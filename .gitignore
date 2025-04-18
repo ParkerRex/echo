@@ -30,7 +30,8 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
-
+client_secret_*.json
+client_secret.json
 # Task files
 tasks.json
 tasks/ 

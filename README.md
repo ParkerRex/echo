@@ -15,23 +15,81 @@ This project automates the process of taking raw video uploads, enhancing their 
 ## Workflow Overview
 
 ```mermaid
-graph LR
-    A[Video Uploaded to GCS raw-* folder] --> B(Cloud Function: trigger_auphonic);
-    B -- Fetches API Key --> C(Secret Manager);
-    B -- Calls Auphonic API --> D(Auphonic);
-    D -- Processes Audio --> E{GCS processed-* folder\
-    (Structured Output)};
-    E --> F(Future: YouTube Upload Function);
-    F --> G(YouTube Channel);
-    E --> H(Future: Content Gen Function);
-    H --> I(Blog Posts, Social Media);
+sequenceDiagram
+    participant User
+    participant GCS as Google Cloud Storage
+    participant FuncAuphonic as trigger_auphonic (main.py)
+    participant Secrets as Secret Manager
+    participant AuphonicAPI as Auphonic Service
+    participant FuncYouTube as upload_to_youtube_daily (youtube_uploader.py)
+    participant YouTubeAPI as YouTube API
+    participant FuncContentGen as (Future) Content Gen Func
+    participant LLM as (Future) LLM API
+
+    User->>GCS: Upload video.mp4 to raw-daily/
+    GCS-->>FuncAuphonic: Trigger (Object Finalize)
+    activate FuncAuphonic
+    FuncAuphonic->>Secrets: Get Auphonic API Key
+    activate Secrets
+    Secrets-->>FuncAuphonic: Return API Key
+    deactivate Secrets
+    FuncAuphonic->>AuphonicAPI: Start Production (input=raw-daily/video.mp4, output_base=processed-daily/video/)
+    deactivate FuncAuphonic
+    activate AuphonicAPI
+    AuphonicAPI->>GCS: Read raw-daily/video.mp4
+    Note right of AuphonicAPI: Auphonic Processing...
+    AuphonicAPI->>GCS: Write processed files (video.mp4, desc.txt, ...) to processed-daily/video/
+    deactivate AuphonicAPI
+
+    GCS-->>FuncYouTube: Trigger (Object Finalize in processed-daily/video/)
+    activate FuncYouTube
+    FuncYouTube->>Secrets: Get YouTube OAuth Secrets (Client ID/Secret, Refresh Token)
+    activate Secrets
+    Secrets-->>FuncYouTube: Return Secrets
+    deactivate Secrets
+    FuncYouTube->>GCS: List files in processed-daily/video/
+    FuncYouTube->>GCS: Download video.mp4 to /tmp/
+    FuncYouTube->>GCS: Download captions.vtt to /tmp/
+    FuncYouTube->>GCS: Read description.txt
+    Note left of FuncYouTube: Authenticate to YouTube API
+    FuncYouTube->>YouTubeAPI: Upload Video (from /tmp/video.mp4, with title, description)
+    activate YouTubeAPI
+    YouTubeAPI-->>FuncYouTube: Confirm Video Upload (Video ID)
+    deactivate YouTubeAPI
+    opt Captions File Exists
+        FuncYouTube->>YouTubeAPI: Upload Captions (from /tmp/captions.vtt for Video ID)
+        activate YouTubeAPI
+        YouTubeAPI-->>FuncYouTube: Confirm Caption Upload
+        deactivate YouTubeAPI
+    end
+    Note left of FuncYouTube: Cleanup /tmp/ files
+    deactivate FuncYouTube
+
+    %% Future Steps
+    GCS-->>FuncContentGen: Trigger (Object Finalize in processed-daily/video/)
+    activate FuncContentGen
+    FuncContentGen->>GCS: Read assets (transcript?)
+    FuncContentGen->>LLM: Generate Blog Post / Social Snippets
+    activate LLM
+    LLM-->>FuncContentGen: Return Generated Content
+    deactivate LLM
+    FuncContentGen->>GCS: Save blog_post.txt, etc.
+    deactivate FuncContentGen
+
 ```
 
-1.  **Upload:** A raw video file (`.mp4`, etc.) is uploaded to a specific folder in the GCS Bucket (`raw-daily/` or `raw-main/`).
-2.  **Trigger:** The GCS upload triggers the `trigger_auphonic` Cloud Function.
-3.  **Auth & API Call:** The function retrieves the Auphonic API key from Secret Manager and calls the Auphonic API, specifying the input file (using its relative GCS path), the appropriate preset/service UUID based on the input folder, and a structured output path (e.g., `processed-daily/video_title/`).
-4.  **Auphonic Processing:** Auphonic accesses the file from GCS (via its configured External Service integration), processes the audio according to the preset, and saves the output files to the specified structured folder within the GCS bucket.
-5.  **(Future) Downstream Processing:** Subsequent functions will be triggered by new files appearing in the `processed-*` folders to handle YouTube uploads, content generation, etc.
+**Detailed Steps:**
+
+1.  **Upload:** A raw video file (e.g., `My Video.mp4`) is uploaded to a specific folder in the GCS Bucket (`raw-daily/` or `raw-main/`).
+2.  **Trigger Auphonic Function:** The GCS upload triggers the `trigger_auphonic` Cloud Function (`main.py`).
+3.  **Start Auphonic Job:** `trigger_auphonic` retrieves the Auphonic API key from Secret Manager. It determines the correct Auphonic preset and service UUID based on the input folder (`raw-daily` vs `raw-main`). It constructs a *structured output path* based on the video filename (e.g., `processed-daily/My_Video/`). It then calls the Auphonic API, telling it to process the input video and place all resulting output files into that GCS folder (`processed-daily/My_Video/`).
+4.  **Auphonic Processing:** Auphonic accesses the raw video from GCS (using its pre-configured GCS External Service), processes it, and saves the output files (e.g., `My_Video.mp4`, `description.txt`, `captions.vtt`) into the specified folder (`processed-daily/My_Video/`).
+5.  **Trigger YouTube Upload Function:** As Auphonic writes files into the `processed-daily/My_Video/` folder, each file finalization triggers the `upload_to_youtube_daily` Cloud Function (`youtube_uploader.py`).
+6.  **Process Folder:** `upload_to_youtube_daily` identifies which folder was triggered (e.g., `processed-daily/My_Video/`). It lists the files within *that folder* to find the main processed video file (`.mp4`, `.mov`), the description (`description.txt`), and captions (`.vtt`, `.srt`).
+7.  **Download & Auth:** It downloads the required files (video, captions) to its temporary local storage (`/tmp/`). It fetches the YouTube OAuth Client ID, Secret, and Refresh Token from Secret Manager to authenticate with the YouTube API for the target channel.
+8.  **Upload to YouTube:** It uploads the downloaded video file to the correct YouTube channel (Daily in this case), setting the title (from the folder name), description (from `description.txt`), and other settings (privacy status, category). If captions were found and downloaded, it makes a separate API call to upload those as well.
+9.  **Cleanup:** The function removes the temporary files it downloaded.
+10. **(Future) Content Generation:** Other functions could later be triggered by files in `processed-*` folders to generate blog posts, social media content, etc.
 
 ## Key Terms
 
@@ -106,7 +164,8 @@ graph LR
     *   Secret Manager API
     *   Cloud Storage API
     *   (Potentially others depending on future functions)
-7.  **Eventarc & GCS Service Agent Permissions:** As encountered during deployment, ensure:
+7.  **YouTube OAuth Credentials:** You need valid OAuth 2.0 credentials (Client ID, Client Secret) for a project with the YouTube Data API v3 enabled. These should be stored in Secret Manager (see Status section).
+8.  **Eventarc & GCS Service Agent Permissions:** As encountered during deployment, ensure:
     *   The Eventarc Service Agent (`service-<PROJECT_NUMBER>@gcp-sa-eventarc.iam.gserviceaccount.com`) has `roles/eventarc.eventReceiver`.
     *   The GCS Service Account (`service-<PROJECT_NUMBER>@gs-project-accounts.iam.gserviceaccount.com`) has `roles/pubsub.publisher`.
 
@@ -128,6 +187,38 @@ gcloud functions deploy trigger-auphonic \
 ```
 
 Replace `YOUR_GCS_BUCKET_REGION`, `YOUR_GCS_BUCKET_NAME`, and `YOUR_FUNCTION_SERVICE_ACCOUNT_EMAIL` with your specific values.
+
+## Current Status (As of April 18, 2025)
+
+*   **Auphonic Processing:** The `trigger_auphonic` function is deployed and functional. It processes videos uploaded to `raw-daily/` and `raw-main/` and outputs structured results to `processed-daily/` and `processed-main/` folders respectively.
+*   **YouTube Authentication:**
+    *   OAuth 2.0 credentials (Client ID, Client Secret, Refresh Token) have been obtained for both the Daily (`me@parkerrex.com`) and Main (`parker.m.rex@gmail.com`) YouTube channels.
+    *   These credentials have been securely stored in Google Secret Manager using specific naming conventions (e.g., `youtube-daily-client-id`, `youtube-main-refresh-token`).
+*   **Daily YouTube Uploader (`upload_to_youtube_daily`):**
+    *   Function structure created in `youtube_uploader.py`.
+    *   Trigger logic (monitoring `processed-daily/`) is set up.
+    *   Authentication logic (fetching secrets, refreshing tokens) is implemented.
+    *   Basic metadata extraction (title from folder, description from `description.txt`) is implemented.
+    *   Video download from GCS to `/tmp/` is implemented.
+    *   Core video upload functionality to YouTube is implemented.
+    *   Caption upload functionality (.vtt, .srt) is implemented.
+    *   Basic cleanup of temporary files is included.
+*   **Main YouTube Uploader (`upload_to_youtube_main`):** Placeholder function exists in `youtube_uploader.py`, but implementation is pending.
+
+## Next Steps
+
+1.  **Implement Main Channel Uploader:** Complete the `upload_to_youtube_main` function in `youtube_uploader.py`, mirroring the daily uploader logic but using the `MAIN_SECRETS` configuration.
+2.  **Deploy YouTube Uploaders:** Deploy both `upload_to_youtube_daily` and `upload_to_youtube_main` Cloud Functions using `gcloud`, ensuring correct GCS triggers, path patterns (`processed-daily/*`, `processed-main/*`), and appropriate timeouts.
+3.  **End-to-End Testing:** Thoroughly test the entire pipeline:
+    *   Upload raw videos to `raw-daily/` and `raw-main/`.
+    *   Verify Auphonic processing completes successfully.
+    *   Verify processed files appear in the correct `processed-*/video_title/` folders.
+    *   Verify the correct YouTube uploader function triggers.
+    *   Verify videos appear on the correct YouTube channel (Daily or Main) with the correct title/description/privacy.
+    *   Test caption uploads.
+4.  **Refine & Enhance:** Based on testing, improve error handling, logging, and potentially enhance metadata extraction (e.g., using Auphonic's output, adding tags).
+5.  **Implement Content Generation:** Begin work on Tasks 7, 8, 9 (Blog Posts, Social Media, Instagram).
+6.  **Implement Monitoring:** Set up Task 10 (Monitoring & Error Handling).
 
 ## Contributing
 
