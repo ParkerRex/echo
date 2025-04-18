@@ -1,0 +1,134 @@
+### Summary of Conversation for Handover to Developer
+
+**Objective**: Build an automation system using Google Cloud Functions (2nd gen) to process videos uploaded to a Google Cloud Storage (GCS) bucket (`gs://automations-youtube-videos-2025/`). When a video lands in `/raw-daily` or `/raw-main`, trigger Auphonic’s API to process the audio and write outputs (processed video, audiogram, captions, etc.) to `/processed-daily/[video-title]` or `/processed-main/[video-title]`. The processed video will then be uploaded to YouTube (Daily channel: `parker.m.rex@gmail.com`, Main channel: `me@parkerrex.com`), and additional content (blog posts, social media) will be generated using Anthropic and Replicate APIs.
+
+**Current Status**: The initial Cloud Function to trigger Auphonic’s Simple API (`https://auphonic.com/api/simple/productions.json`) is partially implemented and locally tested, but it’s encountering a `500 Server Error: Internal Server Error` with the message `"URL doesn't seem to exist or isn't valid."`. This error suggests Auphonic cannot access the input file (`gs://automations-youtube-videos-2025/raw-daily/test_video.mp4`) or there’s an issue with the API request configuration.
+
+**Key Details**:
+- **GCP Project**: `automations-457120`
+- **GCS Bucket**: `gs://automations-youtube-videos-2025/` (initially incorrect as `gs://automations-457120/`)
+- **Service Account**: `gcsfuse-automation@automations-457120.iam.gserviceaccount.com` with roles: `cloudfunctions.developer`, `storage.admin`, `secretmanager.secretAccessor`, `eventarc.eventReceiver`, `iam.serviceAccountUser`.
+- **Auphonic API Key**: `e35bDjoTVwmbkApaorRwSoODBRT2zFRk` (hardcoded for local testing, stored in Secret Manager for deployment).
+- **Auphonic Presets**:
+  - Daily: UUID `NUhaRc7Uy3JnLYSjgkzkjN` (`parker.m.rex@gmail.com`)
+  - Main: UUID `QKiN23RSfTs2AZUfxteBhT` (`me@parkerrex.com`)
+- **Auphonic Services**:
+  - Daily: UUID `AjyidE9UPGg8EQMz5pNhWG`, prefix `raw-daily/`
+  - Main: UUID `h7gE2gDMRiyaCoKhxHNiLo`, prefix `raw-main/`
+- **GCSfuse**: Used to encode videos directly to `/raw-daily` and `/raw-main`.
+
+**Progress and Issues**:
+1. **Initial Setup**:
+   - Created a Cloud Function to trigger on GCS `google.storage.object.finalize` events for `/raw-daily` and `/raw-main`.
+   - Configured to call Auphonic’s Simple API with preset UUIDs, input file (`gs://<bucket>/<file>`), and output folder.
+   - Set up Secret Manager for the Auphonic API key and granted permissions to the service account.
+
+2. **Local Testing**:
+   - Wrote `main.py` and `requirements.txt` to handle GCS events and call Auphonic.
+   - Created `test_event.json` to simulate GCS events.
+   - Encountered multiple issues during local testing with `functions-framework`:
+     - **Incorrect Bucket Name**: Initially used `automations-457120` (project ID), corrected to `automations-youtube-videos-2025`.
+     - **403 Forbidden**: Early Auphonic API calls failed due to the wrong bucket.
+     - **KeyError: 'bucket'**: Event payload had nested `data` field, fixed by updating `test_event.json` and adding defensive checks in `main.py`.
+     - **Current Issue (500 Server Error)**: Auphonic API returns:
+       ```
+       {
+         "status_code": 500,
+         "error_code": null,
+         "error_message": "[\"URL doesn't seem to exist or isn't valid.\"]",
+         "form_errors": {},
+         "data": null
+       }
+       ```
+       This suggests Auphonic cannot access `gs://automations-youtube-videos-2025/raw-daily/test_video.mp4`.
+
+3. **Auphonic Configuration**:
+   - Set up S3-compatible GCS integration in Auphonic:
+     - Endpoint: `storage.googleapis.com`
+     - Bucket: `automations-youtube-videos-2025`
+     - Prefixes: `raw-daily/`, `raw-main/`
+     - Access Key ID/Secret from GCS Interoperability settings.
+   - Configured presets and services, but the `500` error indicates a potential issue with file access, preset UUIDs, or API request parameters.
+
+4. **Troubleshooting Steps Taken**:
+   - Corrected bucket name and updated `main.py` and `test_event.json`.
+   - Added service UUIDs (`AjyidE9UPGg8EQMz5pNhWG`, `h7gE2gDMRiyaCoKhxHNiLo`) to the API request.
+   - Tested file existence with `gsutil ls` and suggested making files public temporarily to rule out permissions.
+   - Ran manual `curl` tests to isolate the Auphonic API issue (pending output from user).
+   - Proposed watch folders as a fallback to bypass API calls.
+
+**Current Bug**:
+- **Symptom**: Auphonic API call fails with `500 Server Error` and `"URL doesn't seem to exist or isn't valid."` when trying to access `gs://automations-youtube-videos-2025/raw-daily/test_video.mp4`.
+- **Likely Causes**:
+  1. **File Absence**: `test_video.mp4` may not exist in `raw-daily/`.
+  2. **GCS Permissions**: Auphonic’s S3 credentials may lack read access to the bucket.
+  3. **Preset/Service UUID**: Incorrect or misconfigured UUIDs (`NUhaRc7Uy3JnLYSjgkzkjN`, `AjyidE9UPGg8EQMz5pNhWG`).
+  4. **API Request**: Missing or incorrect parameters (e.g., `service` UUID required but misconfigured).
+- **Next Steps to Debug**:
+  - Confirm `test_video.mp4` exists:
+    ```bash
+    gsutil ls gs://automations-youtube-videos-2025/raw-daily/test_video.mp4
+    gsutil cp /path/to/local/test_video.mp4 gs://automations-youtube-videos-2025/raw-daily/
+    ```
+  - Test Auphonic’s GCS connection in the External Services interface.
+  - Run manual `curl` test:
+    ```bash
+    curl -X POST https://auphonic.com/api/simple/productions.json \
+      -H "Authorization: Bearer e35bDjoTVwmbkApaorRwSoODBRT2zFRk" \
+      -F "input_file=gs://automations-youtube-videos-2025/raw-daily/test_video.mp4" \
+      -F "preset=NUhaRc7Uy3JnLYSjgkzkjN" \
+      -F "service=AjyidE9UPGg8EQMz5pNhWG" \
+      -F "output_folder=gs://automations-youtube-videos-2025/processed-daily/test_video" \
+      -F "title=Test Video" \
+      -F "action=start"
+    ```
+  - Make the file public temporarily to rule out permissions:
+    ```bash
+    gsutil acl ch -u AllUsers:R gs://automations-youtube-videos-2025/raw-daily/test_video.mp4
+    ```
+  - Verify preset and service UUIDs in Auphonic’s web interface.
+  - Contact Auphonic support if the issue persists.
+
+**Artifacts**:
+- **`main.py`**: Cloud Function to trigger Auphonic, with event handling and API call logic.
+- **`test_event.json`**: Test event for local testing, corrected for GCS bucket `automations-youtube-videos-2025`.
+- **`requirements.txt`**: Dependencies for local and deployed function.
+
+**Handover Tasks for Developer**:
+1. **Resolve 500 Error**:
+   - Verify `test_video.mp4` exists in `gs://automations-youtube-videos-2025/raw-daily/`.
+   - Test Auphonic’s GCS integration and ensure it can list files.
+   - Run the manual `curl` test and analyze the response.
+   - Check preset (`NUhaRc7Uy3JnLYSjgkzkjN`, `QKiN23RSfTs2AZUfxteBhT`) and service UUIDs (`AjyidE9UPGg8EQMz5pNhWG`, `h7gE2gDMRiyaCoKhxHNiLo`) in Auphonic.
+   - Test with public file access to isolate permissions issues.
+2. **Retest Locally**:
+   - Update `main.py` and `test_event.json` as provided.
+   - Run `functions-framework` and `curl` test, sharing logs.
+3. **Deploy**:
+   - Restore Secret Manager in `main.py`.
+   - Deploy with:
+     ```bash
+     gcloud functions deploy trigger-auphonic \
+       --gen2 \
+       --runtime=python310 \
+       --region=us-central1 \
+       --source=. \
+       --trigger-event=google.storage.object.finalize \
+       --trigger-resource=automations-youtube-videos-2025 \
+       --service-account=gcsfuse-automation@automations-457120.iam.gserviceaccount.com \
+       --set-env-vars=GCS_BUCKET=automations-youtube-videos-2025
+     ```
+   - Test with a real video upload.
+4. **Next Steps**:
+   - Implement YouTube upload function using client credentials for `parker.m.rex@gmail.com` (Daily) and `me@parkerrex.com` (Main).
+   - Build content creation pipeline (Anthropic for blog/social media, Replicate for Instagram).
+   - Explore watch folders if API issues persist.
+
+**Pending User Input**:
+- Output of manual `curl` test.
+- Confirmation of `test_video.mp4` existence.
+- Status of Auphonic’s GCS integration for `automations-youtube-videos-2025`.
+
+**Recommendation**: Focus on resolving the `500` error by verifying file existence and GCS access. If unresolved, consider Auphonic’s watch folder feature to bypass API issues, then trigger downstream tasks on `processed-daily/` or `processed-main/` events.
+
+This summary captures the context, progress, and current bug for the developer to take over and resolve. Let me know if you need further details or a specific format for the handover!
