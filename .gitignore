@@ -11,6 +11,7 @@ node_modules/
 
 # Environment variables
 .env
+vps-automations-key.json
 
 # Editor directories and files
 .idea
@@ -32,6 +33,7 @@ __pycache__/
 *.pyd
 client_secret_*.json
 client_secret.json
+
 # Task files
 tasks.json
 tasks/ 

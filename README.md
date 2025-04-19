@@ -220,10 +220,170 @@ Replace `YOUR_GCS_BUCKET_REGION`, `YOUR_GCS_BUCKET_NAME`, and `YOUR_FUNCTION_SER
 5.  **Implement Content Generation:** Begin work on Tasks 7, 8, 9 (Blog Posts, Social Media, Instagram).
 6.  **Implement Monitoring:** Set up Task 10 (Monitoring & Error Handling).
 
-## Contributing
+## Specific Automations 
 
-(Placeholder - Add guidelines later if applicable)
+Automations Project Setup and Auphonic Automation Guide
+This repository (ParkerRex/Automations) contains automation scripts for processing videos using Auphonic and uploading them to YouTube. This README.md explains the setup on a Netcup Debian VPS, details the Auphonic automation workflow, and provides steps to test it. The project uses Docker for local testing and Google Cloud Functions for production deployment.
+Project Overview
+The project automates video processing and uploading:
 
-## License
+Auphonic Automation: Processes videos dropped into specific GCS bucket folders (raw-daily/, raw-main/) using Auphonic, saving outputs to corresponding folders (processed-daily/, processed-main/).
+YouTube Uploader: Uploads processed videos to YouTube (not yet implemented in this guide).
 
-(Placeholder - Specify license, e.g., MIT, Apache 2.0)
+Architecture Diagram
+Below is the high-level architecture of the automation system:
+graph TD
+    A[Video Uploaded to GCS Bucket] -->|raw-daily/ or raw-main/| B[GCS Event Trigger]
+    B --> C[Google Cloud Function: trigger_auphonic]
+    C -->|Retrieve API Key| D[Google Cloud Secret Manager]
+    C -->|Start Production| E[Auphonic API]
+    E -->|Fetch Input File| A
+    E -->|Write Output| F[GCS Bucket: processed-daily/ or processed-main/]
+    F --> G[YouTube Uploader Script]
+    G --> H[YouTube API]
+
+Setup on Netcup Debian VPS
+Prerequisites
+
+VPS: Netcup Debian VPS (8 vCPUs, 16 GB RAM, 512 GB SSD).
+Google Cloud Project: automations-457120.
+GCS Bucket: automations-youtube-videos-2025.
+Auphonic Account: Configured with presets and services for daily and main.
+Docker: Installed on the VPS.
+GitHub: SSH key setup for cloning the repository.
+
+Initial Setup Steps
+
+SSH into VPS:ssh root@<VPS_IP>
+
+
+Install Dependencies:apt update && apt upgrade -y
+apt install -y python3 python3-pip python3-venv docker.io git
+systemctl enable docker
+systemctl start docker
+usermod -aG docker $USER
+
+
+Clone Repository:mkdir -p /opt/automations
+cd /opt/automations
+git clone git@github.com:ParkerRex/Automations.git .
+
+
+Set Up Virtual Environment:python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+
+Set Up Service Account:
+In Google Cloud Console:
+Create a service account vps-automations@automations-457120.iam.gserviceaccount.com.
+Assign roles:
+Secret Manager Secret Accessor (roles/secretmanager.secretAccessor).
+Storage Object Admin (roles/storage.objectAdmin).
+
+
+Download the JSON key (vps-automations-key.json).
+
+
+Upload the key to the VPS:scp vps-automations-key.json root@<VPS_IP>:/opt/automations/
+chmod 600 vps-automations-key.json
+
+
+
+
+Configure .env:nano .env
+
+Add:GOOGLE_APPLICATION_CREDENTIALS=/app/vps-automations-key.json
+
+
+Build Docker Image:docker build -t automations:latest .
+
+
+
+Auphonic Automation Details
+This automation triggers when a video is uploaded to raw-daily/ or raw-main/ in the GCS bucket automations-youtube-videos-2025. It uses Auphonic to process the video and saves the output to processed-daily/ or processed-main/.
+Workflow Diagram
+graph TD
+    A[Video Uploaded to GCS<br>raw-daily/ or raw-main/] -->|GCS Event| B[Cloud Function: trigger_auphonic]
+    B -->|Retrieve API Key| C[Secret Manager: auphonic-api-key]
+    B -->|Extract File Path| D{File Path Check}
+    D -->|raw-daily/| E[Use Daily Preset<br>NUhaRc7Uy3JnLYSjgkzkjN]
+    D -->|raw-main/| F[Use Main Preset<br>QKiN23RSfTs2AZUfxteBhT]
+    E --> G[Use Daily Service<br>AjyidE9UPGg8EQMz5pNhWG]
+    F --> H[Use Main Service<br>h7gE2gDMRiyaCoKhxHNiLo]
+    G --> I[Output to processed-daily/]
+    H --> J[Output to processed-main/]
+    I --> K[Auphonic API]
+    J --> K
+    K -->|Fetch Input| A
+    K -->|Write Output| I
+    K -->|Write Output| J
+
+Steps to Test Locally
+
+Ensure Docker Image is Built:docker build -t automations:latest .
+
+
+Start functions-framework Server:docker run -d --rm --env-file .env -p 8080:8080 --name automations-test automations:latest functions-framework --target trigger_auphonic --source main.py --signature-type event --debug
+
+
+Send Test Event:Use test_event.json:{
+  "id": "test-event-123",
+  "source": "//storage.googleapis.com/projects/_/buckets/automations-youtube-videos-2025",
+  "specversion": "1.0",
+  "type": "google.cloud.storage.object.v1.finalized",
+  "datacontenttype": "application/json",
+  "time": "2025-04-17T12:00:00Z",
+  "data": {
+    "bucket": "automations-youtube-videos-2025",
+    "name": "raw-daily/test_video.mp4",
+    "contentType": "video/mp4",
+    "timeCreated": "2025-04-17T12:00:00Z"
+  }
+}
+
+Send the event:curl -X POST \
+  -H "Content-Type: application/cloudevents+json" \
+  -d @test_event.json \
+  http://localhost:8080/
+
+
+Check Logs:docker logs automations-test
+
+Expected output:DEBUG: Function triggered
+DEBUG: Attempting to retrieve Auphonic API key
+DEBUG: Fetching secret 'auphonic-api-key' from project 'automations-457120'
+DEBUG: Secret successfully retrieved
+DEBUG: Retrieved API key: <your-api-key>
+DEBUG: Received event: {...}
+DEBUG: Extracted data: {'bucket': 'automations-youtube-videos-2025', 'name': 'raw-daily/test_video.mp4', ...}
+DEBUG: Bucket: automations-youtube-videos-2025, File: raw-daily/test_video.mp4
+DEBUG: Video title: test_video, Sanitized: test_video
+DEBUG: Preset UUID: NUhaRc7Uy3JnLYSjgkzkjN, Service UUID: AjyidE9UPGg8EQMz5pNhWG, Output folder: processed-daily/test_video
+DEBUG: Calling Auphonic API with: url=https://auphonic.com/api/productions.json, payload={...}
+DEBUG: Response status: 200
+DEBUG: Auphonic response: {...}
+
+
+Verify Auphonic:
+Log into Auphonic (e.g., with parker.m.rex@gmail.com).
+Check for a new production named test_video.
+Confirm the status is Done and the output is in gs://automations-youtube-videos-2025/processed-daily/test_video.
+
+
+
+Troubleshooting
+
+Secret Manager Error: Ensure vps-automations@automations-457120.iam.gserviceaccount.com has roles/secretmanager.secretAccessor.
+GCS Access: Ensure the service account has roles/storage.objectAdmin and Auphonic services (AjyidE9UPGg8EQMz5pNhWG, h7gE2gDMRiyaCoKhxHNiLo) are configured to access the bucket.
+Auphonic API Error: Verify the API key in Secret Manager is valid.
+
+Deployment to GCP
+See the next section for deploying to Google Cloud Functions and testing with real GCS events.
+Next Steps
+
+Deploy the function to GCP (below).
+Set up CI/CD with GitHub Actions.
+Implement youtube_uploader.py to upload processed videos to YouTube.
+
+
