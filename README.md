@@ -1,389 +1,455 @@
-# Auphonic Video Processing & YouTube Automation
+# 🎬 Video Upload + AI Metadata Pipeline
 
-## Vision
+This repo powers the automation pipeline for uploading `.mp4` files to YouTube with AI-generated transcripts, titles, chapters, and descriptions — using Google Cloud Run + Gemini via Vertex AI.
 
-This project automates the process of taking raw video uploads, enhancing their audio quality using Auphonic, organizing the processed files, and ultimately uploading them to designated YouTube channels. The goal is to create a seamless, hands-off pipeline from raw video to published content, potentially including future steps like blog post generation and social media snippets.
+## 🌟 Project Overview
 
-## Benefits ✨
+The Video Upload + AI Metadata Pipeline automates the process of preparing video content for YouTube. It takes raw video files, processes them using AI to generate high-quality metadata, and prepares them for upload to YouTube. This system dramatically reduces the manual work involved in video publishing while ensuring consistent, high-quality metadata.
 
-*   **Time Savings:** Automates tedious manual steps of audio processing and uploading.
-*   **Consistent Quality:** Ensures all videos benefit from Auphonic's audio enhancement presets.
-*   **Organized Assets:** Automatically structures processed files (audio, video, transcripts) in GCS for easy access.
-*   **Scalability:** Handles uploads for multiple channels (e.g., daily vs. main) based on input folder.
-*   **Extensibility:** Designed with future automations (blogging, social media) in mind.
+### Key Features
 
-## Workflow Overview
+- **Automated Video Processing**: Upload videos to GCS buckets and trigger automatic processing
+- **AI-Generated Metadata**: Generate transcripts, titles, descriptions, and chapters using Gemini AI
+- **Flexible Processing Paths**: Support for both daily content and main channel content
+- **Comprehensive Testing**: Robust test suite for reliable operation
+- **Scalable Architecture**: Cloud-native design that scales with your content needs
+
+---
+## Deployment Workflows
+
+There are two primary ways to deploy this application to Cloud Run:
+
+**1. Direct Source Deployment (Current Method):**
+
+This is the simplest method for quick deployments directly from your local source code. Google Cloud Build handles the container building and pushing behind the scenes.
+
+-   **Command:** `gcloud run deploy process-uploaded-video --source . --region <your-region>`
+-   **Pros:** Simple, fewer manual steps.
+-   **Cons:** Less control over the build process, can potentially lead to architecture mismatches (like the `exec format error` if building on ARM and deploying to x86) if not careful.
 
 ```mermaid
-sequenceDiagram
-    participant User
-    participant GCS as Google Cloud Storage
-    participant FuncAuphonic as trigger_auphonic (main.py)
-    participant Secrets as Secret Manager
-    participant AuphonicAPI as Auphonic Service
-    participant FuncYouTube as upload_to_youtube_daily (youtube_uploader.py)
-    participant YouTubeAPI as YouTube API
-    participant FuncContentGen as (Future) Content Gen Func
-    participant LLM as (Future) LLM API
-
-    User->>GCS: Upload video.mp4 to raw-daily/
-    GCS-->>FuncAuphonic: Trigger (Object Finalize)
-    activate FuncAuphonic
-    FuncAuphonic->>Secrets: Get Auphonic API Key
-    activate Secrets
-    Secrets-->>FuncAuphonic: Return API Key
-    deactivate Secrets
-    FuncAuphonic->>AuphonicAPI: Start Production (input=raw-daily/video.mp4, output_base=processed-daily/video/)
-    deactivate FuncAuphonic
-    activate AuphonicAPI
-    AuphonicAPI->>GCS: Read raw-daily/video.mp4
-    Note right of AuphonicAPI: Auphonic Processing...
-    AuphonicAPI->>GCS: Write processed files (video.mp4, desc.txt, ...) to processed-daily/video/
-    deactivate AuphonicAPI
-
-    GCS-->>FuncYouTube: Trigger (Object Finalize in processed-daily/video/)
-    activate FuncYouTube
-    FuncYouTube->>Secrets: Get YouTube OAuth Secrets (Client ID/Secret, Refresh Token)
-    activate Secrets
-    Secrets-->>FuncYouTube: Return Secrets
-    deactivate Secrets
-    FuncYouTube->>GCS: List files in processed-daily/video/
-    FuncYouTube->>GCS: Download video.mp4 to /tmp/
-    FuncYouTube->>GCS: Download captions.vtt to /tmp/
-    FuncYouTube->>GCS: Read description.txt
-    Note left of FuncYouTube: Authenticate to YouTube API
-    FuncYouTube->>YouTubeAPI: Upload Video (from /tmp/video.mp4, with title, description)
-    activate YouTubeAPI
-    YouTubeAPI-->>FuncYouTube: Confirm Video Upload (Video ID)
-    deactivate YouTubeAPI
-    opt Captions File Exists
-        FuncYouTube->>YouTubeAPI: Upload Captions (from /tmp/captions.vtt for Video ID)
-        activate YouTubeAPI
-        YouTubeAPI-->>FuncYouTube: Confirm Caption Upload
-        deactivate YouTubeAPI
+flowchart TD
+    subgraph "Local Development"
+        A[📝 Code (main.py, etc.)] --> B(📄 Dockerfile);
+        C[📋 requirements.txt] --> B;
     end
-    Note left of FuncYouTube: Cleanup /tmp/ files
-    deactivate FuncYouTube
 
-    %% Future Steps
-    GCS-->>FuncContentGen: Trigger (Object Finalize in processed-daily/video/)
-    activate FuncContentGen
-    FuncContentGen->>GCS: Read assets (transcript?)
-    FuncContentGen->>LLM: Generate Blog Post / Social Snippets
-    activate LLM
-    LLM-->>FuncContentGen: Return Generated Content
-    deactivate LLM
-    FuncContentGen->>GCS: Save blog_post.txt, etc.
-    deactivate FuncContentGen
+    subgraph "Google Cloud Build (Triggered by gcloud run deploy --source)"
+        A & B & C -- gcloud run deploy --source . --> D[Builds Image];
+        D --> E[Pushes to Ephemeral Registry];
+    end
 
+    subgraph "Google Cloud Run"
+        E -- Implicitly --> F[🚀 Cloud Run Service];
+        F -- Pulls Image & Runs --> G[🏃 Container Instance(s)];
+    end
+
+    G --> H[👂 Listens for Events (e.g., GCS Upload)];
 ```
 
-**Detailed Steps:**
+**2. Build & Push to Artifact Registry (Recommended):**
 
-1.  **Upload:** A raw video file (e.g., `My Video.mp4`) is uploaded to a specific folder in the GCS Bucket (`raw-daily/` or `raw-main/`).
-2.  **Trigger Auphonic Function:** The GCS upload triggers the `trigger_auphonic` Cloud Function (`main.py`).
-3.  **Start Auphonic Job:** `trigger_auphonic` retrieves the Auphonic API key from Secret Manager. It determines the correct Auphonic preset and service UUID based on the input folder (`raw-daily` vs `raw-main`). It constructs a *structured output path* based on the video filename (e.g., `processed-daily/My_Video/`). It then calls the Auphonic API, telling it to process the input video and place all resulting output files into that GCS folder (`processed-daily/My_Video/`).
-4.  **Auphonic Processing:** Auphonic accesses the raw video from GCS (using its pre-configured GCS External Service), processes it, and saves the output files (e.g., `My_Video.mp4`, `description.txt`, `captions.vtt`) into the specified folder (`processed-daily/My_Video/`).
-5.  **Trigger YouTube Upload Function:** As Auphonic writes files into the `processed-daily/My_Video/` folder, each file finalization triggers the `upload_to_youtube_daily` Cloud Function (`youtube_uploader.py`).
-6.  **Process Folder:** `upload_to_youtube_daily` identifies which folder was triggered (e.g., `processed-daily/My_Video/`). It lists the files within *that folder* to find the main processed video file (`.mp4`, `.mov`), the description (`description.txt`), and captions (`.vtt`, `.srt`).
-7.  **Download & Auth:** It downloads the required files (video, captions) to its temporary local storage (`/tmp/`). It fetches the YouTube OAuth Client ID, Secret, and Refresh Token from Secret Manager to authenticate with the YouTube API for the target channel.
-8.  **Upload to YouTube:** It uploads the downloaded video file to the correct YouTube channel (Daily in this case), setting the title (from the folder name), description (from `description.txt`), and other settings (privacy status, category). If captions were found and downloaded, it makes a separate API call to upload those as well.
-9.  **Cleanup:** The function removes the temporary files it downloaded.
-10. **(Future) Content Generation:** Other functions could later be triggered by files in `processed-*` folders to generate blog posts, social media content, etc.
+This method gives you more control, ensures architecture compatibility, and is the standard for production environments.
 
-## Key Terms
+1.  **`Dockerfile` (Blueprint):** Defines how to build the container image.
+2.  **`docker buildx build --platform linux/amd64 ... --push` (Factory & Delivery):** Builds the image specifically for Cloud Run's `linux/amd64` architecture and pushes it to Artifact Registry.
+3.  **Artifact Registry (Warehouse):** Stores your versioned Docker images.
+4.  **`gcloud run deploy --image ...` (Runner):** Tells Cloud Run to pull a specific image tag from Artifact Registry and run it.
 
-*   **GCS (Google Cloud Storage):** The service used for storing all video files (raw input, processed output).
-    *   `raw-daily/`, `raw-main/`: Input folders where initial videos are uploaded.
-    *   `processed-daily/`, `processed-main/`: Output parent folders where Auphonic results are stored.
-    *   `processed-*/video_title/`: Structured folders created by the automation to hold all assets for a single processed video.
-*   **Auphonic:** An external web service used for automatic audio post-production (leveling, noise reduction, etc.).
-*   **Cloud Functions:** Serverless functions hosted on Google Cloud used to run the automation code.
-*   **Secret Manager:** Google Cloud service for securely storing API keys and other secrets.
-*   **Eventarc:** Google Cloud service used to connect events (like GCS uploads) to triggers for services like Cloud Functions.
-*   **Service Account:** Google Cloud identity used by services (like Cloud Functions, GCS, Eventarc) to interact with other services and APIs.
+```mermaid
+flowchart TD
+    subgraph "Local Development"
+        AA[📝 Code (main.py, etc.)] --> BB(📄 Dockerfile);
+        CC[📋 requirements.txt] --> BB;
+        BB -- docker buildx build --platform linux/amd64 --> DD[📦 Docker Image (amd64)];
+    end
 
-## Core Components
+    subgraph "Google Cloud"
+        DD -- docker push --> EE[🏪 Artifact Registry];
+        EE -- gcloud run deploy --image --> FF[🚀 Cloud Run Service];
+        FF -- Pulls Image & Runs --> GG[🏃 Container Instance(s)];
+    end
 
-*   **`main.py`:** Contains the primary Cloud Function `trigger_auphonic`.
-    *   Triggered by GCS `object.finalize` events.
-    *   Parses event data to get bucket/file name.
-    *   Determines Auphonic preset/service based on input folder.
-    *   Constructs structured output path.
-    *   Retrieves API key from Secret Manager.
-    *   Calls the Auphonic API (`/api/productions.json`) to start processing.
-*   **`requirements.txt`:** Lists Python dependencies (`functions-framework`, `requests`, `google-cloud-secret-manager`, `google-cloud-storage`).
-*   **`tasks/` directory:** Contains tasks managed by Task Master AI for project development.
-*   **(Planned) YouTube Upload Functions:** Future components to handle uploading processed videos from `processed-*` folders to YouTube.
-*   **(Planned) Content Generation Functions:** Future components to generate blog posts/social media content.
+    GG --> HH[👂 Listens for Events (e.g., GCS Upload)];
 
-## Getting Started
+    AA --> CC;
+```
 
-### Prerequisites
+**Important Note: CPU Architecture Mismatch (ARM64 vs. AMD64)**
 
-1.  **Google Cloud Project:** An active GCP project.
-2.  **Google Cloud SDK (`gcloud`):** Installed and authenticated (`gcloud auth login`, `gcloud config set project YOUR_PROJECT_ID`).
-3.  **Python & Pip:** Python 3.10+ recommended.
-4.  **Virtual Environment:** Recommended (e.g., `python -m venv venv`, `source venv/bin/activate`).
-5.  **Auphonic Account:** Account with API access enabled.
-6.  **GCS Bucket:** Created in a specific region (e.g., `us-east1`).
-7.  **Auphonic API Key:** Stored in Google Secret Manager (e.g., secret ID `auphonic-api-key`).
-8.  **Auphonic Presets & External Services:**
-    *   Auphonic presets created for different processing needs (e.g., daily vs. main channel).
-    *   Google Cloud Storage configured as an External Service in Auphonic, linked to your GCS bucket (this allows Auphonic to read input and write output). Note the Service UUIDs.
+-   **The Problem:** Google Cloud Run instances typically use the `linux/amd64` (also known as x86_64) CPU architecture. However, modern Macs with Apple Silicon (M1/M2/M3) use the `linux/arm64` (or aarch64) architecture.
+-   **The Error:** If you build a Docker image *without* specifying the platform on an ARM-based Mac, Docker defaults to building an `arm64` image. Trying to run this `arm64` image on Cloud Run's `amd64` environment results in an `exec format error` because the underlying operating system doesn't understand the compiled code's instruction set.
+-   **Workflow A Solution:** The `docker buildx build --platform linux/amd64 ...` command explicitly tells Docker (even on your ARM Mac) to cross-compile and build the image for the `linux/amd64` architecture that Cloud Run requires. This guarantees compatibility.
+-   **Workflow B Caveat:** While `gcloud run deploy --source .` usually lets Cloud Build handle this correctly behind the scenes, subtle build environment issues can sometimes occur. Using Workflow A (Build & Push) provides more direct control and was used in this project's troubleshooting to definitively resolve the `exec format error`.
 
-### Setup & Configuration
+## Original Workflow Diagram (GCS -> Cloud Run -> Processing -> YouTube)
 
-1.  **Clone Repository:** (Assuming it's created based on Task 12)
-    ```bash
-    git clone git@github.com:parkerrex/Automations.git
-    cd Automations
-    ```
-2.  **Create Virtual Environment:**
-    ```bash
-    python -m venv venv
-    source venv/bin/activate # On Windows use `venv\Scripts\activate`
-    ```
-3.  **Install Dependencies:**
-    ```bash
-    pip install -r requirements.txt
-    ```
-4.  **Configure `main.py`:**
-    *   Update `PROJECT_ID` if different from `automations-457120`.
-    *   Update `SECRET_ID` if different from `auphonic-api-key`.
-    *   Update `PRESETS` dictionary with your actual Auphonic Preset UUIDs.
-    *   Update `SERVICES` dictionary with your actual Auphonic GCS External Service UUIDs.
-5.  **GCP Service Account Permissions:** Ensure the service account used for the Cloud Function (`gcsfuse-automation@...` in the example) has roles:
-    *   `Secret Manager Secret Accessor` (to get API key)
-    *   `Cloud Functions Developer` (or Invoker/Admin as needed)
-    *   Any roles needed to interact with GCS if not already covered.
-6.  **GCP API Enablement:** Ensure these APIs are enabled in your project:
-    *   Cloud Functions API
-    *   Cloud Build API
-    *   Eventarc API
-    *   Secret Manager API
-    *   Cloud Storage API
-    *   (Potentially others depending on future functions)
-7.  **YouTube OAuth Credentials:** You need valid OAuth 2.0 credentials (Client ID, Client Secret) for a project with the YouTube Data API v3 enabled. These should be stored in Secret Manager (see Status section).
-8.  **Eventarc & GCS Service Agent Permissions:** As encountered during deployment, ensure:
-    *   The Eventarc Service Agent (`service-<PROJECT_NUMBER>@gcp-sa-eventarc.iam.gserviceaccount.com`) has `roles/eventarc.eventReceiver`.
-    *   The GCS Service Account (`service-<PROJECT_NUMBER>@gs-project-accounts.iam.gserviceaccount.com`) has `roles/pubsub.publisher`.
+```mermaid
+flowchart TD
+  A[📤 Upload .mp4 to raw-daily/ or raw-main/] --> B[🗂️ GCS Bucket]
 
-### Deployment
+  B --> C[🔔 Eventarc Trigger]
+  C --> D[🚀 Cloud Run (process-uploaded-video)]
 
-Deploy the main Cloud Function using `gcloud`. **Ensure the `--region` matches your GCS bucket's region.**
+  D --> E[📥 app.py handles POST /]
+  E --> F[🧠 process_uploaded_video.py]
+
+  F --> G[🔊 Extract audio via ffmpeg]
+  G --> H[🤖 Gemini (Vertex AI)
+transcript + metadata]
+
+  H --> I[📂 processed-daily/ or processed-main/
+transcript.txt, title.txt, etc.]
+
+  I --> J[⬆️ Upload to YouTube (via Cloud Function)]
+```
+
+
+## 🧠 Architecture Overview
+
+### Complete System Architecture
+
+```mermaid
+flowchart TD
+  %% User Actions
+  User([Content Creator]) -->|Uploads| A[.mp4 Video File]
+  A -->|Placed in| B[GCS Bucket]
+
+  %% Storage Paths
+  B -->|For daily content| B1[raw-daily/]
+  B -->|For main channel| B2[raw-main/]
+
+  %% Event Triggering
+  B1 & B2 -->|Triggers| C[Eventarc]
+  C -->|Invokes| D[Cloud Run Service]
+
+  %% Video Processing Module
+  subgraph "Video Processor Module"
+    D -->|Handles request| E[app.py]
+    E -->|Calls| F[process_uploaded_video.py]
+    F -->|Downloads video| G[Temporary Storage]
+    G -->|Extracts audio| H[ffmpeg]
+    H -->|Creates| I[WAV Audio File]
+
+    %% AI Processing
+    I -->|Sent to| J[Vertex AI]
+    J -->|Processes with| K[Gemini 2.0 Model]
+
+    %% Generated Outputs
+    K -->|Generates| L1[Transcript]
+    K -->|Generates| L2[VTT Subtitles]
+    K -->|Generates| L3[Shownotes]
+    K -->|Generates| L4[Chapters JSON]
+    K -->|Generates| L5[Title & Keywords]
+
+    %% Output Processing
+    L1 & L2 & L3 & L4 & L5 -->|Formatted as| M[Output Files]
+    M -->|Uploaded to| N[GCS Bucket]
+  end
+
+  %% Output Storage
+  N -->|For daily content| N1[processed-daily/]
+  N -->|For main channel| N2[processed-main/]
+
+  %% YouTube Upload
+  N1 & N2 -->|Triggers| O[YouTube Upload Function]
+  O -->|Authenticates with| P[YouTube API]
+  P -->|Creates| Q[YouTube Video]
+
+  %% Testing & Monitoring
+  subgraph "Testing & Monitoring"
+    R[pytest Suite] -->|Verifies| F
+    S[Cloud Monitoring] -->|Tracks| D
+    T[Error Logging] -->|Captures| U[System Errors]
+  end
+
+  %% Styling
+  classDef storage fill:#f9f,stroke:#333,stroke-width:2px;
+  classDef processing fill:#bbf,stroke:#333,stroke-width:2px;
+  classDef ai fill:#bfb,stroke:#333,stroke-width:2px;
+  classDef output fill:#fbb,stroke:#333,stroke-width:2px;
+
+  class B,B1,B2,G,N,N1,N2 storage;
+  class D,E,F,H,O storage;
+  class J,K ai;
+  class L1,L2,L3,L4,L5,M,Q output;
+```
+
+### Core Processing Flow
+
+```mermaid
+flowchart TD
+  subgraph User
+    A[Drop .mp4 into raw-daily/ or raw-main/]
+  end
+
+  subgraph GCS
+    B[raw-daily/] --> C[Eventarc Trigger]
+    D[raw-main/] --> C
+  end
+
+  subgraph CloudRun
+    C --> E[process-uploaded-video Service]
+    E --> F[Extract Audio with ffmpeg]
+    F --> G[Transcribe + Summarize with Gemini]
+    G --> H1[transcript.txt]
+    G --> H2[description.txt]
+    G --> H3[title.txt]
+    G --> H4[chapters.txt]
+    G --> H5[subtitles.vtt]
+    H1 & H2 & H3 & H4 & H5 --> I[processed-daily/ or processed-main/]
+  end
+
+  subgraph YouTubeUploader
+    I --> J[upload_to_youtube Cloud Function]
+    J --> K[YouTube Upload Complete ✅]
+  end
+```
+
+### Video Processor Module Detail
+
+```mermaid
+flowchart TD
+  A[GCS Event] --> B[Cloud Run Service]
+  B --> C[app.py]
+  C --> D[process_uploaded_video.py]
+
+  D --> E{Valid MP4?}
+  E -->|No| F[Skip Processing]
+  E -->|Yes| G[Download Video]
+
+  G --> H[Extract Audio]
+  H --> I[Create Part Object]
+
+  I --> J1[generate_transcript]
+  I --> J2[generate_vtt]
+  I --> J3[generate_shownotes]
+  I --> J4[generate_chapters]
+  I --> J5[generate_titles]
+
+  J1 & J2 & J3 & J4 & J5 --> K[Upload Results to GCS]
+  K --> L[Move Original to Processed Folder]
+```
+
+---
+
+## 🔧 Components
+
+### Core Components
+
+| Component                   | Description                                            |
+| --------------------------- | ------------------------------------------------------ |
+| `process_uploaded_video.py` | Core module that extracts audio and uses Gemini        |
+| `app.py`                    | Cloud Run service entry point for handling GCS events  |
+| `Dockerfile`                | Custom container to support ffmpeg and Vertex          |
+| Eventarc trigger            | Links GCS uploads to Cloud Run                         |
+| Vertex AI (Gemini 2.0)      | Handles transcription, title generation, and summaries |
+
+### Video Processor Module
+
+The `video_processor/` directory contains a modular implementation of the video processing functionality:
+
+| Component                                   | Description                                           |
+| ------------------------------------------- | ----------------------------------------------------- |
+| `video_processor/process_uploaded_video.py` | Core module for video processing and AI integration   |
+| `video_processor/app.py`                    | Cloud Run service entry point                         |
+| `video_processor/tests/`                    | Comprehensive test suite for all functionality        |
+| `video_processor/README.md`                 | Detailed documentation for the video processor module |
+
+### Testing Framework
+
+The project includes a comprehensive testing framework to ensure reliability:
+
+| Component                                           | Description                               |
+| --------------------------------------------------- | ----------------------------------------- |
+| `video_processor/tests/conftest.py`                 | Common pytest fixtures for testing        |
+| `video_processor/tests/test_*_generation.py`        | Unit tests for each generation function   |
+| `video_processor/tests/test_process_video_event.py` | Tests for the main processing function    |
+| `video_processor/test_audio_processing.py`          | Standalone test for audio processing      |
+| `video_processor/test_process_video.py`             | Standalone test for end-to-end processing |
+
+---
+
+## 🐛 Recent Bug Fixes & Improvements
+
+### Audio Format for Gemini API
+
+We recently fixed an issue where raw binary WAV audio data was being passed directly to the Gemini API, which expects a properly formatted Part object with the correct MIME type.
+
+#### Problem
+The error occurred when trying to process audio data with Gemini API:
+```
+ERROR:root:Gemini API call failed: Unexpected item type: b'RIFF\xf0j=\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00\x80>\x00\x00\x00}\x00\x00\x02\x00\x10\x00LIST\x1a\x00\x00\x00INFOISFT\x0e\x00\x00\x00Lavf59.27.100\x00data\xaaj=\x00...
+```
+
+#### Solution
+1. Modified the code to use the `Part.from_data()` method to properly format the audio data with the correct MIME type
+2. Updated all Gemini API functions to accept the properly formatted audio part
+3. Fixed environment variable issues by using hardcoded project ID instead of relying on environment variables
+4. Added comprehensive test suite to prevent similar issues in the future
+
+### Comprehensive Test Suite
+
+We've added a robust test suite to ensure the reliability of the video processing pipeline:
+
+1. **Unit Tests:** Tests for each generation function in isolation
+2. **Integration Tests:** Tests for the end-to-end processing workflow
+3. **Mocking:** Proper mocking of external dependencies like Vertex AI and GCS
+4. **Documentation:** Detailed documentation on how to run tests and what to look for
+
+See the `video_processor/README.md` file for more details on the testing framework.
+
+---
+
+## 🔜 Next Automations (Ranked by Impact vs Effort)
+
+| Priority | Automation                    | Impact | Effort | Description                                       |
+| -------- | ----------------------------- | ------ | ------ | ------------------------------------------------- |
+| 1        | Skool Post Generator          | ⭐⭐⭐⭐   | ⭐⭐     | Auto-post insights to Skool based on video output |
+| 2        | Daily AI News Video Generator | ⭐⭐⭐⭐   | ⭐⭐⭐    | Scrape top AI stories → script + upload           |
+| 3        | YouTube Comment Q&A Generator | ⭐⭐⭐    | ⭐⭐     | Pull top comments, answer via Gemini              |
+| 4        | AI Strategy Devlog Generator  | ⭐⭐⭐    | ⭐⭐⭐    | Summarize weekly building efforts as content      |
+| 5        | 3-Part AI Agent Series        | ⭐⭐⭐⭐⭐  | ⭐⭐⭐⭐⭐  | Fully written/recorded video series on agents     |
+
+---
+
+## 📝 Usage & Expected Outcomes
+
+1.  **Upload:** Drop your `.mp4` video file into the GCS bucket under either the `raw-daily/` or `raw-main/` prefix.
+2.  **Trigger:** An Eventarc trigger detects the new file and invokes the `process-uploaded-video` Cloud Run service.
+3.  **Processing:**
+    *   Cloud Run downloads the video.
+    *   `ffmpeg` extracts the audio into a `.wav` file.
+    *   The audio is sent to Gemini (Vertex AI) for processing.
+    *   Gemini returns the transcript, description, titles, and chapters.
+4.  **Output:** The service writes the following files back to the GCS bucket under the corresponding `processed-daily/<video-name>/` or `processed-main/<video-name>/` prefix:
+    *   `transcript.txt`: Full text transcript of the video.
+    *   `description.txt`: A short, engaging YouTube description.
+    *   `title.txt`: 3 suggested clickbaity titles.
+    *   `chapters.txt`: Timestamped chapters for the video.
+5.  **YouTube Upload (Future):** A separate Cloud Function (not yet implemented in this repo, see *Next Automations*) is intended to monitor the `processed-*` prefixes, retrieve the generated text files, and use them to upload the original video to YouTube.
+
+---
+
+## 🧪 Testing Framework
+
+The project includes a comprehensive testing framework to ensure reliability and maintainability. The testing approach combines unit tests, integration tests, and standalone test scripts.
+
+### Testing Architecture
+
+```mermaid
+flowchart TD
+    A[pytest Test Suite] --> B1[Unit Tests]
+    A --> B2[Integration Tests]
+    B1 --> C1[Transcript Generation]
+    B1 --> C2[VTT Generation]
+    B1 --> C3[Chapters Generation]
+    B1 --> C4[Titles Generation]
+    B1 --> C5[Process Video Event]
+    B2 --> D1[Audio Processing]
+    B2 --> D2[End-to-End Processing]
+    C1 & C2 & C3 & C4 & C5 --> E[Mock Gemini API]
+    D1 --> F1[Real ffmpeg]
+    D2 --> F1
+    D1 --> F2[Mock Gemini API]
+    D2 --> F3[Mock GCS]
+```
+
+### Implemented Tests
+
+1. **Unit Tests (`pytest`):**
+   * Tests for each generation function in isolation:
+     * `test_transcript_generation.py`
+     * `test_vtt_generation.py`
+     * `test_chapters_generation.py`
+     * `test_titles_generation.py`
+   * Tests for the main processing function:
+     * `test_process_video_event.py`
+   * **Mocking:** Uses `unittest.mock` to mock external dependencies:
+     * `google.cloud.storage`: Mocks `storage.Client`, `bucket`, and `blob` interactions
+     * `vertexai`: Mocks `GenerativeModel` and its `generate_content` method
+     * `subprocess.run`: Mocks the `ffmpeg` call
+   * **Test Cases:**
+     * Normal operation with valid inputs
+     * Edge cases with unusual inputs
+     * Error handling for API failures
+     * Handling of non-MP4 files or files in wrong directories
+
+2. **Standalone Test Scripts:**
+   * `test_audio_processing.py`: Tests audio extraction and processing with Gemini API
+   * `test_process_video.py`: Tests the end-to-end video processing workflow
+
+### Running Tests
 
 ```bash
-gcloud functions deploy trigger-auphonic \
-  --gen2 \
-  --runtime=python310 \
-  --region=YOUR_GCS_BUCKET_REGION \
-  --source=. \
-  --entry-point=trigger_auphonic \
-  --trigger-event=google.storage.object.finalize \
-  --trigger-resource=YOUR_GCS_BUCKET_NAME \
-  --service-account=YOUR_FUNCTION_SERVICE_ACCOUNT_EMAIL \
-  --set-env-vars=GCS_BUCKET=YOUR_GCS_BUCKET_NAME
+# Navigate to the video_processor directory
+cd video_processor
+
+# Install test dependencies
+pip install pytest pytest-mock pytest-cov
+
+# Run all tests with coverage report
+pytest
+
+# Run specific test file
+pytest tests/test_transcript_generation.py
+
+# Run tests with verbose output
+pytest -v
+
+# Run tests with coverage report
+pytest --cov=. --cov-report=term-missing
 ```
 
-Replace `YOUR_GCS_BUCKET_REGION`, `YOUR_GCS_BUCKET_NAME`, and `YOUR_FUNCTION_SERVICE_ACCOUNT_EMAIL` with your specific values.
+### Common Testing Issues and Solutions
 
-## Current Status (As of April 18, 2025)
+See the `video_processor/README.md` file for detailed information on common testing issues and solutions, including:
 
-*   **Auphonic Processing:** The `trigger_auphonic` function is deployed and functional. It processes videos uploaded to `raw-daily/` and `raw-main/` and outputs structured results to `processed-daily/` and `processed-main/` folders respectively.
-*   **YouTube Authentication:**
-    *   OAuth 2.0 credentials (Client ID, Client Secret, Refresh Token) have been obtained for both the Daily (`me@parkerrex.com`) and Main (`parker.m.rex@gmail.com`) YouTube channels.
-    *   These credentials have been securely stored in Google Secret Manager using specific naming conventions (e.g., `youtube-daily-client-id`, `youtube-main-refresh-token`).
-*   **Daily YouTube Uploader (`upload_to_youtube_daily`):**
-    *   Function structure created in `youtube_uploader.py`.
-    *   Trigger logic (monitoring `processed-daily/`) is set up.
-    *   Authentication logic (fetching secrets, refreshing tokens) is implemented.
-    *   Basic metadata extraction (title from folder, description from `description.txt`) is implemented.
-    *   Video download from GCS to `/tmp/` is implemented.
-    *   Core video upload functionality to YouTube is implemented.
-    *   Caption upload functionality (.vtt, .srt) is implemented.
-    *   Basic cleanup of temporary files is included.
-*   **Main YouTube Uploader (`upload_to_youtube_main`):** Placeholder function exists in `youtube_uploader.py`, but implementation is pending.
+1. Mocking Vertex AI Part objects
+2. Handling newline characters in tests
+3. Patching the correct import paths
+4. Debugging test failures
 
-## Next Steps
+---
 
-1.  **Implement Main Channel Uploader:** Complete the `upload_to_youtube_main` function in `youtube_uploader.py`, mirroring the daily uploader logic but using the `MAIN_SECRETS` configuration.
-2.  **Deploy YouTube Uploaders:** Deploy both `upload_to_youtube_daily` and `upload_to_youtube_main` Cloud Functions using `gcloud`, ensuring correct GCS triggers, path patterns (`processed-daily/*`, `processed-main/*`), and appropriate timeouts.
-3.  **End-to-End Testing:** Thoroughly test the entire pipeline:
-    *   Upload raw videos to `raw-daily/` and `raw-main/`.
-    *   Verify Auphonic processing completes successfully.
-    *   Verify processed files appear in the correct `processed-*/video_title/` folders.
-    *   Verify the correct YouTube uploader function triggers.
-    *   Verify videos appear on the correct YouTube channel (Daily or Main) with the correct title/description/privacy.
-    *   Test caption uploads.
-4.  **Refine & Enhance:** Based on testing, improve error handling, logging, and potentially enhance metadata extraction (e.g., using Auphonic's output, adding tags).
-5.  **Implement Content Generation:** Begin work on Tasks 7, 8, 9 (Blog Posts, Social Media, Instagram).
-6.  **Implement Monitoring:** Set up Task 10 (Monitoring & Error Handling).
+## 🚀 CI/CD Setup (GitHub Actions)
 
-## Specific Automations 
+A GitHub Actions workflow (`.github/workflows/deploy.yml`) can automate testing and deployment:
 
-Automations Project Setup and Auphonic Automation Guide
-This repository (ParkerRex/Automations) contains automation scripts for processing videos using Auphonic and uploading them to YouTube. This README.md explains the setup on a Netcup Debian VPS, details the Auphonic automation workflow, and provides steps to test it. The project uses Docker for local testing and Google Cloud Functions for production deployment.
-Project Overview
-The project automates video processing and uploading:
+1.  **Trigger:** On push/merge to the `main` branch.
 
-Auphonic Automation: Processes videos dropped into specific GCS bucket folders (raw-daily/, raw-main/) using Auphonic, saving outputs to corresponding folders (processed-daily/, processed-main/).
-YouTube Uploader: Uploads processed videos to YouTube (not yet implemented in this guide).
+2.  **Jobs:**
+    *   **`lint`:**
+        *   Checkout code.
+        *   Set up Python.
+        *   Install dependencies (`requirements.txt`).
+        *   Run linters (`flake8`, `black --check`).
+    *   **`test`:**
+        *   Checkout code.
+        *   Set up Python.
+        *   Install dependencies.
+        *   Run unit tests (`pytest tests/`).
+    *   **`build_and_deploy` (depends on `lint`, `test`):**
+        *   Checkout code.
+        *   Authenticate to Google Cloud (using Workload Identity Federation or Service Account Key secret).
+        *   Configure Docker for Artifact Registry (`gcloud auth configure-docker ...`).
+        *   Build multi-platform image using `docker buildx build --platform linux/amd64 ...` and push to Artifact Registry with a unique tag (e.g., Git SHA).
+        *   Deploy to Cloud Run using the newly pushed image tag (`gcloud run deploy ... --image <artifact-registry-path>:<tag> ...`).
 
-Architecture Diagram
-Below is the high-level architecture of the automation system:
-graph TD
-    A[Video Uploaded to GCS Bucket] -->|raw-daily/ or raw-main/| B[GCS Event Trigger]
-    B --> C[Google Cloud Function: trigger_auphonic]
-    C -->|Retrieve API Key| D[Google Cloud Secret Manager]
-    C -->|Start Production| E[Auphonic API]
-    E -->|Fetch Input File| A
-    E -->|Write Output| F[GCS Bucket: processed-daily/ or processed-main/]
-    F --> G[YouTube Uploader Script]
-    G --> H[YouTube API]
+3.  **Secrets:** Store GCP service account keys or Workload Identity Federation configuration securely in GitHub repository secrets.
 
-Setup on Netcup Debian VPS
-Prerequisites
+```mermaid
+flowchart TD
+    A[Push to main branch] --> B{GitHub Actions Trigger};
+    B --> C[Lint Job];
+    B --> D[Test Job];
+    C --> E{Build & Deploy Job};
+    D --> E;
+    E --> F[Auth to GCP];
+    F --> G[Configure Docker];
+    G --> H[Build & Push Image (linux/amd64)];
+    H --> I[Deploy to Cloud Run];
+```
 
-VPS: Netcup Debian VPS (8 vCPUs, 16 GB RAM, 512 GB SSD).
-Google Cloud Project: automations-457120.
-GCS Bucket: automations-youtube-videos-2025.
-Auphonic Account: Configured with presets and services for daily and main.
-Docker: Installed on the VPS.
-GitHub: SSH key setup for cloning the repository.
-
-Initial Setup Steps
-
-SSH into VPS:ssh root@<VPS_IP>
-
-
-Install Dependencies:apt update && apt upgrade -y
-apt install -y python3 python3-pip python3-venv docker.io git
-systemctl enable docker
-systemctl start docker
-usermod -aG docker $USER
-
-
-Clone Repository:mkdir -p /opt/automations
-cd /opt/automations
-git clone git@github.com:ParkerRex/Automations.git .
-
-
-Set Up Virtual Environment:python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-
-
-Set Up Service Account:
-In Google Cloud Console:
-Create a service account vps-automations@automations-457120.iam.gserviceaccount.com.
-Assign roles:
-Secret Manager Secret Accessor (roles/secretmanager.secretAccessor).
-Storage Object Admin (roles/storage.objectAdmin).
-
-
-Download the JSON key (vps-automations-key.json).
-
-
-Upload the key to the VPS:scp vps-automations-key.json root@<VPS_IP>:/opt/automations/
-chmod 600 vps-automations-key.json
-
-
-
-
-Configure .env:nano .env
-
-Add:GOOGLE_APPLICATION_CREDENTIALS=/app/vps-automations-key.json
-
-
-Build Docker Image:docker build -t automations:latest .
-
-
-
-Auphonic Automation Details
-This automation triggers when a video is uploaded to raw-daily/ or raw-main/ in the GCS bucket automations-youtube-videos-2025. It uses Auphonic to process the video and saves the output to processed-daily/ or processed-main/.
-Workflow Diagram
-graph TD
-    A[Video Uploaded to GCS<br>raw-daily/ or raw-main/] -->|GCS Event| B[Cloud Function: trigger_auphonic]
-    B -->|Retrieve API Key| C[Secret Manager: auphonic-api-key]
-    B -->|Extract File Path| D{File Path Check}
-    D -->|raw-daily/| E[Use Daily Preset<br>NUhaRc7Uy3JnLYSjgkzkjN]
-    D -->|raw-main/| F[Use Main Preset<br>QKiN23RSfTs2AZUfxteBhT]
-    E --> G[Use Daily Service<br>AjyidE9UPGg8EQMz5pNhWG]
-    F --> H[Use Main Service<br>h7gE2gDMRiyaCoKhxHNiLo]
-    G --> I[Output to processed-daily/]
-    H --> J[Output to processed-main/]
-    I --> K[Auphonic API]
-    J --> K
-    K -->|Fetch Input| A
-    K -->|Write Output| I
-    K -->|Write Output| J
-
-Steps to Test Locally
-
-Ensure Docker Image is Built:docker build -t automations:latest .
-
-
-Start functions-framework Server:docker run -d --rm --env-file .env -p 8080:8080 --name automations-test automations:latest functions-framework --target trigger_auphonic --source main.py --signature-type event --debug
-
-
-Send Test Event:Use test_event.json:{
-  "id": "test-event-123",
-  "source": "//storage.googleapis.com/projects/_/buckets/automations-youtube-videos-2025",
-  "specversion": "1.0",
-  "type": "google.cloud.storage.object.v1.finalized",
-  "datacontenttype": "application/json",
-  "time": "2025-04-17T12:00:00Z",
-  "data": {
-    "bucket": "automations-youtube-videos-2025",
-    "name": "raw-daily/test_video.mp4",
-    "contentType": "video/mp4",
-    "timeCreated": "2025-04-17T12:00:00Z"
-  }
-}
-
-Send the event:curl -X POST \
-  -H "Content-Type: application/cloudevents+json" \
-  -d @test_event.json \
-  http://localhost:8080/
-
-
-Check Logs:docker logs automations-test
-
-Expected output:DEBUG: Function triggered
-DEBUG: Attempting to retrieve Auphonic API key
-DEBUG: Fetching secret 'auphonic-api-key' from project 'automations-457120'
-DEBUG: Secret successfully retrieved
-DEBUG: Retrieved API key: <your-api-key>
-DEBUG: Received event: {...}
-DEBUG: Extracted data: {'bucket': 'automations-youtube-videos-2025', 'name': 'raw-daily/test_video.mp4', ...}
-DEBUG: Bucket: automations-youtube-videos-2025, File: raw-daily/test_video.mp4
-DEBUG: Video title: test_video, Sanitized: test_video
-DEBUG: Preset UUID: NUhaRc7Uy3JnLYSjgkzkjN, Service UUID: AjyidE9UPGg8EQMz5pNhWG, Output folder: processed-daily/test_video
-DEBUG: Calling Auphonic API with: url=https://auphonic.com/api/productions.json, payload={...}
-DEBUG: Response status: 200
-DEBUG: Auphonic response: {...}
-
-
-Verify Auphonic:
-Log into Auphonic (e.g., with parker.m.rex@gmail.com).
-Check for a new production named test_video.
-Confirm the status is Done and the output is in gs://automations-youtube-videos-2025/processed-daily/test_video.
-
-
-
-Troubleshooting
-
-Secret Manager Error: Ensure vps-automations@automations-457120.iam.gserviceaccount.com has roles/secretmanager.secretAccessor.
-GCS Access: Ensure the service account has roles/storage.objectAdmin and Auphonic services (AjyidE9UPGg8EQMz5pNhWG, h7gE2gDMRiyaCoKhxHNiLo) are configured to access the bucket.
-Auphonic API Error: Verify the API key in Secret Manager is valid.
-
-Deployment to GCP
-See the next section for deploying to Google Cloud Functions and testing with real GCS events.
-Next Steps
-
-Deploy the function to GCP (below).
-Set up CI/CD with GitHub Actions.
-Implement youtube_uploader.py to upload processed videos to YouTube.
-
+This setup ensures that code is automatically tested and deployed only if checks pass, preventing broken deployments and enabling safer collaboration.
 
