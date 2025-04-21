@@ -1,0 +1,10 @@
+google-cloud-storage==2.10.0
+google-cloud-aiplatform
+vertexai
+flask
+gunicorn
+
+# Testing dependencies
+pytest==7.4.0
+pytest-mock==3.11.1
+pytest-cov==4.1.0
