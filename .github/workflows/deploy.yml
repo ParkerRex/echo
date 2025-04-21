@@ -1,0 +1,85 @@
+name: Deploy Video Processor
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 black
+          pip install -r requirements.txt
+      - name: Lint with flake8
+        run: |
+          flake8 video_processor --count --select=E9,F63,F7,F82 --show-source --statistics
+      - name: Check formatting with black
+        run: |
+          black --check video_processor
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-mock pytest-cov
+          pip install -r requirements.txt
+      - name: Run tests
+        run: |
+          cd video_processor
+          python -m pytest tests/test_youtube_uploader.py tests/test_generate_youtube_token.py tests/test_main.py -v
+
+  build_and_deploy:
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: automations-457120
+          
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+          
+      - name: Build and push Docker image
+        run: |
+          export IMAGE_TAG=$(date +%Y%m%d-%H%M%S)
+          export IMAGE_NAME="us-central1-docker.pkg.dev/automations-457120/cloud-run-source-deploy/video-processor:${IMAGE_TAG}"
+          docker build -t ${IMAGE_NAME} .
+          docker push ${IMAGE_NAME}
+          echo "IMAGE_NAME=${IMAGE_NAME}" >> $GITHUB_ENV
+          
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy video-processor \
+            --image ${IMAGE_NAME} \
+            --platform managed \
+            --region us-central1 \
+            --allow-unauthenticated \
+            --memory 2Gi \
+            --cpu 2 \
+            --timeout 3600 \
+            --concurrency 10

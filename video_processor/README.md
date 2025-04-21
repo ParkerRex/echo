@@ -19,13 +19,17 @@ flowchart TD
     G --> H5[Generate Title & Keywords]
     H1 & H2 & H3 & H4 & H5 --> I[Upload Results to GCS]
     I --> J[Move Original Video to Processed Folder]
+    I --> K[Trigger YouTube Upload Function]
 ```
 
 ## Files Overview
 
 ### Core Files
 - **process_uploaded_video.py**: Core module that handles video processing, audio extraction, and Gemini API integration
-- **app.py**: Cloud Run service entry point that receives GCS events and calls the processing functions
+- **main.py**: Cloud Run service entry point that receives GCS events and calls the processing functions
+- **app.py**: Flask application for the video processor service
+- **youtube_uploader.py**: Cloud Function for uploading videos to YouTube
+- **generate_youtube_token.py**: Utility for generating YouTube API OAuth tokens
 
 ### Test Files
 - **tests/**: Directory containing all pytest test files
@@ -35,6 +39,9 @@ flowchart TD
   - **test_chapters_generation.py**: Tests for chapters generation
   - **test_titles_generation.py**: Tests for title and keywords generation
   - **test_process_video_event.py**: Tests for the main process_video_event function
+  - **test_main.py**: Tests for the Flask app and event handling
+  - **test_youtube_uploader.py**: Tests for YouTube upload functionality
+  - **test_generate_youtube_token.py**: Tests for OAuth token generation
 - **test_audio_processing.py**: Standalone script for testing audio processing with Gemini API
 - **test_process_video.py**: Standalone script for testing the end-to-end video processing workflow
 - **pytest.ini**: Configuration file for pytest
@@ -85,16 +92,19 @@ flowchart TD
 ```
 video_processor/
 ├── tests/
-│   ├── __init__.py         # Makes tests a proper package
-│   ├── conftest.py         # Common pytest fixtures
-│   ├── test_transcript_generation.py
-│   ├── test_vtt_generation.py
-│   ├── test_chapters_generation.py
-│   ├── test_titles_generation.py
-│   └── test_process_video_event.py
-├── test_audio_processing.py  # Standalone test script
-├── test_process_video.py     # Standalone test script
-└── pytest.ini              # pytest configuration
+│   ├── __init__.py                    # Makes tests a proper package
+│   ├── conftest.py                    # Common pytest fixtures
+│   ├── test_transcript_generation.py  # Tests for transcript generation
+│   ├── test_vtt_generation.py         # Tests for VTT generation
+│   ├── test_chapters_generation.py    # Tests for chapters generation
+│   ├── test_titles_generation.py      # Tests for title generation
+│   ├── test_process_video_event.py    # Tests for video processing
+│   ├── test_main.py                   # Tests for Flask app and event handling
+│   ├── test_youtube_uploader.py       # Tests for YouTube upload functionality
+│   └── test_generate_youtube_token.py # Tests for OAuth token generation
+├── test_audio_processing.py           # Standalone test script
+├── test_process_video.py              # Standalone test script
+└── pytest.ini                         # pytest configuration
 ```
 
 ### Setting Up the Test Environment
@@ -164,6 +174,38 @@ When running the tests, pay attention to:
 4. **Mock Verification**: Ensure that mocks are being called with the expected parameters
 5. **Edge Cases**: Check that tests cover various edge cases and error conditions
 
+### Testability Improvements
+
+We've made several improvements to make the code more testable:
+
+#### 1. Dependency Injection
+
+The `main.py` module now uses dependency injection to make it easier to test:
+
+```python
+def create_app(process_func: Optional[Callable] = None) -> Flask:
+    """Create and configure the Flask application."""
+    flask_app = Flask(__name__)
+
+    # Use the provided process function or default to the real one
+    video_processor = process_func if process_func is not None else process_video_event
+
+    # ... rest of the function
+```
+
+This allows tests to inject a mock processing function instead of the real one.
+
+#### 2. Modular Structure
+
+The code is now organized in a modular structure with clear separation of concerns:
+
+- **main.py**: Handles HTTP requests and routing
+- **process_uploaded_video.py**: Contains the core processing logic
+- **youtube_uploader.py**: Handles YouTube API integration
+- **generate_youtube_token.py**: Manages OAuth token generation
+
+This makes it easier to test each component in isolation.
+
 ### Common Testing Issues and Solutions
 
 #### 1. Mocking Vertex AI Part Objects
@@ -192,9 +234,11 @@ When using `patch`, make sure to patch where the object is used, not where it's 
 
 ```python
 # Correct way to patch
-with patch("process_uploaded_video.GenerativeModel", return_value=mock_model):
+with patch("video_processor.process_uploaded_video.GenerativeModel", return_value=mock_model):
     # Test code here
 ```
+
+Note that with our new module structure, all imports should be prefixed with `video_processor.`
 
 ### Adding New Tests
 
@@ -238,6 +282,8 @@ When sending audio to Gemini API:
 This module is deployed as part of a Cloud Run service that is triggered by GCS events when new videos are uploaded to specific folders.
 
 ## Future Improvements
+
+See the main [ROADMAP.md](../ROADMAP.md) file for a complete list of planned improvements. Key technical improvements for this module include:
 
 1. Add more robust error handling for different types of audio files and formats
 2. Implement retry logic for API calls

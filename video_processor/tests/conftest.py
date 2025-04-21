@@ -12,7 +12,9 @@ import os
 import tempfile
 import pytest
 import subprocess
+import json
 from unittest.mock import MagicMock, patch
+from flask import Flask
 
 
 @pytest.fixture
@@ -118,3 +120,65 @@ def mock_part():
     mock = MagicMock()
     mock.from_data.return_value = MagicMock()
     return mock
+
+
+@pytest.fixture
+def mock_flask_app():
+    """Create a test Flask app."""
+    app = Flask(__name__)
+    app.testing = True
+    return app
+
+
+@pytest.fixture
+def mock_cloud_event():
+    """Create a mock Cloud Event for testing."""
+    event = MagicMock()
+    event.data = {
+        "bucket": "test-bucket",
+        "name": "daily-raw/test_video.mp4",
+        "contentType": "video/mp4",
+        "size": "1000000",
+    }
+    return event
+
+
+@pytest.fixture
+def mock_youtube_credentials():
+    """Mock for YouTube API credentials."""
+    mock_creds = MagicMock()
+    mock_creds.refresh.return_value = None
+    return mock_creds
+
+
+@pytest.fixture
+def mock_youtube_service():
+    """Mock for YouTube API service."""
+    mock_service = MagicMock()
+    mock_videos = MagicMock()
+    mock_captions = MagicMock()
+
+    # Set up the chain of mocks
+    mock_service.videos.return_value = mock_videos
+    mock_service.captions.return_value = mock_captions
+
+    # Mock the insert methods
+    mock_insert_request = MagicMock()
+    mock_insert_request.next_chunk.return_value = (None, {"id": "test_video_id"})
+    mock_videos.insert.return_value = mock_insert_request
+
+    mock_caption_request = MagicMock()
+    mock_caption_request.execute.return_value = {"id": "test_caption_id"}
+    mock_captions.insert.return_value = mock_caption_request
+
+    return mock_service
+
+
+@pytest.fixture
+def mock_secretmanager_client():
+    """Mock for Secret Manager client."""
+    mock_client = MagicMock()
+    mock_response = MagicMock()
+    mock_response.payload.data.decode.return_value = "test_secret_value"
+    mock_client.access_secret_version.return_value = mock_response
+    return mock_client

@@ -4,13 +4,14 @@ This repo powers the automation pipeline for uploading `.mp4` files to YouTube w
 
 ## 🌟 Project Overview
 
-The Video Upload + AI Metadata Pipeline automates the process of preparing video content for YouTube. It takes raw video files, processes them using AI to generate high-quality metadata, and prepares them for upload to YouTube. This system dramatically reduces the manual work involved in video publishing while ensuring consistent, high-quality metadata.
+The Video Upload + AI Metadata Pipeline automates the process of preparing video content for YouTube. It takes raw video files, processes them using AI to generate high-quality metadata, and uploads them to YouTube. This system dramatically reduces the manual work involved in video publishing while ensuring consistent, high-quality metadata.
 
 ### Key Features
 
 - **Automated Video Processing**: Upload videos to GCS buckets and trigger automatic processing
 - **AI-Generated Metadata**: Generate transcripts, titles, descriptions, and chapters using Gemini AI
 - **Flexible Processing Paths**: Support for both daily content and main channel content
+- **YouTube Integration**: Automatic upload to YouTube with proper metadata and captions
 - **Comprehensive Testing**: Robust test suite for reliable operation
 - **Scalable Architecture**: Cloud-native design that scales with your content needs
 
@@ -82,11 +83,11 @@ flowchart TD
 -   **Workflow A Solution:** The `docker buildx build --platform linux/amd64 ...` command explicitly tells Docker (even on your ARM Mac) to cross-compile and build the image for the `linux/amd64` architecture that Cloud Run requires. This guarantees compatibility.
 -   **Workflow B Caveat:** While `gcloud run deploy --source .` usually lets Cloud Build handle this correctly behind the scenes, subtle build environment issues can sometimes occur. Using Workflow A (Build & Push) provides more direct control and was used in this project's troubleshooting to definitively resolve the `exec format error`.
 
-## Original Workflow Diagram (GCS -> Cloud Run -> Processing -> YouTube)
+## Current Workflow Diagram (GCS -> Cloud Run -> Processing -> YouTube)
 
 ```mermaid
 flowchart TD
-  A[📤 Upload .mp4 to raw-daily/ or raw-main/] --> B[🗂️ GCS Bucket]
+  A[📤 Upload .mp4 to daily-raw/ or main-raw/] --> B[🗂️ GCS Bucket]
 
   B --> C[🔔 Eventarc Trigger]
   C --> D[🚀 Cloud Run (process-uploaded-video)]
@@ -101,7 +102,8 @@ transcript + metadata]
   H --> I[📂 processed-daily/ or processed-main/
 transcript.txt, title.txt, etc.]
 
-  I --> J[⬆️ Upload to YouTube (via Cloud Function)]
+  I --> J[🔔 Eventarc Trigger]
+  J --> K[⬆️ Upload to YouTube (via Cloud Function)]
 ```
 
 
@@ -116,8 +118,8 @@ flowchart TD
   A -->|Placed in| B[GCS Bucket]
 
   %% Storage Paths
-  B -->|For daily content| B1[raw-daily/]
-  B -->|For main channel| B2[raw-main/]
+  B -->|For daily content| B1[daily-raw/]
+  B -->|For main channel| B2[main-raw/]
 
   %% Event Triggering
   B1 & B2 -->|Triggers| C[Eventarc]
@@ -155,12 +157,13 @@ flowchart TD
   N1 & N2 -->|Triggers| O[YouTube Upload Function]
   O -->|Authenticates with| P[YouTube API]
   P -->|Creates| Q[YouTube Video]
+  O -->|Uploads| R[Captions/Subtitles]
 
   %% Testing & Monitoring
   subgraph "Testing & Monitoring"
-    R[pytest Suite] -->|Verifies| F
-    S[Cloud Monitoring] -->|Tracks| D
-    T[Error Logging] -->|Captures| U[System Errors]
+    S1[pytest Suite] -->|Verifies| F
+    S2[Cloud Monitoring] -->|Tracks| D
+    S3[Error Logging] -->|Captures| U[System Errors]
   end
 
   %% Styling
@@ -172,7 +175,7 @@ flowchart TD
   class B,B1,B2,G,N,N1,N2 storage;
   class D,E,F,H,O storage;
   class J,K ai;
-  class L1,L2,L3,L4,L5,M,Q output;
+  class L1,L2,L3,L4,L5,M,Q,R output;
 ```
 
 ### Core Processing Flow
@@ -180,12 +183,12 @@ flowchart TD
 ```mermaid
 flowchart TD
   subgraph User
-    A[Drop .mp4 into raw-daily/ or raw-main/]
+    A[Drop .mp4 into daily-raw/ or main-raw/]
   end
 
   subgraph GCS
-    B[raw-daily/] --> C[Eventarc Trigger]
-    D[raw-main/] --> C
+    B[daily-raw/] --> C[Eventarc Trigger]
+    D[main-raw/] --> C
   end
 
   subgraph CloudRun
@@ -201,8 +204,9 @@ flowchart TD
   end
 
   subgraph YouTubeUploader
-    I --> J[upload_to_youtube Cloud Function]
-    J --> K[YouTube Upload Complete ✅]
+    I --> J[Eventarc Trigger]
+    J --> K[upload_to_youtube Cloud Function]
+    K --> L[YouTube Upload Complete ✅]
   end
 ```
 
@@ -237,40 +241,47 @@ flowchart TD
 
 ### Core Components
 
-| Component                   | Description                                            |
-| --------------------------- | ------------------------------------------------------ |
-| `process_uploaded_video.py` | Core module that extracts audio and uses Gemini        |
-| `app.py`                    | Cloud Run service entry point for handling GCS events  |
-| `Dockerfile`                | Custom container to support ffmpeg and Vertex          |
-| Eventarc trigger            | Links GCS uploads to Cloud Run                         |
-| Vertex AI (Gemini 2.0)      | Handles transcription, title generation, and summaries |
+All components are now organized in the `video_processor/` directory for better modularity and containerization:
 
-### Video Processor Module
-
-The `video_processor/` directory contains a modular implementation of the video processing functionality:
-
-| Component                                   | Description                                           |
-| ------------------------------------------- | ----------------------------------------------------- |
-| `video_processor/process_uploaded_video.py` | Core module for video processing and AI integration   |
-| `video_processor/app.py`                    | Cloud Run service entry point                         |
-| `video_processor/tests/`                    | Comprehensive test suite for all functionality        |
-| `video_processor/README.md`                 | Detailed documentation for the video processor module |
+| Component                                   | Description                                            |
+| ------------------------------------------- | ------------------------------------------------------ |
+| `video_processor/process_uploaded_video.py` | Core module that extracts audio and uses Gemini        |
+| `video_processor/main.py`                   | Cloud Run service entry point for handling GCS events  |
+| `video_processor/app.py`                    | Flask app for the video processor service              |
+| `video_processor/youtube_uploader.py`       | Cloud Function for uploading videos to YouTube         |
+| `video_processor/generate_youtube_token.py` | Utility for generating YouTube API OAuth tokens        |
+| `video_processor/tests/`                    | Comprehensive test suite for all functionality         |
+| `Dockerfile`                                | Custom container to support ffmpeg and Vertex          |
+| Eventarc trigger                            | Links GCS uploads to Cloud Run                         |
+| Vertex AI (Gemini 2.0)                      | Handles transcription, title generation, and summaries |
 
 ### Testing Framework
 
 The project includes a comprehensive testing framework to ensure reliability:
 
-| Component                                           | Description                               |
-| --------------------------------------------------- | ----------------------------------------- |
-| `video_processor/tests/conftest.py`                 | Common pytest fixtures for testing        |
-| `video_processor/tests/test_*_generation.py`        | Unit tests for each generation function   |
-| `video_processor/tests/test_process_video_event.py` | Tests for the main processing function    |
-| `video_processor/test_audio_processing.py`          | Standalone test for audio processing      |
-| `video_processor/test_process_video.py`             | Standalone test for end-to-end processing |
+| Component                                              | Description                                |
+| ------------------------------------------------------ | ------------------------------------------ |
+| `video_processor/tests/conftest.py`                    | Common pytest fixtures for testing         |
+| `video_processor/tests/test_*_generation.py`           | Unit tests for each generation function    |
+| `video_processor/tests/test_process_video_event.py`    | Tests for the main processing function     |
+| `video_processor/tests/test_main.py`                   | Tests for the Flask app and event handling |
+| `video_processor/tests/test_youtube_uploader.py`       | Tests for YouTube upload functionality     |
+| `video_processor/tests/test_generate_youtube_token.py` | Tests for OAuth token generation           |
+| `video_processor/test_audio_processing.py`             | Standalone test for audio processing       |
+| `video_processor/test_process_video.py`                | Standalone test for end-to-end processing  |
 
 ---
 
 ## 🐛 Recent Bug Fixes & Improvements
+
+### Code Reorganization and Improved Testability
+
+We've recently reorganized the codebase to improve modularity, testability, and containerization:
+
+1. **Unified Module Structure:** Moved all code into the `video_processor/` directory for better organization
+2. **Improved Testability:** Refactored `main.py` to use dependency injection for better testing
+3. **Consolidated Docker Setup:** Combined multiple Dockerfiles into a single, optimized container definition
+4. **Comprehensive Testing:** Added tests for all components, including YouTube integration
 
 ### Audio Format for Gemini API
 
@@ -294,28 +305,23 @@ We've added a robust test suite to ensure the reliability of the video processin
 
 1. **Unit Tests:** Tests for each generation function in isolation
 2. **Integration Tests:** Tests for the end-to-end processing workflow
-3. **Mocking:** Proper mocking of external dependencies like Vertex AI and GCS
-4. **Documentation:** Detailed documentation on how to run tests and what to look for
+3. **Mocking:** Proper mocking of external dependencies like Vertex AI, GCS, and YouTube API
+4. **Dependency Injection:** Refactored code to use dependency injection for better testability
+5. **Documentation:** Detailed documentation on how to run tests and what to look for
 
 See the `video_processor/README.md` file for more details on the testing framework.
 
 ---
 
-## 🔜 Next Automations (Ranked by Impact vs Effort)
+## 🔜 Future Development
 
-| Priority | Automation                    | Impact | Effort | Description                                       |
-| -------- | ----------------------------- | ------ | ------ | ------------------------------------------------- |
-| 1        | Skool Post Generator          | ⭐⭐⭐⭐   | ⭐⭐     | Auto-post insights to Skool based on video output |
-| 2        | Daily AI News Video Generator | ⭐⭐⭐⭐   | ⭐⭐⭐    | Scrape top AI stories → script + upload           |
-| 3        | YouTube Comment Q&A Generator | ⭐⭐⭐    | ⭐⭐     | Pull top comments, answer via Gemini              |
-| 4        | AI Strategy Devlog Generator  | ⭐⭐⭐    | ⭐⭐⭐    | Summarize weekly building efforts as content      |
-| 5        | 3-Part AI Agent Series        | ⭐⭐⭐⭐⭐  | ⭐⭐⭐⭐⭐  | Fully written/recorded video series on agents     |
+See the [ROADMAP.md](./ROADMAP.md) file for a detailed list of planned features and improvements, ranked by impact vs. effort.
 
 ---
 
 ## 📝 Usage & Expected Outcomes
 
-1.  **Upload:** Drop your `.mp4` video file into the GCS bucket under either the `raw-daily/` or `raw-main/` prefix.
+1.  **Upload:** Drop your `.mp4` video file into the GCS bucket under either the `daily-raw/` or `main-raw/` prefix.
 2.  **Trigger:** An Eventarc trigger detects the new file and invokes the `process-uploaded-video` Cloud Run service.
 3.  **Processing:**
     *   Cloud Run downloads the video.
@@ -325,9 +331,10 @@ See the `video_processor/README.md` file for more details on the testing framewo
 4.  **Output:** The service writes the following files back to the GCS bucket under the corresponding `processed-daily/<video-name>/` or `processed-main/<video-name>/` prefix:
     *   `transcript.txt`: Full text transcript of the video.
     *   `description.txt`: A short, engaging YouTube description.
-    *   `title.txt`: 3 suggested clickbaity titles.
+    *   `title.txt`: Suggested clickbaity title.
     *   `chapters.txt`: Timestamped chapters for the video.
-5.  **YouTube Upload (Future):** A separate Cloud Function (not yet implemented in this repo, see *Next Automations*) is intended to monitor the `processed-*` prefixes, retrieve the generated text files, and use them to upload the original video to YouTube.
+    *   `subtitles.vtt`: WebVTT format subtitles with timestamps.
+5.  **YouTube Upload:** A Cloud Function monitors the `processed-*` prefixes, retrieves the generated text files, and uses them to upload the original video to YouTube with proper metadata and captions.
 
 ---
 
@@ -365,15 +372,25 @@ flowchart TD
      * `test_titles_generation.py`
    * Tests for the main processing function:
      * `test_process_video_event.py`
+   * Tests for the main application:
+     * `test_main.py`: Tests the Flask app and event handling
+   * Tests for YouTube integration:
+     * `test_youtube_uploader.py`: Tests YouTube upload functionality
+     * `test_generate_youtube_token.py`: Tests OAuth token generation
    * **Mocking:** Uses `unittest.mock` to mock external dependencies:
      * `google.cloud.storage`: Mocks `storage.Client`, `bucket`, and `blob` interactions
      * `vertexai`: Mocks `GenerativeModel` and its `generate_content` method
      * `subprocess.run`: Mocks the `ffmpeg` call
+     * `google.oauth2.credentials`: Mocks YouTube API credentials
+     * `googleapiclient.discovery`: Mocks YouTube API service
+     * `google.cloud.secretmanager`: Mocks Secret Manager client
    * **Test Cases:**
      * Normal operation with valid inputs
      * Edge cases with unusual inputs
      * Error handling for API failures
      * Handling of non-MP4 files or files in wrong directories
+     * YouTube upload success and failure scenarios
+     * OAuth token generation and storage
 
 2. **Standalone Test Scripts:**
    * `test_audio_processing.py`: Tests audio extraction and processing with Gemini API

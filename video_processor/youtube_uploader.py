@@ -499,10 +499,5 @@ def upload_to_youtube_main(cloud_event):
 
     except Exception as e:
         logging.error(f"Error in upload_to_youtube_main: {e}")
-        raise  # Re-raise for potential Cloud Functions retry
-
-
-# --- Local Testing & OAuth Token Generation ---
-# You'll need a separate script (run locally) to perform the initial OAuth flow
-# and save the refresh token to Secret Manager. This script would use Flow.run_local_server()
-# or similar, using the client_id and client_secret.
+        # Depending on the error, might want to retry or send alert
+        raise  # Re-raise to potentially trigger Cloud Functions retry mechanisms

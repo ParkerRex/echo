@@ -5,7 +5,9 @@ from google.cloud import secretmanager
 # --- Configuration ---
 # Download this file from Google Cloud Console > APIs & Services > Credentials
 # Important: DO NOT COMMIT THIS FILE OR THE GENERATED TOKEN!
-CLIENT_SECRETS_FILE = "client_secret.json"  # Assumes file is in the same directory
+CLIENT_SECRETS_FILE = (
+    "./docs/client_secret.json"  # Assumes file is in the same directory
+)
 
 # The scopes must match exactly what your Cloud Function will need.
 SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
