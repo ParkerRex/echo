@@ -4,13 +4,13 @@ This document outlines the planned features and improvements for the Video Uploa
 
 ## Planned Features (Ranked by Impact vs Effort)
 
-| Priority | Feature                      | Impact | Effort | Description                                       |
-| -------- | ---------------------------- | ------ | ------ | ------------------------------------------------- |
-| 1        | Skool Post Generator         | ⭐⭐⭐⭐   | ⭐⭐     | Auto-post insights to Skool based on video output |
-| 2        | Daily AI News Video Generator| ⭐⭐⭐⭐   | ⭐⭐⭐    | Scrape top AI stories → script + upload           |
-| 3        | YouTube Comment Q&A Generator| ⭐⭐⭐    | ⭐⭐     | Pull top comments, answer via Gemini              |
-| 4        | AI Strategy Devlog Generator | ⭐⭐⭐    | ⭐⭐⭐    | Summarize weekly building efforts as content      |
-| 5        | 3-Part AI Agent Series       | ⭐⭐⭐⭐⭐  | ⭐⭐⭐⭐⭐  | Fully written/recorded video series on agents     |
+| Priority | Feature                       | Impact | Effort | Description                                       |
+| -------- | ----------------------------- | ------ | ------ | ------------------------------------------------- |
+| 1        | Skool Post Generator          | ⭐⭐⭐⭐   | ⭐⭐     | Auto-post insights to Skool based on video output |
+| 2        | Daily AI News Video Generator | ⭐⭐⭐⭐   | ⭐⭐⭐    | Scrape top AI stories → script + upload           |
+| 3        | YouTube Comment Q&A Generator | ⭐⭐⭐    | ⭐⭐     | Pull top comments, answer via Gemini              |
+| 4        | AI Strategy Devlog Generator  | ⭐⭐⭐    | ⭐⭐⭐    | Summarize weekly building efforts as content      |
+| 5        | 3-Part AI Agent Series        | ⭐⭐⭐⭐⭐  | ⭐⭐⭐⭐⭐  | Fully written/recorded video series on agents     |
 
 ## Technical Improvements
 
@@ -40,7 +40,13 @@ This document outlines the planned features and improvements for the Video Uploa
 
 ### Infrastructure
 
-1. Implement monitoring and alerting for the entire pipeline
+1. **Implement Cloud Monitoring for the entire pipeline (HIGH PRIORITY)**
+   - Configure CPU, memory, and request latency monitoring for Cloud Run services
+   - Create uptime checks to verify service availability
+   - Set up custom log-based metrics to track processing success rates and times
+   - Configure alerting policies for service outages and high error rates
+   - Build custom dashboards for operational insights and debugging
+   - Implement distributed tracing to identify bottlenecks in the processing pipeline
 2. Add cost optimization measures
 3. Implement better logging and error reporting
 4. Set up disaster recovery procedures

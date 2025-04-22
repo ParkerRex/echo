@@ -321,20 +321,20 @@ See the [ROADMAP.md](./ROADMAP.md) file for a detailed list of planned features 
 
 ## 📝 Usage & Expected Outcomes
 
-1.  **Upload:** Drop your `.mp4` video file into the GCS bucket under either the `daily-raw/` or `main-raw/` prefix.
-2.  **Trigger:** An Eventarc trigger detects the new file and invokes the `process-uploaded-video` Cloud Run service.
+1.  **Upload:** Drop your `.mp4` video file into the GCS bucket `automations-youtube-videos-2025`.
+2.  **Trigger:** The Eventarc trigger detects the new file and invokes the `video-processor` Cloud Run service.
 3.  **Processing:**
     *   Cloud Run downloads the video.
     *   `ffmpeg` extracts the audio into a `.wav` file.
     *   The audio is sent to Gemini (Vertex AI) for processing.
     *   Gemini returns the transcript, description, titles, and chapters.
-4.  **Output:** The service writes the following files back to the GCS bucket under the corresponding `processed-daily/<video-name>/` or `processed-main/<video-name>/` prefix:
+4.  **Output:** The service writes the following files back to the GCS bucket:
     *   `transcript.txt`: Full text transcript of the video.
     *   `description.txt`: A short, engaging YouTube description.
     *   `title.txt`: Suggested clickbaity title.
     *   `chapters.txt`: Timestamped chapters for the video.
     *   `subtitles.vtt`: WebVTT format subtitles with timestamps.
-5.  **YouTube Upload:** A Cloud Function monitors the `processed-*` prefixes, retrieves the generated text files, and uses them to upload the original video to YouTube with proper metadata and captions.
+5.  **YouTube Upload:** The service uploads the video to YouTube with the generated metadata and captions using the integrated YouTube uploader module.
 
 ---
 
@@ -426,6 +426,65 @@ See the `video_processor/README.md` file for detailed information on common test
 2. Handling newline characters in tests
 3. Patching the correct import paths
 4. Debugging test failures
+
+---
+
+## 🚀 Deployment
+
+The application is deployed as a Cloud Run service that responds to GCS events via Eventarc:
+
+1. **Cloud Run Service**: Handles the video processing and AI integration
+2. **Eventarc Trigger**: Connects GCS upload events to the Cloud Run service
+3. **YouTube Uploader**: Integrated into the main service for video uploads
+
+### Deployment Architecture
+
+```mermaid
+flowchart TD
+    A[GCS Bucket] -->|Upload Video| B[Eventarc Trigger]
+    B -->|Event Notification| C[Cloud Run Service]
+    C -->|Process Video| D[Vertex AI Gemini]
+    D -->|Return Metadata| C
+    C -->|Store Results| A
+    C -->|Upload Video| E[YouTube API]
+```
+
+### Deployment Steps
+
+1. Run the deployment script to build and deploy the Cloud Run service:
+   ```bash
+   ./deploy.sh
+   ```
+
+   This script:
+   - Runs tests to ensure everything is working
+   - Builds a Docker image with the current code
+   - Deploys the image to Cloud Run
+   - Sets up Eventarc triggers if needed
+
+2. Alternatively, deploy directly from source code:
+   ```bash
+   gcloud run deploy video-processor \
+     --source . \
+     --platform managed \
+     --region us-central1 \
+     --allow-unauthenticated \
+     --memory 2Gi \
+     --cpu 2 \
+     --timeout 3600 \
+     --concurrency 10
+   ```
+
+3. Set up the Eventarc trigger:
+   ```bash
+   gcloud eventarc triggers create video-processor-trigger \
+     --location=us-east1 \
+     --destination-run-service=video-processor \
+     --destination-run-region=us-central1 \
+     --event-filters="type=google.cloud.storage.object.v1.finalized" \
+     --event-filters="bucket=automations-youtube-videos-2025" \
+     --service-account="vps-automations@automations-457120.iam.gserviceaccount.com"
+   ```
 
 ---
 

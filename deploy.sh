@@ -55,22 +55,10 @@ python -m pytest tests/test_youtube_uploader.py tests/test_generate_youtube_toke
 }
 cd ..
 
-# Build the Docker image
-print_yellow "Building Docker image ${IMAGE_NAME}:${IMAGE_TAG}..."
-docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
-
-# Configure Docker for Artifact Registry
-print_yellow "Configuring Docker for Artifact Registry..."
-gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
-
-# Push the Docker image
-print_yellow "Pushing Docker image to Artifact Registry..."
-docker push ${IMAGE_NAME}:${IMAGE_TAG}
-
-# Deploy to Cloud Run
-print_yellow "Deploying to Cloud Run..."
+# Deploy directly to Cloud Run using source code
+print_yellow "Deploying to Cloud Run from source..."
 gcloud run deploy ${SERVICE_NAME} \
-    --image ${IMAGE_NAME}:${IMAGE_TAG} \
+    --source . \
     --platform managed \
     --region ${REGION} \
     --allow-unauthenticated \
