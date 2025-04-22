@@ -56,9 +56,26 @@ else
     exit 1
 fi
 
+# Check if docker-compose is available
+if command -v docker-compose &> /dev/null; then
+    DOCKER_COMPOSE_CMD="docker-compose"
+else
+    print_yellow "docker-compose not found, trying with 'docker compose' instead..."
+    if docker compose version &> /dev/null; then
+        DOCKER_COMPOSE_CMD="docker compose"
+    else
+        print_red "Neither docker-compose nor docker compose is available. Please install Docker Compose."
+        exit 1
+    fi
+fi
+
 # Stop any running containers
 print_yellow "Stopping any running containers..."
-docker-compose down
+$DOCKER_COMPOSE_CMD down || {
+    print_yellow "Failed to stop containers with docker-compose, trying direct docker commands..."
+    docker stop $(docker ps -q --filter "name=video-processor") 2>/dev/null || true
+    docker stop $(docker ps -q --filter "name=mock-gcs") 2>/dev/null || true
+}
 
 # Start the containers
 print_yellow "Starting containers..."
@@ -74,7 +91,37 @@ else
     echo '{"type":"service_account","project_id":"automations-457120"}' > credentials/service_account.json
 fi
 
-docker-compose up -d
+# Start containers with docker-compose
+$DOCKER_COMPOSE_CMD up -d || {
+    print_yellow "Failed to start containers with docker-compose, trying direct docker commands..."
+
+    # Build and run the video processor container
+    docker build -t video-processor .
+    docker run -d --name video-processor \
+        -p 8080:8080 \
+        -e PORT=8080 \
+        -e GOOGLE_CLOUD_PROJECT=automations-457120 \
+        -e TESTING_MODE=true \
+        -e GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/service_account.json \
+        -v "$(pwd)/video_processor:/app/video_processor" \
+        -v "$(pwd)/test_data:/app/test_data" \
+        -v "$(pwd)/credentials/service_account.json:/app/credentials/service_account.json:ro" \
+        video-processor
+
+    # Build and run the mock GCS container
+    docker build -t mock-gcs -f Dockerfile.mock .
+    docker run -d --name mock-gcs \
+        -p 8081:8081 \
+        -e PORT=8081 \
+        -e GOOGLE_CLOUD_PROJECT=automations-457120 \
+        -e TESTING_MODE=true \
+        -e GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/service_account.json \
+        -e VIDEO_PROCESSOR_URL=http://host.docker.internal:8080 \
+        -v "$(pwd)/scripts:/app/scripts" \
+        -v "$(pwd)/test_data:/app/test_data" \
+        -v "$(pwd)/credentials/service_account.json:/app/credentials/service_account.json:ro" \
+        mock-gcs
+}
 
 # Wait for the containers to start
 print_yellow "Waiting for containers to start..."
@@ -138,6 +185,12 @@ fi
 
 # Stop the containers
 print_yellow "Stopping containers..."
-docker-compose down
+$DOCKER_COMPOSE_CMD down || {
+    print_yellow "Failed to stop containers with docker-compose, trying direct docker commands..."
+    docker stop $(docker ps -q --filter "name=video-processor") 2>/dev/null || true
+    docker stop $(docker ps -q --filter "name=mock-gcs") 2>/dev/null || true
+    docker rm $(docker ps -a -q --filter "name=video-processor") 2>/dev/null || true
+    docker rm $(docker ps -a -q --filter "name=mock-gcs") 2>/dev/null || true
+}
 
 print_green "Test completed successfully!"
