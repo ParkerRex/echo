@@ -8,7 +8,14 @@ from typing import Callable, Optional, Tuple, Any
 from .process_uploaded_video import process_video_event
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+
+# Log startup information
+logging.info("Starting Video Processor application")
+logging.info(f"Testing mode: {os.environ.get('TESTING_MODE', 'false')}")
+logging.info(f"Project ID: {os.environ.get('GOOGLE_CLOUD_PROJECT', 'unknown')}")
 
 
 def create_app(process_func: Optional[Callable] = None) -> Flask:
@@ -52,9 +59,13 @@ def create_app(process_func: Optional[Callable] = None) -> Flask:
             logging.info(f"Processing gs://{bucket}/{name}")
 
             # Call the core processing function using the injected or default processor
-            video_processor(bucket, name)
-
-            logging.info(f"Successfully processed gs://{bucket}/{name}")
+            logging.info(f"Calling video_processor function for gs://{bucket}/{name}")
+            try:
+                video_processor(bucket, name)
+                logging.info(f"Successfully processed gs://{bucket}/{name}")
+            except Exception as e:
+                logging.error(f"Error in video_processor function: {e}", exc_info=True)
+                raise
             # Return 2xx response to acknowledge the event
             return ("", 204)
 

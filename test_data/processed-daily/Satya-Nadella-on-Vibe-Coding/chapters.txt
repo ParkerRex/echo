@@ -1,0 +1,10 @@
+00:00 - Introduction
+00:07 - First Product
+00:17 - Microsoft's Altair Basic
+00:40 - Altair Emulator
+01:38 - Emulator Creation
+01:55 - Run the Program
+02:01 - Retro Look
+02:15 - Math Test
+02:28 - Emulate QSharp on the Altair
+02:46 - Conclusion

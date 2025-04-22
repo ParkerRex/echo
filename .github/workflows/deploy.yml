@@ -39,31 +39,58 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest pytest-mock pytest-cov
           pip install -r requirements.txt
-      - name: Run tests
+      - name: Run unit tests
         run: |
           cd video_processor
           python -m pytest tests/test_youtube_uploader.py tests/test_generate_youtube_token.py tests/test_main.py -v
 
-  build_and_deploy:
+  docker_test:
+    runs-on: ubuntu-latest
     needs: [lint, test]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v2
+      - name: Create test data directory
+        run: |
+          mkdir -p test_data/daily-raw test_data/processed-daily
+      - name: Copy test video file
+        run: |
+          # Create a dummy test video file if the real one doesn't exist
+          if [ ! -f "test_data/Satya Nadella on Vibe Coding.mp4" ]; then
+            dd if=/dev/urandom of="test_data/Satya Nadella on Vibe Coding.mp4" bs=1M count=1
+          fi
+      - name: Set up service account credentials
+        run: |
+          # Create the service account file from the secret
+          mkdir -p credentials
+          echo "${{ secrets.GCP_SA_KEY }}" > credentials/service_account.json
+          chmod 600 credentials/service_account.json
+      - name: Run Docker test
+        run: |
+          chmod +x scripts/docker_test.sh
+          ./scripts/docker_test.sh --clean
+
+  build_and_deploy:
+    needs: [lint, test, docker_test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
         with:
           project_id: automations-457120
-          
+
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v1
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
-          
+
       - name: Configure Docker for Artifact Registry
         run: |
           gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
-          
+
       - name: Build and push Docker image
         run: |
           export IMAGE_TAG=$(date +%Y%m%d-%H%M%S)
@@ -71,7 +98,7 @@ jobs:
           docker build -t ${IMAGE_NAME} .
           docker push ${IMAGE_NAME}
           echo "IMAGE_NAME=${IMAGE_NAME}" >> $GITHUB_ENV
-          
+
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy video-processor \
