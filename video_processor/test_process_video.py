@@ -10,7 +10,10 @@ import subprocess
 from video_processor.process_uploaded_video import process_video_event
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
 
 def test_process_video():
     """Test the process_video_event function with a sample MP4 file."""
@@ -18,7 +21,7 @@ def test_process_video():
     with tempfile.TemporaryDirectory() as tmpdir:
         # Create a simple test video file using ffmpeg
         test_video_path = os.path.join(tmpdir, "test_video.mp4")
-        
+
         # Generate a simple test video using ffmpeg
         logging.info(f"Generating test video file at {test_video_path}...")
         try:
@@ -26,12 +29,18 @@ def test_process_video():
                 [
                     "ffmpeg",
                     "-y",  # Overwrite output files without asking
-                    "-f", "lavfi",  # Use libavfilter
-                    "-i", "sine=frequency=440:duration=5",  # Generate a 5-second 440Hz tone
-                    "-f", "lavfi",  # Use libavfilter for video
-                    "-i", "color=c=blue:s=640x480:d=5",  # Generate a 5-second blue screen
-                    "-c:a", "aac",  # Audio codec
-                    "-c:v", "h264",  # Video codec
+                    "-f",
+                    "lavfi",  # Use libavfilter
+                    "-i",
+                    "sine=frequency=440:duration=5",  # Generate a 5-second 440Hz tone
+                    "-f",
+                    "lavfi",  # Use libavfilter for video
+                    "-i",
+                    "color=c=blue:s=640x480:d=5",  # Generate a 5-second blue screen
+                    "-c:a",
+                    "aac",  # Audio codec
+                    "-c:v",
+                    "h264",  # Video codec
                     test_video_path,
                 ],
                 check=True,
@@ -42,11 +51,11 @@ def test_process_video():
         except subprocess.CalledProcessError as e:
             logging.error(f"ffmpeg failed: {e}\nStderr: {e.stderr}")
             return
-        
+
         # Create a mock GCS bucket and upload the test video
         bucket_name = "test-bucket"
         file_name = "daily-raw/test_video.mp4"
-        
+
         # Mock the GCS operations for testing
         logging.info("Testing process_video_event function...")
         try:
@@ -56,6 +65,7 @@ def test_process_video():
             logging.info("Test completed successfully!")
         except Exception as e:
             logging.error(f"Error during testing: {e}")
+
 
 if __name__ == "__main__":
     test_process_video()

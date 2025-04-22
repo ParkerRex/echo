@@ -42,7 +42,8 @@ def test_get_youtube_credentials(mock_secretmanager_client, mock_youtube_credent
         return_value=mock_secretmanager_client,
     ):
         with patch(
-            "video_processor.youtube_uploader.Credentials", return_value=mock_youtube_credentials
+            "video_processor.youtube_uploader.Credentials",
+            return_value=mock_youtube_credentials,
         ):
             with patch("video_processor.youtube_uploader.Request") as mock_request:
                 # Call the function
@@ -193,7 +194,8 @@ def test_upload_to_youtube_daily(
                     ):
                         with patch("video_processor.youtube_uploader.upload_captions"):
                             with patch(
-                                "video_processor.youtube_uploader.os.path.exists", return_value=True
+                                "video_processor.youtube_uploader.os.path.exists",
+                                return_value=True,
                             ):
                                 with patch(
                                     "video_processor.youtube_uploader.os.remove"
@@ -257,7 +259,8 @@ def test_upload_to_youtube_main(
                     ):
                         with patch("video_processor.youtube_uploader.upload_captions"):
                             with patch(
-                                "video_processor.youtube_uploader.os.path.exists", return_value=True
+                                "video_processor.youtube_uploader.os.path.exists",
+                                return_value=True,
                             ):
                                 with patch(
                                     "video_processor.youtube_uploader.os.remove"

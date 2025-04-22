@@ -2,7 +2,7 @@ name: Deploy Video Processor
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
   workflow_dispatch:
 
 jobs:
@@ -39,6 +39,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest pytest-mock pytest-cov
           pip install -r requirements.txt
+      - name: Set up service account credentials
+        run: |
+          # Create the service account file from the secret
+          mkdir -p credentials
+          echo "${{ secrets.GCP_SA_KEY }}" > credentials/service_account.json
+          chmod 600 credentials/service_account.json
       - name: Run unit tests
         run: |
           cd video_processor
