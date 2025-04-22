@@ -43,8 +43,11 @@ jobs:
         run: |
           # Create the service account file from the secret
           mkdir -p credentials
-          echo "${{ secrets.GCP_SA_KEY }}" > credentials/service_account.json
+          # Make sure the JSON is properly formatted
+          echo '${{ secrets.GCP_SA_KEY }}' > credentials/service_account.json
           chmod 600 credentials/service_account.json
+          # Verify the JSON is valid
+          python -c "import json; json.load(open('credentials/service_account.json'))"
       - name: Run unit tests
         run: |
           cd video_processor
@@ -70,8 +73,11 @@ jobs:
         run: |
           # Create the service account file from the secret
           mkdir -p credentials
-          echo "${{ secrets.GCP_SA_KEY }}" > credentials/service_account.json
+          # Make sure the JSON is properly formatted
+          echo '${{ secrets.GCP_SA_KEY }}' > credentials/service_account.json
           chmod 600 credentials/service_account.json
+          # Verify the JSON is valid
+          python -c "import json; json.load(open('credentials/service_account.json'))"
       - name: Run Docker test
         run: |
           chmod +x scripts/docker_test.sh
@@ -91,7 +97,7 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v1
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
 
       - name: Configure Docker for Artifact Registry
         run: |

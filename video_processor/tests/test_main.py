@@ -10,8 +10,18 @@ from unittest.mock import patch, MagicMock
 # Add the root directory to the path so we can import the main module
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-# Import the main module - authentication is handled by environment variables
-from video_processor import main
+# Import the main module - authentication is handled by environment variables or mocked in conftest.py
+try:
+    from video_processor import main
+except Exception as e:
+    # If there's an authentication error, we'll mock the authentication
+    import os
+    import sys
+    from unittest.mock import patch
+
+    # Mock the authentication
+    with patch("google.auth.default", return_value=(None, "automations-457120")):
+        from video_processor import main
 
 
 @pytest.fixture
