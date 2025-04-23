@@ -6,9 +6,9 @@ set -e
 
 # Configuration
 PROJECT_ID="automations-457120"
-REGION="us-central1"
+REGION="us-east1"
 SERVICE_NAME="video-processor"
-ARTIFACT_REGISTRY="us-central1-docker.pkg.dev/${PROJECT_ID}/cloud-run-source-deploy"
+ARTIFACT_REGISTRY="us-east1-docker.pkg.dev/${PROJECT_ID}/cloud-run-source-deploy"
 IMAGE_NAME="${ARTIFACT_REGISTRY}/${SERVICE_NAME}"
 IMAGE_TAG=$(date +%Y%m%d-%H%M%S)
 
@@ -234,7 +234,7 @@ if ! gcloud eventarc triggers describe video-processor-trigger --location=${REGI
             --destination-run-service=${SERVICE_NAME} \
             --destination-run-region=${REGION} \
             --event-filters="type=google.cloud.storage.object.v1.finalized" \
-            --event-filters="bucket=automations-videos" \
+            --event-filters="bucket=automations-youtube-videos-2025" \
             --service-account="${SA_EMAIL}" | tee -a "${LOG_FILE}"
         log "✓ Eventarc trigger created"
     else

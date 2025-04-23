@@ -94,16 +94,16 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-  A[📤 Upload .mp4 to daily-raw/ or main-raw/] --> B[🗂️ GCS Bucket]
+  A[📤 Upload .mp4 to daily-raw/ or main-raw/] --> B[🗂️ GCS Bucket: automations-youtube-videos-2025]
 
-  B --> C[🔔 Eventarc Trigger]
-  C --> D[🚀 Cloud Run Service]
+  B --> C[🔔 Eventarc Trigger: video-processor-trigger]
+  C --> D[🚀 Cloud Run Service: video-processor in us-east1]
 
   D --> E[📥 app.py handles POST /]
   E --> F[🧠 process_uploaded_video.py]
 
   F --> G[🔊 Extract audio via ffmpeg]
-  G --> H[🤖 Gemini API]
+  G --> H[🤖 Gemini API: gemini-2.0-flash-001]
 
   H --> I[📂 processed-daily/ or processed-main/]
 
@@ -219,7 +219,7 @@ After deployment, you can test the application by uploading a video to the GCS b
 
 ```bash
 # Upload a video to the GCS bucket
-gsutil cp test_data/test-video.mp4 gs://automations-videos/daily-raw/
+gsutil cp test_data/test-video.mp4 gs://automations-youtube-videos-2025/daily-raw/
 ```
 
 ### Step 4: Monitor the Deployment
@@ -228,7 +228,7 @@ You can monitor the application using Cloud Run logs:
 
 ```bash
 # View the logs
-gcloud logging read 'resource.type=cloud_run_revision AND resource.labels.service_name=video-processor' \
+gcloud logging read 'resource.type=cloud_run_revision AND resource.labels.service_name=video-processor AND resource.labels.location=us-east1' \
   --limit=10 \
   --format='table(timestamp, severity, textPayload)'
 ```
@@ -253,6 +253,7 @@ For more detailed information about the project, refer to the following document
 2. **[Testing Guide](docs/TESTING_GUIDE.md)**: Comprehensive testing instructions
 3. **[Visual Testing Guide](docs/VISUAL_TESTING_GUIDE.md)**: Visual examples of what to expect during testing
 4. **[Quick Test Guide](docs/QUICK_TEST_GUIDE.md)**: Simple step-by-step instructions for quick testing
+5. **[Monitoring Guide](docs/MONITORING_GUIDE.md)**: Guide for monitoring the application in production
 
 ---
 

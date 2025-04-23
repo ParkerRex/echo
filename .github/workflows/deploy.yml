@@ -106,12 +106,12 @@ jobs:
 
       - name: Configure Docker for Artifact Registry
         run: |
-          gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+          gcloud auth configure-docker us-east1-docker.pkg.dev --quiet
 
       - name: Build and push Docker image
         run: |
           export IMAGE_TAG=$(date +%Y%m%d-%H%M%S)
-          export IMAGE_NAME="us-central1-docker.pkg.dev/automations-457120/cloud-run-source-deploy/video-processor:${IMAGE_TAG}"
+          export IMAGE_NAME="us-east1-docker.pkg.dev/automations-457120/cloud-run-source-deploy/video-processor:${IMAGE_TAG}"
           docker build -t ${IMAGE_NAME} .
           docker push ${IMAGE_NAME}
           echo "IMAGE_NAME=${IMAGE_NAME}" >> $GITHUB_ENV
@@ -121,7 +121,7 @@ jobs:
           gcloud run deploy video-processor \
             --image ${IMAGE_NAME} \
             --platform managed \
-            --region us-central1 \
+            --region us-east1 \
             --allow-unauthenticated \
             --memory 2Gi \
             --cpu 2 \
