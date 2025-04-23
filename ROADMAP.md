@@ -10,6 +10,7 @@ This document outlines the planned features and improvements for the Video Uploa
 [ ] add in a step to go and generate 10 title options using the vid IQ logic that send me a discord message to pick one from
 [ ] add in a step to go and generate 4 thumbnails using a custom workflow with pillo outliend in prd.txt
 [ ] Add support for video tags and cards
+[ ] automatically add a comment from my accoutn and pin it to the video with a custom message
 
 
 

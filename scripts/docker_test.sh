@@ -145,7 +145,7 @@ print_yellow "Files in test_data/processed-daily:"
 find test_data/processed-daily -type f | sort
 
 # Check if the processed directory exists
-PROCESSED_DIR=$(find test_data/processed-daily -type d -depth 1 | head -1)
+PROCESSED_DIR=$(find test_data/processed-daily -mindepth 1 -maxdepth 1 -type d | head -1)
 if [ -n "$PROCESSED_DIR" ]; then
     print_green "Found processed directory: $PROCESSED_DIR"
 
