@@ -36,4 +36,10 @@ client_secret.json
 
 # Task files
 tasks.json
-tasks/ 
+tasks/
+
+# Test data
+test_data/daily-raw/*.mp4
+test_data/processed-daily/
+test_data/main-raw/
+test_data/processed-main/
