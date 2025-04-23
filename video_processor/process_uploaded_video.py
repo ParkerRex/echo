@@ -500,6 +500,10 @@ def process_video_event(bucket_name, file_name):
             # TODO: Decide how to save/use video_keywords
             logging.info("Result uploads complete.")
 
+            # The YouTube uploader will be triggered automatically by the GCS event
+            # when the files are uploaded to the processed-daily/ or processed-main/ folders
+            logging.info("YouTube uploader will be triggered by GCS event.")
+
             # --- Move original video file to processed folder ---
             try:
                 destination_blob_name = processed_path + os.path.basename(file_name)

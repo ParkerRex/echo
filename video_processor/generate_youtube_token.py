@@ -1,4 +1,6 @@
 import os
+import sys
+import argparse
 import google_auth_oauthlib.flow
 from google.cloud import secretmanager
 
@@ -19,8 +21,9 @@ API_VERSION = "v3"
 # Requires google-cloud-secret-manager library and authentication
 SAVE_TO_SECRET_MANAGER = False  # Set to True to enable saving
 PROJECT_ID = "automations-457120"
-# The secret ID where the refresh token should be stored for the DAILY uploader
-SECRET_ID_TO_SAVE = "youtube-daily-refresh-token"
+
+# Secret IDs for each channel
+SECRET_IDS = {"daily": "youtube-daily-refresh-token", "main": "youtube-refresh-token"}
 
 
 def save_refresh_token_to_secret(project_id, secret_id, token):
@@ -47,11 +50,40 @@ def save_refresh_token_to_secret(project_id, secret_id, token):
 
 
 def main():
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(
+        description="Generate YouTube OAuth tokens for video uploads"
+    )
+    parser.add_argument(
+        "--channel",
+        choices=["daily", "main"],
+        default="daily",
+        help="The YouTube channel to generate tokens for (daily or main)",
+    )
+    parser.add_argument(
+        "--save", action="store_true", help="Save the token directly to Secret Manager"
+    )
+    args = parser.parse_args()
+
+    # Set channel and secret ID based on arguments
+    channel = args.channel
+    secret_id_to_save = SECRET_IDS[channel]
+    save_to_secret_manager = args.save or SAVE_TO_SECRET_MANAGER
+
+    # Print header
+    print("\n" + "=" * 80)
+    print(f"YouTube OAuth Token Generator for {channel.upper()} Channel")
+    print("=" * 80)
+
     # Check if client secrets file exists
     if not os.path.exists(CLIENT_SECRETS_FILE):
-        print(f"Error: Client secrets file not found at '{CLIENT_SECRETS_FILE}'")
+        print(f"\nError: Client secrets file not found at '{CLIENT_SECRETS_FILE}'")
+        print("\nTo obtain this file:")
+        print("1. Go to https://console.cloud.google.com/apis/credentials")
+        print("2. Create an OAuth 2.0 Client ID (Web application type)")
+        print("3. Add http://localhost:8080 as an authorized redirect URI")
         print(
-            "Please download it from the Google Cloud Console and place it in this directory."
+            "4. Download the JSON file and save it as 'client_secret.json' in the docs directory"
         )
         return
 
@@ -61,11 +93,14 @@ def main():
     )
 
     # Run the console flow instead of local server
-    print("\nStarting console authentication flow...")
-    print("Please visit the following URL in your browser:")
+    print("\nStarting OAuth authentication flow...")
+    print(
+        "\nIMPORTANT: You will need to authenticate with the Google account that owns the YouTube channel."
+    )
+    print("\nPlease visit the following URL in your browser:")
     auth_url, _ = flow.authorization_url(prompt="consent")
-    print(auth_url)
-    print("\nAfter authorizing, Google will provide you with a code.")
+    print(f"\n{auth_url}\n")
+    print("After authorizing, Google will provide you with a code.")
     code = input("Enter the authorization code here: ")
     flow.fetch_token(code=code)
     credentials = flow.credentials
@@ -74,27 +109,37 @@ def main():
     # The credentials object now contains the refresh token.
     refresh_token = credentials.refresh_token
 
-    print("\nAuthentication successful!")
-    print("-" * 40)
-    print(f"Obtained Refresh Token: {refresh_token}")
-    print("-" * 40)
+    print("\n" + "=" * 40)
+    print("Authentication successful!")
+    print("=" * 40)
+    print(f"\nChannel: {channel.upper()}")
+    print(f"Secret ID: {secret_id_to_save}")
+    print(f"Refresh Token: {refresh_token}")
     print(
-        "\nIMPORTANT: Store this refresh token securely! This token allows offline access."
+        "\nIMPORTANT: This refresh token allows offline access to your YouTube account."
     )
-    print(
-        f"You need to store this token in Google Secret Manager under the ID: '{SECRET_ID_TO_SAVE}' (for the daily uploader). Remember to also store the client ID and client secret."
-    )
+    print("Keep it secure and do not commit it to version control!")
 
     # Optionally save to Secret Manager
-    if SAVE_TO_SECRET_MANAGER and refresh_token:
-        print(
-            f"\nAttempting to save refresh token to Secret Manager (Secret ID: {SECRET_ID_TO_SAVE})..."
-        )
-        save_refresh_token_to_secret(PROJECT_ID, SECRET_ID_TO_SAVE, refresh_token)
+    if save_to_secret_manager and refresh_token:
+        print(f"\nAttempting to save refresh token to Secret Manager...")
+        print(f"Project: {PROJECT_ID}")
+        print(f"Secret ID: {secret_id_to_save}")
+        save_refresh_token_to_secret(PROJECT_ID, secret_id_to_save, refresh_token)
     else:
         print("\nAutomatic saving to Secret Manager is disabled.")
+        print("\nTo manually save the token:")
         print(
-            f"Please manually create or update the secret '{SECRET_ID_TO_SAVE}' in project '{PROJECT_ID}' with the refresh token above."
+            f"1. Go to https://console.cloud.google.com/security/secret-manager?project={PROJECT_ID}"
+        )
+        print(f"2. Create or update the secret '{secret_id_to_save}'")
+        print("3. Add a new version with the refresh token as the value")
+        print("\nYou'll also need to create/update these secrets:")
+        print(
+            f"- '{secret_id_to_save.replace('refresh_token', 'client_id')}': The client ID from your OAuth credentials"
+        )
+        print(
+            f"- '{secret_id_to_save.replace('refresh_token', 'client_secret')}': The client secret from your OAuth credentials"
         )
 
 

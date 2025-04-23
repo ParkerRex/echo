@@ -17,7 +17,10 @@ from google.auth.transport.requests import Request
 logging.basicConfig(level=logging.INFO)
 
 # --- Configuration (Fetch from Secrets/Env Vars) ---
-PROJECT_ID = "automations-457120"  # TODO: Consider fetching from env var
+PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT", "automations-457120")
+
+# Default privacy status for uploaded videos
+DEFAULT_PRIVACY_STATUS = os.environ.get("DEFAULT_PRIVACY_STATUS", "unlisted")
 
 # Secret Manager IDs (Assumed names, need to be created)
 DAILY_SECRETS = {
@@ -120,12 +123,68 @@ def read_blob_content(bucket_name, source_blob_name):
         return None
 
 
+def check_upload_marker(bucket_name, folder_path):
+    """Checks if a video has already been uploaded by looking for a marker file.
+
+    Args:
+        bucket_name: The GCS bucket name
+        folder_path: The folder path in the bucket
+
+    Returns:
+        bool: True if the marker exists (video already uploaded), False otherwise
+    """
+    marker_path = folder_path + "uploaded.marker"
+    try:
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(bucket_name)
+        blob = bucket.blob(marker_path)
+        exists = blob.exists()
+        if exists:
+            logging.info(f"Upload marker found at gs://{bucket_name}/{marker_path}")
+        return exists
+    except Exception as e:
+        logging.warning(f"Error checking upload marker: {e}")
+        return False
+
+
+def create_upload_marker(bucket_name, folder_path, video_id):
+    """Creates a marker file after successful upload to prevent duplicate uploads.
+
+    Args:
+        bucket_name: The GCS bucket name
+        folder_path: The folder path in the bucket
+        video_id: The YouTube video ID of the uploaded video
+
+    Returns:
+        bool: True if marker was created successfully, False otherwise
+    """
+    marker_path = folder_path + "uploaded.marker"
+    marker_content = json.dumps(
+        {
+            "video_id": video_id,
+            "upload_time": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "status": "uploaded",
+        }
+    )
+
+    try:
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(bucket_name)
+        blob = bucket.blob(marker_path)
+        blob.upload_from_string(marker_content)
+        logging.info(f"Created upload marker at gs://{bucket_name}/{marker_path}")
+        return True
+    except Exception as e:
+        logging.error(f"Failed to create upload marker: {e}")
+        return False
+
+
 def upload_video(
     youtube,
     local_file_path,  # Now expects a local path
     title,
     description,
-    privacy_status="private",
+    privacy_status=None,  # Will use DEFAULT_PRIVACY_STATUS if None
     category_id="22",  # Default: People & Blogs
     tags=[],
     max_retries=5,  # Max retries for 5xx errors
@@ -135,6 +194,12 @@ def upload_video(
 ):
     """Uploads a video from a local file path to YouTube with retries."""
     logging.info(f"Starting upload for local file: {local_file_path}")
+
+    # Use DEFAULT_PRIVACY_STATUS if privacy_status is None
+    if privacy_status is None:
+        privacy_status = DEFAULT_PRIVACY_STATUS
+
+    logging.info(f"Setting video privacy status to: {privacy_status}")
 
     body = dict(
         snippet=dict(
@@ -319,7 +384,9 @@ def upload_to_youtube_daily(cloud_event):
                 logging.info(f"Found caption file: {caption_blob_name}")
             elif blob_basename.lower() == "chapters.txt":
                 chapters_content = read_blob_content(bucket_name, blob.name)
-                # TODO: Add logic to format chapters_content into description
+                # Add chapters to the description if available
+                if chapters_content:
+                    description_content += "\n\n## Chapters\n" + chapters_content
 
         # --- Validation: Proceed only if video file is found ---
         if video_blob_name is None:
@@ -328,8 +395,10 @@ def upload_to_youtube_daily(cloud_event):
             # If the trigger was for the video, but it's not found (??), something is wrong.
             return  # Stop processing
 
-        # TODO: Add logic here to prevent multiple uploads if triggered by different files
-        # e.g., check if video already uploaded via a marker file or API check?
+        # Check if this video has already been uploaded
+        if check_upload_marker(bucket_name, folder_path):
+            logging.info(f"Video in {folder_path} has already been uploaded. Skipping.")
+            return
 
         # --- Download Video File ---
         temp_video_path = f"/tmp/{os.path.basename(video_blob_name)}"
@@ -351,17 +420,25 @@ def upload_to_youtube_daily(cloud_event):
             temp_video_path,  # Use downloaded path
             video_title,
             description_content,  # Use content from description.txt
-            privacy_status="private",  # Or 'public', 'unlisted'
+            privacy_status=DEFAULT_PRIVACY_STATUS,
         )
 
-        # --- Upload Captions (if video upload succeeded and captions exist) ---
-        if youtube_response and temp_caption_path:
+        # --- Upload Captions and Create Marker (if video upload succeeded) ---
+        if youtube_response:
             video_id = youtube_response.get("id")
             if video_id:
-                upload_captions(youtube, video_id, temp_caption_path)
+                # Upload captions if available
+                if temp_caption_path:
+                    upload_captions(youtube, video_id, temp_caption_path)
+
+                # Create upload marker to prevent duplicate uploads
+                create_upload_marker(bucket_name, folder_path, video_id)
+                logging.info(
+                    f"Successfully uploaded video to YouTube with ID: {video_id}"
+                )
             else:
                 logging.error(
-                    "Could not get video ID from upload response to upload captions."
+                    "Could not get video ID from upload response. Upload may have failed."
                 )
 
         # --- Cleanup Temporary Files ---
@@ -441,14 +518,19 @@ def upload_to_youtube_main(cloud_event):
                 logging.info(f"Found caption file: {caption_blob_name}")
             elif blob_basename.lower() == "chapters.txt":
                 chapters_content = read_blob_content(bucket_name, blob.name)
-                # TODO: Add logic to format chapters_content into description
+                # Add chapters to the description if available
+                if chapters_content:
+                    description_content += "\n\n## Chapters\n" + chapters_content
 
         # --- Validation: Proceed only if video file is found ---
         if video_blob_name is None:
             logging.warning(f"No video file found in folder {folder_path}. Exiting.")
             return  # Stop processing
 
-        # TODO: Add logic here to prevent multiple uploads if triggered by different files
+        # Check if this video has already been uploaded
+        if check_upload_marker(bucket_name, folder_path):
+            logging.info(f"Video in {folder_path} has already been uploaded. Skipping.")
+            return
 
         # --- Download Video File ---
         temp_video_path = f"/tmp/{os.path.basename(video_blob_name)}"
@@ -471,17 +553,25 @@ def upload_to_youtube_main(cloud_event):
             temp_video_path,
             video_title,
             description_content,
-            privacy_status="private",  # Or 'public', 'unlisted'
+            privacy_status=DEFAULT_PRIVACY_STATUS,
         )
 
-        # --- Upload Captions (if video upload succeeded and captions exist) ---
-        if youtube_response and temp_caption_path:
+        # --- Upload Captions and Create Marker (if video upload succeeded) ---
+        if youtube_response:
             video_id = youtube_response.get("id")
             if video_id:
-                upload_captions(youtube, video_id, temp_caption_path)
+                # Upload captions if available
+                if temp_caption_path:
+                    upload_captions(youtube, video_id, temp_caption_path)
+
+                # Create upload marker to prevent duplicate uploads
+                create_upload_marker(bucket_name, folder_path, video_id)
+                logging.info(
+                    f"Successfully uploaded video to YouTube with ID: {video_id}"
+                )
             else:
                 logging.error(
-                    "Could not get video ID from upload response to upload captions."
+                    "Could not get video ID from upload response. Upload may have failed."
                 )
 
         # --- Cleanup Temporary Files ---

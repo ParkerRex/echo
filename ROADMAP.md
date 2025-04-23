@@ -2,6 +2,17 @@
 
 This document outlines the planned features and improvements for the Video Upload + AI Metadata Pipeline project. These features are ranked by impact vs. effort to help prioritize development.
 
+
+## Beef up the youtube uploader module
+[ ] Add support for custom thumbnails
+[ ] Implement scheduling for video publishing
+[ ] add better prompt for the chapter markers
+[ ] add in a step to go and generate 10 title options using the vid IQ logic that send me a discord message to pick one from
+[ ] add in a step to go and generate 4 thumbnails using a custom workflow with pillo outliend in prd.txt
+[ ] Add support for video tags and cards
+
+
+
 ## Planned Features (Ranked by Impact vs Effort)
 
 | Priority | Feature                       | Impact | Effort | Description                                       |
@@ -11,6 +22,9 @@ This document outlines the planned features and improvements for the Video Uploa
 | 3        | YouTube Comment Q&A Generator | ⭐⭐⭐    | ⭐⭐     | Pull top comments, answer via Gemini              |
 | 4        | AI Strategy Devlog Generator  | ⭐⭐⭐    | ⭐⭐⭐    | Summarize weekly building efforts as content      |
 | 5        | 3-Part AI Agent Series        | ⭐⭐⭐⭐⭐  | ⭐⭐⭐⭐⭐  | Fully written/recorded video series on agents     |
+
+
+add news pipeline with vertex
 
 ## Technical Improvements
 
@@ -25,7 +39,15 @@ This document outlines the planned features and improvements for the Video Uploa
 
 ### YouTube Uploader
 
-1. Implement better handling of chapters in video descriptions
+✅ Implement basic YouTube uploader functionality
+✅ Support for both Daily and Main channels
+✅ Add chapters to video descriptions
+✅ Support for captions/subtitles
+✅ Prevent duplicate uploads with marker files
+✅ Set default privacy status to "unlisted" (configurable)
+
+Future Improvements:
+1. Add support for keywords/tags
 2. Add support for custom thumbnails
 3. Implement scheduling for video publishing
 4. Add support for playlists

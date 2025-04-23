@@ -362,3 +362,75 @@ flowchart TD
     *   `subtitles.vtt`: WebVTT format subtitles with timestamps.
 5.  **YouTube Upload:** The service uploads the video to YouTube with the generated metadata and captions using the integrated YouTube uploader module.
 
+## 🚀 YouTube Uploader Enhancements
+
+The YouTube uploader module can be enhanced with additional features to provide more control over video uploads. Below is an analysis of potential enhancements with ICE scores (Impact, Confidence, Ease) to help prioritize implementation.
+
+| Enhancement                      | Description                                                             | Impact (1-10) | Confidence (1-10) | Ease (1-10) | ICE Score | Priority |
+| -------------------------------- | ----------------------------------------------------------------------- | ------------- | ----------------- | ----------- | --------- | -------- |
+| **Privacy Status Options**       | Change default from "private" to "unlisted" or add configuration option | 9             | 10                | 10          | 900       | 1        |
+| **Keywords/Tags Implementation** | Extract or generate SEO keywords for videos                             | 8             | 8                 | 7           | 448       | 2        |
+| **Custom Thumbnails**            | Support uploading custom thumbnail images                               | 9             | 9                 | 6           | 486       | 3        |
+| **Playlists Integration**        | Add videos to playlists automatically                                   | 7             | 8                 | 7           | 392       | 4        |
+| **Scheduled Publishing**         | Set videos to publish at specific dates/times                           | 8             | 7                 | 6           | 336       | 5        |
+| **Video Language Settings**      | Specify video language and add localized metadata                       | 6             | 8                 | 5           | 240       | 6        |
+| **Content Rating**               | Add content rating information to videos                                | 5             | 9                 | 8           | 360       | 7        |
+| **Advanced Metadata**            | Support for location, recording date, etc.                              | 6             | 7                 | 5           | 210       | 8        |
+
+### Implementation Details
+
+#### 1. Privacy Status Options (ICE: 900)
+
+Currently, videos are set to "private" by default. This enhancement would:
+- Add environment variable or configuration option to set default privacy status
+- Support "unlisted" as the preferred default for most use cases
+- Allow per-video privacy settings via metadata files
+
+#### 2. Keywords/Tags Implementation (ICE: 448)
+
+Currently, no keywords/tags are added to videos. This enhancement would:
+- Support a keywords.txt file for explicit keyword lists
+- Extract keywords from title and description if no explicit list is provided
+- Optionally generate SEO-optimized keywords using AI
+
+#### 3. Custom Thumbnails (ICE: 486)
+
+Currently, YouTube generates automatic thumbnails. This enhancement would:
+- Support uploading custom thumbnail images (JPG, PNG)
+- Detect thumbnail files in the processed folder
+- Apply thumbnails after successful video upload
+
+#### 4. Playlists Integration (ICE: 392)
+
+Currently, videos are not added to playlists. This enhancement would:
+- Support playlist.txt file to specify playlist IDs
+- Add videos to specified playlists after upload
+- Support creating new playlists if needed
+
+#### 5. Scheduled Publishing (ICE: 336)
+
+Currently, videos are published immediately with the specified privacy setting. This enhancement would:
+- Support schedule.txt file with ISO 8601 date format
+- Set videos to private until the scheduled date
+- Automatically change privacy status at the scheduled time
+
+#### 6. Video Language Settings (ICE: 240)
+
+Currently, no language metadata is specified. This enhancement would:
+- Support language specification in metadata
+- Add defaultLanguage parameter to video uploads
+- Support localized titles and descriptions
+
+#### 7. Content Rating (ICE: 360)
+
+Currently, no content rating is specified. This enhancement would:
+- Support content rating specification in metadata
+- Add contentRating parameter to video uploads
+- Provide guidance on appropriate content ratings
+
+#### 8. Advanced Metadata (ICE: 210)
+
+Currently, only basic metadata is supported. This enhancement would:
+- Support additional metadata like location, recording date, etc.
+- Add support for JSON-based metadata configuration
+- Provide more control over video metadata
