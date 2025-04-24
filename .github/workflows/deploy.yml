@@ -42,12 +42,12 @@ jobs:
       - name: Set up service account credentials
         run: |
           # Create the service account file from the secret
-          mkdir -p credentials
+          mkdir -p @credentials
           # Make sure the JSON is properly formatted
-          echo '${{ secrets.GCP_SA_KEY }}' > credentials/service_account.json
-          chmod 600 credentials/service_account.json
+          echo '${{ secrets.GCP_SA_KEY }}' > @credentials/service_account.json
+          chmod 600 @credentials/service_account.json
           # Verify the JSON is valid
-          python -c "import json; json.load(open('credentials/service_account.json'))"
+          python -c "import json; json.load(open('@credentials/service_account.json'))"
       - name: Run unit tests
         run: |
           cd video_processor
@@ -77,12 +77,12 @@ jobs:
       - name: Set up service account credentials
         run: |
           # Create the service account file from the secret
-          mkdir -p credentials
+          mkdir -p @credentials
           # Make sure the JSON is properly formatted
-          echo '${{ secrets.GCP_SA_KEY }}' > credentials/service_account.json
-          chmod 600 credentials/service_account.json
+          echo '${{ secrets.GCP_SA_KEY }}' > @credentials/service_account.json
+          chmod 600 @credentials/service_account.json
           # Verify the JSON is valid
-          python -c "import json; json.load(open('credentials/service_account.json'))"
+          python -c "import json; json.load(open('@credentials/service_account.json'))"
       - name: Run Docker test
         run: |
           chmod +x scripts/docker_test.sh

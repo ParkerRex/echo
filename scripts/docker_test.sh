@@ -81,14 +81,14 @@ $DOCKER_COMPOSE_CMD down || {
 print_yellow "Starting containers..."
 
 # Check if service account file exists
-mkdir -p credentials
-if [ -f "credentials/service_account.json" ]; then
-    print_green "Found service account credentials at credentials/service_account.json"
+mkdir -p @credentials
+if [ -f "@credentials/service_account.json" ]; then
+    print_green "Found service account credentials at @credentials/service_account.json"
 else
-    print_red "Service account credentials not found at credentials/service_account.json"
+    print_red "Service account credentials not found at @credentials/service_account.json"
     print_yellow "Creating a mock service account file for testing..."
     # Create a minimal mock service account file
-    echo '{"type":"service_account","project_id":"automations-457120"}' > credentials/service_account.json
+    echo '{"type":"service_account","project_id":"automations-457120"}' > @credentials/service_account.json
 fi
 
 # Start containers with docker-compose
@@ -102,10 +102,10 @@ $DOCKER_COMPOSE_CMD up -d || {
         -e PORT=8080 \
         -e GOOGLE_CLOUD_PROJECT=automations-457120 \
         -e TESTING_MODE=true \
-        -e GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/service_account.json \
+        -e GOOGLE_APPLICATION_CREDENTIALS=/app/@credentials/service_account.json \
         -v "$(pwd)/video_processor:/app/video_processor" \
         -v "$(pwd)/test_data:/app/test_data" \
-        -v "$(pwd)/credentials/service_account.json:/app/credentials/service_account.json:ro" \
+        -v "$(pwd)/@credentials/service_account.json:/app/@credentials/service_account.json:ro" \
         video-processor
 
     # Build and run the mock GCS container
@@ -115,11 +115,11 @@ $DOCKER_COMPOSE_CMD up -d || {
         -e PORT=8081 \
         -e GOOGLE_CLOUD_PROJECT=automations-457120 \
         -e TESTING_MODE=true \
-        -e GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/service_account.json \
+        -e GOOGLE_APPLICATION_CREDENTIALS=/app/@credentials/service_account.json \
         -e VIDEO_PROCESSOR_URL=http://host.docker.internal:8080 \
         -v "$(pwd)/scripts:/app/scripts" \
         -v "$(pwd)/test_data:/app/test_data" \
-        -v "$(pwd)/credentials/service_account.json:/app/credentials/service_account.json:ro" \
+        -v "$(pwd)/@credentials/service_account.json:/app/@credentials/service_account.json:ro" \
         mock-gcs
 }
 

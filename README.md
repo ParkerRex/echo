@@ -47,12 +47,12 @@ Before you begin, make sure you have the following installed:
 
 4. **Set up Google Cloud credentials**
    ```bash
-   # Copy your service account key to the credentials directory
-   mkdir -p credentials
-   cp /path/to/your/service-account-key.json credentials/service_account.json
+   # Copy your service account key to the @credentials directory
+   mkdir -p @credentials
+   cp /path/to/your/service-account-key.json @credentials/service_account.json
 
    # Set environment variable
-   export GOOGLE_APPLICATION_CREDENTIALS="$(pwd)/credentials/service_account.json"
+   export GOOGLE_APPLICATION_CREDENTIALS="$(pwd)/@credentials/service_account.json"
    ```
 
 ## 💻 Development Workflow
@@ -109,7 +109,7 @@ flowchart TD
 
   I --> J[🔔 Eventarc Trigger]
   J --> K[⬆️ YouTube Upload]
-```
+``****`
 
 ## 🧪 Testing
 
@@ -241,7 +241,7 @@ If you encounter issues during deployment:
 2. Verify that your service account has the necessary permissions
 3. Make sure your GCS bucket exists and is accessible
 4. Try running the deployment with the `--verbose` flag for more detailed output
-
+****
 For more detailed deployment instructions, see the [Deployment Guide](docs/DEPLOYMENT_GUIDE.md).
 
 

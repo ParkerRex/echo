@@ -7,7 +7,7 @@ This guide explains how to run Docker-based tests for the Video Processor applic
 - Docker and Docker Compose installed
 - Python 3.11 or later
 - Test video file in the `test_data` directory
-- Service account credentials in `credentials/service_account.json` (for real API tests)
+- Service account credentials in `@credentials/service_account.json` (for real API tests)
 
 ## Running the Docker Test
 
@@ -69,7 +69,7 @@ python scripts/real_api_test.py --clean
 
 Real API tests require valid Google Cloud service account credentials:
 
-1. Place your service account JSON file at `credentials/service_account.json`
+1. Place your service account JSON file at `@credentials/service_account.json`
 
 2. The service account should have the necessary permissions:
    - Storage Object Admin for GCS access
@@ -98,7 +98,7 @@ If the service account file is not found in either location, the Docker test wil
    - Increase the wait time in the script if needed
 
 5. **Authentication failures in real API tests**
-   - Verify that `docs/service_account.json` contains valid credentials
+   - Verify that `@credentials/service_account.json` contains valid credentials
    - Check that the service account has the necessary permissions
    - Ensure the project ID in the service account matches the one in the code
 

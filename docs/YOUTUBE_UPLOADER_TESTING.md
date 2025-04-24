@@ -21,7 +21,7 @@ mkdir -p test_data/processed-main/test-video
 
 # Set environment variables
 export TESTING_MODE=true
-export GOOGLE_APPLICATION_CREDENTIALS=./credentials/service_account.json
+export GOOGLE_APPLICATION_CREDENTIALS=./@credentials/service_account.json
 ```
 
 ### 2. Create Test Files

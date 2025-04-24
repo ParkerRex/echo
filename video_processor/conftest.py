@@ -10,9 +10,9 @@ from unittest.mock import patch, MagicMock
 os.environ["GOOGLE_CLOUD_PROJECT"] = "automations-457120"
 
 # For CI environment, we'll use the credentials file created by the workflow
-# For local testing, we'll use the credentials file in the credentials directory
+# For local testing, we'll use the credentials file in the @credentials directory
 credentials_path = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "../credentials/service_account.json")
+    os.path.join(os.path.dirname(__file__), "../@credentials/service_account.json")
 )
 if os.path.exists(credentials_path):
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
@@ -20,7 +20,7 @@ else:
     # In CI, the credentials file is created in the root directory
     ci_credentials_path = os.path.abspath(
         os.path.join(
-            os.path.dirname(__file__), "../../credentials/service_account.json"
+            os.path.dirname(__file__), "../../@credentials/service_account.json"
         )
     )
     if os.path.exists(ci_credentials_path):
