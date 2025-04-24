@@ -1,10 +1,1 @@
-00:00 - Introduction
-00:07 - First Product
-00:17 - Microsoft's Altair Basic
-00:40 - Altair Emulator
-01:38 - Emulator Creation
-01:55 - Run the Program
-02:01 - Retro Look
-02:15 - Math Test
-02:28 - Emulate QSharp on the Altair
-02:46 - Conclusion
+00:00 - Introduction to the mock video\n02:00 - First main point in the mock video\n04:00 - Second main point in the mock video\n06:00 - Conclusion of the mock video

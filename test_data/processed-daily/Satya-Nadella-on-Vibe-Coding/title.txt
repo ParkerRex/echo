@@ -1,17 +1,1 @@
-Okay, here are a few title options for that audio content:
-
-**Short & Catchy:**
-
-*   Retro Computing Rebooted
-*   Altair Basic: AI's Take
-*   Quantum Altair?
-
-**More Descriptive:**
-
-*   Microsoft's First Product: An AI Retrospective
-*   Recreating Altair BASIC with GitHub Copilot
-*   From Altair to Quantum: an AI Assisted Journey
-
-**My Recommendation:**
-
-I like "**Retro Computing Rebooted**" as it's concise, intriguing, and accurately reflects the content.
+Mock Video Title for Testing Purposes
