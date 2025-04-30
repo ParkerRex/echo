@@ -59,19 +59,29 @@ Before you begin, make sure you have the following installed:
 
 ### Project Structure
 
-The project is organized as follows:
+The project is now organized for clarity and maintainability, with a clear separation between frontend and backend code:
 
 ```
 Automations/
-├── video_processor/       # Main application code
-├── scripts/               # Utility scripts
-├── test_data/             # Test data directory
+├── frontend/              # React (Vite) app for the live-tracking UI
+├── backend/               # All backend code, scripts, and test data
+│   ├── video_processor/   # Main application code (Python, GCP pipeline)
+│   ├── scripts/           # Utility scripts for backend operations
+│   ├── test_data/         # Test data for backend testing
+│   ├── Dockerfile         # Container definition for backend
+│   ├── docker-compose.yml # Docker Compose configuration for backend
+│   └── deploy.sh          # Deployment script for backend
 ├── docs/                  # Documentation
-├── Dockerfile             # Container definition
-├── docker-compose.yml     # Docker Compose configuration
-├── requirements.txt       # Python dependencies
-└── deploy.sh              # Deployment script
+├── memory-bank/           # Project memory bank and context files
+├── @credentials/          # Service account and API credentials (not tracked in git)
+├── credentials/           # Additional credentials (not tracked in git)
+├── requirements.txt       # Python dependencies (legacy, see backend/)
+└── README.md              # Project overview and instructions
 ```
+
+- **/frontend** contains all code for the React-based UI (Vite + TanStack Start).
+- **/backend** contains all Python code, GCP pipeline, scripts, and test data.
+- Credentials and documentation remain at the root or in their respective directories.
 
 For a detailed explanation of the project structure, see [PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md).
 
