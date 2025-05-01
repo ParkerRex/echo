@@ -86,11 +86,11 @@ def process_video_with_real_apis(video_file):
     os.environ["LOCAL_OUTPUT"] = "true"  # Write outputs to local filesystem
 
     # Set the GOOGLE_APPLICATION_CREDENTIALS environment variable to point to the service account file
-    service_account_path = Path("@credentials/service_account.json").absolute()
+    service_account_path = Path("credentials/service_account.json").absolute()
     if not service_account_path.exists():
         logger.error(f"Service account credentials not found at {service_account_path}")
         logger.error(
-            "Please place your service account credentials at @credentials/service_account.json"
+            "Please place your service account credentials at credentials/service_account.json"
         )
         return False
 

@@ -12,7 +12,7 @@ services:
       - PORT=8080
       - GOOGLE_CLOUD_PROJECT=automations-457120
       - TESTING_MODE=true
-      - GOOGLE_APPLICATION_CREDENTIALS=/app/@credentials/service_account.json
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/service_account.json
       - GCS_UPLOAD_BUCKET=automations-youtube-videos-2025
     volumes:
       # Mount the local directory for development
@@ -20,7 +20,7 @@ services:
       # Mount test data directory
       - ./backend/test_data:/app/test_data
       # Mount credentials file
-      - ./@credentials/service_account.json:/app/@credentials/service_account.json:ro
+      - ./credentials/service_account.json:/app/credentials/service_account.json:ro
       # Mount Google Cloud credentials if available
       - ${HOME}/.config/gcloud:/root/.config/gcloud:ro
     command: >
@@ -53,11 +53,11 @@ services:
       - PORT=8081
       - GOOGLE_CLOUD_PROJECT=automations-457120
       - TESTING_MODE=true
-      - GOOGLE_APPLICATION_CREDENTIALS=/app/@credentials/service_account.json
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/service_account.json
       - VIDEO_PROCESSOR_URL=http://backend:8080
     volumes:
       - ./backend/scripts:/app/scripts
       - ./backend/test_data:/app/test_data
-      - ./@credentials/service_account.json:/app/@credentials/service_account.json:ro
+      - ./credentials/service_account.json:/app/credentials/service_account.json:ro
     depends_on:
       - backend

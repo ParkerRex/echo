@@ -6,7 +6,7 @@ import string
 # Path to service account key
 SERVICE_ACCOUNT_PATH = os.path.abspath(os.path.join(
     os.path.dirname(__file__),
-    "../../@credentials/service_account.json"
+    "../../credentials/service_account.json"
 ))
 
 def random_string(length=6):

@@ -5,7 +5,7 @@ from google.cloud import firestore
 # Path to service account key
 SERVICE_ACCOUNT_PATH = os.path.abspath(os.path.join(
     os.path.dirname(__file__),
-    "../../@credentials/service_account.json"
+    "../../credentials/service_account.json"
 ))
 
 def regenerate_thumbnail(video_id, thumbnail_idx, prompt):

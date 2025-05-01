@@ -20,7 +20,7 @@ The YouTube uploader is implemented as a Cloud Function that is triggered by Clo
 1. Go to the [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
 2. Create an OAuth 2.0 Client ID (Web application type)
 3. Add `http://localhost:8080` as an authorized redirect URI
-4. Download the JSON file and save it as `@credentials/client_secret.json`
+4. Download the JSON file and save it as `credentials/client_secret.json`
 
 ### 2. Generate OAuth Tokens
 
@@ -42,7 +42,7 @@ Store the OAuth credentials in Secret Manager:
 
 ```bash
 # Using the setup script
-python -m video_processor.setup_youtube_secrets --client-secrets-file @credentials/client_secret.json --refresh-token YOUR_REFRESH_TOKEN
+python -m video_processor.setup_youtube_secrets --client-secrets-file credentials/client_secret.json --refresh-token YOUR_REFRESH_TOKEN
 
 # Or manually via the Google Cloud Console
 # Go to: https://console.cloud.google.com/security/secret-manager

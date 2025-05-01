@@ -11,19 +11,12 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
-import { Route as UploadImport } from './routes/upload'
 import { Route as SettingsImport } from './routes/settings'
 import { Route as DashboardImport } from './routes/dashboard'
 import { Route as IndexImport } from './routes/index'
 import { Route as VideoVideoIdImport } from './routes/video.$videoId'
 
 // Create/Update Routes
-
-const UploadRoute = UploadImport.update({
-  id: '/upload',
-  path: '/upload',
-  getParentRoute: () => rootRoute,
-} as any)
 
 const SettingsRoute = SettingsImport.update({
   id: '/settings',
@@ -74,13 +67,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsImport
       parentRoute: typeof rootRoute
     }
-    '/upload': {
-      id: '/upload'
-      path: '/upload'
-      fullPath: '/upload'
-      preLoaderRoute: typeof UploadImport
-      parentRoute: typeof rootRoute
-    }
     '/video/$videoId': {
       id: '/video/$videoId'
       path: '/video/$videoId'
@@ -97,7 +83,6 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/settings': typeof SettingsRoute
-  '/upload': typeof UploadRoute
   '/video/$videoId': typeof VideoVideoIdRoute
 }
 
@@ -105,7 +90,6 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/settings': typeof SettingsRoute
-  '/upload': typeof UploadRoute
   '/video/$videoId': typeof VideoVideoIdRoute
 }
 
@@ -114,22 +98,15 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/settings': typeof SettingsRoute
-  '/upload': typeof UploadRoute
   '/video/$videoId': typeof VideoVideoIdRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard' | '/settings' | '/upload' | '/video/$videoId'
+  fullPaths: '/' | '/dashboard' | '/settings' | '/video/$videoId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/settings' | '/upload' | '/video/$videoId'
-  id:
-    | '__root__'
-    | '/'
-    | '/dashboard'
-    | '/settings'
-    | '/upload'
-    | '/video/$videoId'
+  to: '/' | '/dashboard' | '/settings' | '/video/$videoId'
+  id: '__root__' | '/' | '/dashboard' | '/settings' | '/video/$videoId'
   fileRoutesById: FileRoutesById
 }
 
@@ -137,7 +114,6 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
   SettingsRoute: typeof SettingsRoute
-  UploadRoute: typeof UploadRoute
   VideoVideoIdRoute: typeof VideoVideoIdRoute
 }
 
@@ -145,7 +121,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
   SettingsRoute: SettingsRoute,
-  UploadRoute: UploadRoute,
   VideoVideoIdRoute: VideoVideoIdRoute,
 }
 
@@ -162,7 +137,6 @@ export const routeTree = rootRoute
         "/",
         "/dashboard",
         "/settings",
-        "/upload",
         "/video/$videoId"
       ]
     },
@@ -174,9 +148,6 @@ export const routeTree = rootRoute
     },
     "/settings": {
       "filePath": "settings.tsx"
-    },
-    "/upload": {
-      "filePath": "upload.tsx"
     },
     "/video/$videoId": {
       "filePath": "video.$videoId.tsx"

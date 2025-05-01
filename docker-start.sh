@@ -65,20 +65,20 @@ fi
 print_blue "Using command: $DOCKER_COMPOSE"
 
 # Check for credentials
-if [ ! -f "./@credentials/service_account.json" ]; then
-    print_yellow "Warning: Service account credentials not found at ./@credentials/service_account.json"
+if [ ! -f "./credentials/service_account.json" ]; then
+    print_yellow "Warning: Service account credentials not found at ./credentials/service_account.json"
     
-    # Create @credentials directory if it doesn't exist
-    mkdir -p ./@credentials
+    # Create credentials directory if it doesn't exist
+    mkdir -p ./credentials
     
     # Ask if the user wants to continue with a mock credential file
     read -p "Do you want to continue with a mock credentials file? (y/n) " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         print_yellow "Creating mock credentials file for testing purposes..."
-        echo '{"type":"service_account","project_id":"automations-457120"}' > ./@credentials/service_account.json
+        echo '{"type":"service_account","project_id":"automations-457120"}' > ./credentials/service_account.json
     else
-        print_red "Please add credentials to ./@credentials/service_account.json and try again."
+        print_red "Please add credentials to ./credentials/service_account.json and try again."
         exit 1
     fi
 fi

@@ -38,9 +38,9 @@ Before you begin, make sure you have the following installed:
 
 2. **Set up Google Cloud credentials**
    ```bash
-   # Copy your service account key to the @credentials directory
-   mkdir -p @credentials
-   cp /path/to/your/service-account-key.json @credentials/service_account.json
+   # Copy your service account key to the credentials directory
+   mkdir -p credentials
+   cp /path/to/your/service-account-key.json credentials/service_account.json
    ```
 
 3. **Make Docker scripts executable**
@@ -153,51 +153,31 @@ Our service management scripts provide several key features:
 5. **Isolated Testing**: Test environment with mock services
 6. **Comprehensive Monitoring**: Real-time logs and status information
 
-See [Docker Setup](docs/DOCKER_SETUP.md) for more detailed instructions.
 
-### Project Structure
+## 🚀 Long-term Vision
 
-The project is organized for clarity and maintainability, with a clear separation between frontend and backend code:
+The long-term vision for this project is to create a fully automated content creation and distribution pipeline that can:
 
 ```mermaid
 flowchart TD
-    Root[Automations/] --> Frontend[frontend/]
-    Root --> Backend[backend/]
-    Root --> Docs[docs/]
-    Root --> Creds[@credentials/]
-    Root --> Docker[Docker Files]
-    
-    Frontend --> FComponents[components/]
-    Frontend --> FRoutes[routes/]
-    Frontend --> FDockerfile[Dockerfile]
-    
-    FComponents --> UIComp[ui/]
-    FComponents --> VideoComp[video/]
-    FComponents --> SharedComp[shared/]
-    FComponents --> HomeComp[home/]
-    
-    VideoComp --> ProgressSteps[progress-steps.tsx]
-    VideoComp --> VideoProgress[video-progress-card.tsx]
-    VideoComp --> ProcessingDash[processing-dashboard.tsx]
-    VideoComp --> ContentEdit[content-editor.tsx]
-    VideoComp --> TitleSel[title-selector.tsx]
-    VideoComp --> ThumbGallery[thumbnail-gallery.tsx]
-    VideoComp --> VideoDetail[video-detail.tsx]
-    
-    Backend --> BProcessor[video_processor/]
-    Backend --> BScripts[scripts/]
-    Backend --> BTests[tests/]
-    Backend --> BData[test_data/]
-    Backend --> BDockerfile[Dockerfile]
-    
-    Docker --> DockerCompose[docker-compose.yml]
-    Docker --> DockerScripts[docker-*.sh scripts]
-    
-    BProcessor --> Api[api/]
-    BProcessor --> Core[core/]
-    BProcessor --> Services[services/]
-    BProcessor --> Utils[utils/]
+    Ideas[Content Idea Generation] --> Planning[Content Planning]
+    Planning --> Scripts[Script Generation]
+    Scripts --> Recording[Recording]
+    Recording --> Processing[Video Processing]
+    Processing --> Distribution[Multi-platform Distribution]
+    Distribution --> Analytics[Performance Analytics]
+    Analytics --> Optimization[Content Optimization]
+    Optimization --> Ideas
 ```
+
+1. **Generate ideas** for content based on trending topics and audience interests
+2. **Create scripts and outlines** using AI based on those ideas
+3. **Record and edit videos** with minimal human intervention
+4. **Process and upload videos** with optimized metadata across multiple platforms
+5. **Promote content** across social media and other channels
+6. **Analyze performance** and adjust strategy accordingly
+
+This roadmap will be updated regularly as features are implemented and new priorities emerge.
 
 ## 📊 System Architecture
 
