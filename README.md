@@ -75,6 +75,9 @@ Automations/
 ├── memory-bank/           # Project memory bank and context files
 ├── @credentials/          # Service account and API credentials (not tracked in git)
 ├── credentials/           # Additional credentials (not tracked in git)
+├── logs/                  # Log files for development servers
+├── start-services.sh      # Script to start both frontend and backend servers
+├── stop-services.sh       # Script to stop both frontend and backend servers
 ├── requirements.txt       # Python dependencies (legacy, see backend/)
 └── README.md              # Project overview and instructions
 ```
@@ -84,6 +87,53 @@ Automations/
 - Credentials and documentation remain at the root or in their respective directories.
 
 For a detailed explanation of the project structure, see [PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md).
+
+### Service Management Scripts
+
+For local development, we provide convenient scripts to manage the frontend and backend services:
+
+#### Starting Services
+
+To start both the backend Flask app and frontend Vite server:
+
+```bash
+# Make the script executable (only needed once)
+chmod +x start-services.sh
+
+# Start both services
+./start-services.sh
+```
+
+This script:
+- Activates the Python virtual environment for the backend
+- Sets necessary environment variables
+- Starts the backend Flask app on port 8080
+- Starts the frontend Vite dev server
+- Logs output to the `/logs` directory
+- Saves process IDs for easy termination
+
+#### Stopping Services
+
+To stop all running services:
+
+```bash
+# Make the script executable (only needed once)
+chmod +x stop-services.sh
+
+# Stop all services
+./stop-services.sh
+```
+
+This script:
+- Safely terminates both backend and frontend servers
+- Cleans up process ID files
+- Provides status messages for each service
+
+#### Logs
+
+Service logs are stored in the `/logs` directory:
+- `backend.log`: Flask app logs
+- `frontend.log`: Vite dev server logs
 
 ### Making Changes
 
@@ -119,7 +169,7 @@ flowchart TD
 
   I --> J[🔔 Eventarc Trigger]
   J --> K[⬆️ YouTube Upload]
-``****`
+```
 
 ## 🧪 Testing
 
@@ -251,9 +301,8 @@ If you encounter issues during deployment:
 2. Verify that your service account has the necessary permissions
 3. Make sure your GCS bucket exists and is accessible
 4. Try running the deployment with the `--verbose` flag for more detailed output
-****
-For more detailed deployment instructions, see the [Deployment Guide](docs/DEPLOYMENT_GUIDE.md).
 
+For more detailed deployment instructions, see the [Deployment Guide](docs/DEPLOYMENT_GUIDE.md).
 
 ## 📚 Additional Documentation
 
