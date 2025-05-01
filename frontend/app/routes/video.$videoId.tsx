@@ -16,20 +16,30 @@ function VideoDetailComponent() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    async function fetchVideo() {
-      setLoading(true);
-      const docRef = doc(db, "videos", videoId);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        setVideoData(docSnap.data());
-        setForm(docSnap.data());
-      } else {
-        setVideoData(null);
-        setForm(null);
-      }
-      setLoading(false);
-    }
-    if (videoId) fetchVideo();
+    if (!videoId) return;
+    setLoading(true);
+    const docRef = doc(db, "videos", videoId);
+    const unsubscribe =
+      // Use onSnapshot for real-time updates
+      require("firebase/firestore").onSnapshot(
+        docRef,
+        (docSnap: any) => {
+          if (docSnap.exists()) {
+            setVideoData(docSnap.data());
+            setForm(docSnap.data());
+          } else {
+            setVideoData(null);
+            setForm(null);
+          }
+          setLoading(false);
+        },
+        (error: any) => {
+          setVideoData(null);
+          setForm(null);
+          setLoading(false);
+        }
+      );
+    return () => unsubscribe();
   }, [videoId]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -118,6 +128,65 @@ function VideoDetailComponent() {
           </form>
         </CardContent>
       </Card>
+      <div className="mt-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Thumbnails</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {Array.isArray(videoData.thumbnails) && videoData.thumbnails.length > 0 ? (
+              <div className="space-y-6">
+                {videoData.thumbnails.map((thumb: any, idx: number) => (
+                  <div key={idx} className="flex items-center space-x-4">
+                    <img
+                      src={thumb.url}
+                      alt={`Thumbnail ${idx + 1}`}
+                      className="w-32 h-20 object-cover rounded border"
+                    />
+                    <div className="flex-1">
+                      <Label htmlFor={`thumb-prompt-${idx}`}>Prompt</Label>
+                      <Input
+                        id={`thumb-prompt-${idx}`}
+                        name={`thumb-prompt-${idx}`}
+                        value={form?.thumbnails?.[idx]?.prompt || thumb.prompt || ""}
+                        onChange={e => {
+                          const newThumbs = [...(form?.thumbnails || videoData.thumbnails)];
+                          newThumbs[idx] = {
+                            ...newThumbs[idx],
+                            prompt: e.target.value,
+                          };
+                          setForm({ ...form, thumbnails: newThumbs });
+                        }}
+                        className="mt-1"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={async () => {
+                        // Save the new prompt and trigger backend regeneration
+                        if (!form) return;
+                        setSaving(true);
+                        const docRef = doc(db, "videos", videoId);
+                        const newThumbs = [...(form?.thumbnails || videoData.thumbnails)];
+                        await updateDoc(docRef, {
+                          [`thumbnails.${idx}.prompt`]: newThumbs[idx].prompt,
+                          [`thumbnails.${idx}.status`]: "pending", // Mark as pending for backend to pick up
+                        });
+                        setSaving(false);
+                      }}
+                      disabled={saving}
+                    >
+                      {saving ? "Regenerating..." : "Regenerate"}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div>No thumbnails found for this video.</div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
       <div className="mt-8">
         <Card>
           <CardHeader>

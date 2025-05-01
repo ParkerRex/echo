@@ -6,6 +6,10 @@ from google.cloud import firestore
 
 import firestore_trigger_listener as listener
 
+# Mark all tests in this module as "integration" so they can be
+# selectively run via `pytest -m integration`
+pytestmark = pytest.mark.integration
+
 TEST_COLLECTION = "videos_test"
 
 @pytest.fixture(scope="module")

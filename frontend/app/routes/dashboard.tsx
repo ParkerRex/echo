@@ -1,10 +1,57 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import React, { useEffect, useState } from "react";
+import { collection, onSnapshot } from "firebase/firestore";
+import type { QuerySnapshot, DocumentData } from "firebase/firestore";
+import { db } from "../../firebase";
+import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
 
 function DashboardComponent() {
+    const [videos, setVideos] = useState<DocumentData[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const unsubscribe = onSnapshot(
+            collection(db, "videos"),
+            (snapshot: QuerySnapshot<DocumentData>) => {
+                const vids = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setVideos(vids);
+                setLoading(false);
+            }
+        );
+        return () => unsubscribe();
+    }, []);
+
     return (
-        <div>
-            <h1>Dashboard</h1>
-            <p>This is the Dashboard page route.</p>
+        <div className="max-w-3xl mx-auto py-8">
+            <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
+            {loading ? (
+                <div>Loading videos...</div>
+            ) : videos.length === 0 ? (
+                <div>No videos found.</div>
+            ) : (
+                <div className="space-y-4">
+                    {videos.map(video => (
+                        <Card key={video.id}>
+                            <CardHeader>
+                                <CardTitle>
+                                    <Link
+                                        to="/video/$videoId"
+                                        params={{ videoId: video.id }}
+                                        className="text-blue-600 hover:underline"
+                                    >
+                                        {video.title || "Untitled Video"}
+                                    </Link>
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div>Status: {video.current_stage || "Unknown"}</div>
+                                <div>Filename: {video.filename || "N/A"}</div>
+                                <div>Channel: {video.channel || "N/A"}</div>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

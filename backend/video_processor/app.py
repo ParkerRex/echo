@@ -1,9 +1,11 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 import os
 import json
 import logging
-from process_uploaded_video import process_uploaded_video
+from process_uploaded_video import process_video_event
 from types import SimpleNamespace
+from google.cloud import storage
+from datetime import timedelta
 
 # Configure basic logging
 logging.basicConfig(level=logging.INFO)
@@ -48,7 +50,12 @@ def handle_gcs_event():
         # print(json.dumps(event, indent=2)) # Avoid printing potentially large events
 
         # ✅ Call your actual processor
-        process_uploaded_video(cloud_event_obj)  # Pass the object-like data
+        # Call the correct function for processing video events
+        # (cloud_event_obj should have .bucket and .name attributes)
+        if hasattr(cloud_event_obj, "bucket") and hasattr(cloud_event_obj, "name"):
+            process_video_event(cloud_event_obj.bucket, cloud_event_obj.name)
+        else:
+            logging.error("cloud_event_obj missing required attributes: bucket, name")
 
         return "✅ Event processed.", 200
     except Exception as e:
@@ -57,6 +64,45 @@ def handle_gcs_event():
         )  # Use logging.exception for traceback
         return "❌ Failed to handle event.", 500
 
+
+@app.route("/api/gcs-upload-url", methods=["POST"])
+def get_gcs_upload_url():
+    try:
+        data = request.get_json()
+        filename = data.get("filename")
+        content_type = data.get("content_type", "video/mp4")
+        if not filename:
+            return jsonify({"error": "Missing filename"}), 400
+
+        # GCS bucket name from env or hardcoded for now
+        bucket_name = os.environ.get("GCS_UPLOAD_BUCKET", "YOUR_GCS_BUCKET_NAME")
+        if not bucket_name or bucket_name == "YOUR_GCS_BUCKET_NAME":
+            return jsonify({"error": "GCS bucket not configured"}), 500
+
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(bucket_name)
+        blob = bucket.blob(f"videos/{filename}")
+
+        # Generate signed URL for upload (PUT)
+        url = blob.generate_signed_url(
+            version="v4",
+            expiration=timedelta(minutes=15),
+            method="PUT",
+            content_type=content_type,
+        )
+
+        object_path = f"videos/{filename}"
+        gcs_url = f"https://storage.googleapis.com/{bucket_name}/{object_path}"
+
+        return jsonify({
+            "url": url,
+            "bucket": bucket_name,
+            "object_path": object_path,
+            "gcs_url": gcs_url
+        }), 200
+    except Exception as e:
+        logging.exception("❌ Error generating GCS signed URL:")
+        return jsonify({"error": "Failed to generate signed URL"}), 500
 
 # --- Add this block for debugging ---
 if __name__ == "__main__":

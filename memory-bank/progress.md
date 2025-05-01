@@ -1,45 +1,50 @@
 # Progress
 
-_Last reviewed and confirmed up to date: 2025-04-30 11:34 EDT_
-
 **What Works:**  
-- Core pipeline: video upload to GCS, automatic processing, AI metadata generation, and YouTube upload
-- **Firestore integration is restored in the frontend.** A single firebase.js at the root is used for all Firestore access. Video metadata editing (title, description, tags, scheduledTime) is now live, using shadcn UI components styled with Tailwind. Backend listener can now respond to UI-driven changes.
-- Robust test suite for main processing and YouTube integration
+- Core backend pipeline: video upload to GCS, automatic processing, AI metadata generation, and YouTube upload
+- Firestore trigger integration: backend listener detects UI-driven changes to video documents and triggers backend processing (thumbnail regeneration, metadata updates)
+- Robust test suite for main processing and YouTube integration  
+- Backend integration tests for Firestore trigger listener implemented and passing (`pytest -m integration`)
 - Modular, event-driven architecture
 - Support for both Daily and Main channel workflows
 - Prevention of duplicate uploads
 - Major project reorganization: all backend code, scripts, and test data grouped under `/backend/`
-- New `/frontend/` directory with scaffolded React (Vite) app, TanStack Router/Query installed
-- Firestore integration: frontend displays real-time video status and metadata from Firestore
-- CLI-based Firestore collection/document creation using service account credentials (backend/scripts/create_sample_videos_firestore.py)
+- New `/frontend/` directory with React (Vite) app scaffolded and TanStack Start running
+- Frontend app now starts successfully after manual deletion of problematic routes
+- **All main frontend routes (Dashboard, Video Detail, Upload, Settings) have been systematically audited and updated for:**
+  - Firestore integration with real-time updates (`onSnapshot`)
+  - Inline editing and thumbnail management (Video Detail)
+  - Consistent use of shadcn UI components and Tailwind styling
+  - Robust upload flow using GCS signed URLs and Firestore doc creation (Upload)
+  - Settings page structure for future extensibility
+- Dashboard: Real-time video list, navigation, shadcn Card components
+- Video Detail: Inline metadata editing, thumbnail prompt editing/regeneration, real-time updates, shadcn UI
+- Upload: Drop zone, GCS signed URL upload, Firestore doc creation, shadcn Card UI
+- Settings: Now uses shadcn Card and Tailwind, structured for future settings
+- TypeScript and routing issues resolved; firebase.d.ts added for type safety
+- Firestore integration: backend and scripts for collection/document creation are operational
 - Backend Python environment is now fully self-contained in `/backend/venv` with `requirements.txt` in `/backend/`
 - Documentation updated to reflect new structure and workflow
-- Vite dev server runs and serves the new frontend app
-- **VideoDetailPage fetches real Firestore data and supports inline editing and saving of video metadata (title, description, tags, scheduled time)**
-- **Thumbnails section in VideoDetailPage supports prompt editing and "Regenerate" action for each thumbnail, updating Firestore and ready for backend trigger integration**
+- **Frontend upload page now uses GCS signed URLs for video uploads in production.** The backend provides a `/api/gcs-upload-url` endpoint, and the frontend uploads directly to GCS and creates a Firestore doc with the GCS URL.
+- **Upload pipeline improved:** Frontend now uses the GCS URL returned by the backend, ensuring robust and environment-agnostic Firestore document creation.
+    - The backend `/api/gcs-upload-url` endpoint now returns the signed upload URL, bucket name, object path, and canonical GCS object URL. The frontend uses this `gcs_url` for Firestore document creation, eliminating reliance on frontend environment variables and preventing broken links or config drift.
+    - This change guarantees that all Firestore video records have a valid, production-ready GCS URL, regardless of deployment environment. It also simplifies onboarding and future maintenance.
+- **Video Detail page now uses real-time Firestore updates (onSnapshot) for instant UI sync with backend-triggered changes.**
+    - The detail page previously used a one-time `getDoc` fetch, so users had to refresh to see pipeline or backend changes. Now, it uses Firestore's `onSnapshot` for live updates, ensuring the UI always reflects the latest status, metadata, and thumbnails.
+    - This supports a seamless, event-driven user experience and aligns with the project's real-time architecture.
+- **TypeScript type safety for Firestore integration is enforced via a dedicated `firebase.d.ts` declaration.**
+    - This prevents type errors, improves code completion, and ensures all modules importing `db` from `../../firebase` are type-safe, even though the config is in JS.
 
 **What's Left to Build:**  
-- **[Highest Priority]** Adopted a unified, E2E-first testing strategy ([testing-strategy.md](./testing-strategy.md)). All testing, E2E, and integration progress is now tracked via the atomic checklist in that doc.
-- **[COMPLETED]** Backend Firestore trigger listener integration tests implemented and passing: Simulate Firestore document changes in a test collection and assert backend triggers correct actions (metadata update, thumbnail regeneration).
-- **[COMPLETED]** Upload drop zone implemented and tested: DropZone component (shadcn + Tailwind) with drag-and-drop and file input for .mp4 files, integrated into Upload page, with comprehensive component tests (React Testing Library + Vitest) all passing.
-- Only after the atomic checklist is underway:
-  - [ ] Rebuild and verify all frontend routes and navigation in `frontend/app/routes` after manual intervention to get TanStack Start running. Many routes were deleted to restore frontend functionality; restoring and properly configuring these routes is now secondary.
-    - [ ] Ensure all required pages (Dashboard, VideoDetail, Upload, Settings, etc.) are routed and render without errors
-    - [ ] Verify navigation and UI state management
-  - [ ] Migrate all frontend code from JavaScript to TypeScript
-  - [ ] Ensure the frontend app runs successfully after migration
-  - [ ] Add and run tests to verify UI elements render as expected
+- Begin E2E and integration test implementation for all main user flows (upload, edit, thumbnail regeneration, real-time updates)
+  - [ ] E2E tests for Firestore trigger integration (UI action → backend → UI update)
+  - [ ] E2E tests for YouTube upload and metadata roundtrip
+  - [ ] Use test GCS bucket and Firestore collection for E2E tests
+  - [ ] Add cleanup logic for test data after E2E runs
+  - [ ] Document and automate E2E test flow (local and CI)
+- Migrate all frontend code from JavaScript to TypeScript
+- Add/verify component tests for upload, metadata editing, thumbnail regeneration
 - Backend enhancements: Skool post generator, daily AI news generator, etc.
-
----
-
-## Unified Testing Strategy & Checklist
-
-- See [testing-strategy.md](./testing-strategy.md) for the comprehensive, atomic checklist covering backend, frontend, and E2E testing.
-- **[COMPLETED]** Backend: Firestore trigger listener integration tests implemented and passing (simulate Firestore document changes, assert backend triggers correct actions).
-- **[COMPLETED]** Frontend: Upload drop zone implemented and tested (DropZone component, integrated, all component tests passing).
-- All progress on testing, E2E, and integration is now tracked there.
 
 ### YouTube Uploader Enhancements
   - [ ] Add support for custom thumbnails
@@ -55,25 +60,31 @@ _Last reviewed and confirmed up to date: 2025-04-30 11:34 EDT_
 - Additional test coverage for edge cases and error conditions
 
 **Current Status:**  
-- Project structure is clean and maintainable, with clear separation of frontend and backend
-- **Backend Firestore trigger listener integration tests are now implemented and passing. Next step: E2E test harness setup (Cypress/Playwright or custom), then further integration/E2E coverage.**
-- **Regression fixed:** Firestore integration is restored in the frontend, with a single firebase.js at the root. Video metadata editing is live and uses shadcn UI components with Tailwind. Backend triggers can now respond to UI-driven changes.
-- **Frontend routing and navigation are currently incomplete after manual intervention; many routes were deleted to restore TanStack Start functionality. Rebuilding and verifying all routes is now secondary to verifying backend triggers.**
-- Frontend UI for video metadata and thumbnail management is partially complete and integrated with Firestore, but navigation and some pages are missing or broken.
-- Backend code, scripts, and test data consolidated under `/backend/`
-- Documentation and memory bank fully updated
+- Project structure is clean and maintainable, with clear separation of frontend and backend.
+- Firestore trigger integration is operational and verified.
+- **All main frontend routes have been audited and updated for Firestore integration, real-time updates, and UI/UX consistency.**
+- Frontend app runs; Dashboard, Video Detail, Upload, and Settings routes are restored and functional, including thumbnail management and real-time updates.
+- **Upload page now uses GCS signed URLs for production uploads; Firestore doc is created with the canonical GCS URL returned by the backend, not constructed on the frontend.**
+    - This ensures all video records are valid and portable, and removes a major source of environment-specific bugs.
+- **Video Detail page now uses Firestore `onSnapshot` for real-time UI updates, so users see instant feedback for all backend and pipeline changes.**
+- **TypeScript type safety is enforced for Firestore integration, reducing runtime errors and improving developer experience.**
+- Backend code, scripts, and test data consolidated under `/backend/`.
+- Documentation and memory bank fully updated with rationale and technical decisions for all major changes.
 
 **Known Issues:**  
-- **No known issues with Firestore integration.** Backend and frontend are now reconnected. All new UI uses shadcn components and Tailwind for styling.
-- Frontend routing/navigation is incomplete; some pages are missing or broken after route deletions.
 - Need to ensure all scripts and documentation reference new paths
 - E2E test coverage is not yet complete for the new Firestore trigger flow
 
 **Evolution of Project Decisions:**  
-- Adopted frontend/backend split for maintainability and clarity
-- Chose Vite + React + TanStack for frontend, Firestore for real-time backend data
-- Roadmap and README.md are referenced for ongoing updates and reprioritization
-- ICE scoring used to prioritize enhancements
+- **Clarified storage architecture: GCS is canonical for video files, Firestore for metadata/status, Firebase Storage not used for video in production.**
+- **Adopted signed URL pattern for secure, direct uploads from frontend to GCS.**
+- **Backend now returns canonical GCS URLs for all uploads, decoupling frontend from deployment config and ensuring all Firestore records are valid and production-ready.**
+- **All main UI routes (Dashboard, Video Detail, Upload, Settings) now use Firestore `onSnapshot` for real-time updates, supporting a true event-driven workflow.**
+- **TypeScript type safety is enforced for Firestore integration, even with a JS-based config, via a dedicated `.d.ts` file.**
+- Adopted frontend/backend split for maintainability and clarity.
+- Chose Vite + React + TanStack for frontend, Firestore for real-time backend data.
+- Roadmap and README.md are referenced for ongoing updates and reprioritization.
+- ICE scoring used to prioritize enhancements.
 
 ---
 

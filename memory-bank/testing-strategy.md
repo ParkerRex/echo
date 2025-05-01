@@ -44,7 +44,7 @@ This document defines the unified testing strategy for the Video Upload + AI Met
 
 ### Backend
 
-- [ ] Add integration tests for Firestore trigger listener (simulate document changes, assert pipeline is called)
+- [x] Add integration tests for Firestore trigger listener (simulate document changes, assert pipeline is called)
 - [ ] Reduce redundant mocks in backend tests; use real GCS/Firestore where feasible
 - [ ] Ensure all backend modules have unit tests with clear, non-overlapping coverage
 

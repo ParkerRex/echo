@@ -6,6 +6,7 @@ interface DropZoneProps {
     accept?: string;
     multiple?: boolean;
     className?: string;
+    disabled?: boolean;
 }
 
 export const DropZone: React.FC<DropZoneProps> = ({
@@ -13,23 +14,27 @@ export const DropZone: React.FC<DropZoneProps> = ({
     accept = ".mp4",
     multiple = false,
     className = "",
+    disabled = false,
 }) => {
     const [isDragging, setIsDragging] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
     const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+        if (disabled) return;
         e.preventDefault();
         e.stopPropagation();
         setIsDragging(true);
     };
 
     const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+        if (disabled) return;
         e.preventDefault();
         e.stopPropagation();
         setIsDragging(false);
     };
 
     const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+        if (disabled) return;
         e.preventDefault();
         e.stopPropagation();
         setIsDragging(false);
@@ -39,10 +44,12 @@ export const DropZone: React.FC<DropZoneProps> = ({
     };
 
     const handleClick = () => {
+        if (disabled) return;
         inputRef.current?.click();
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (disabled) return;
         if (e.target.files && e.target.files.length > 0) {
             onFilesAccepted(e.target.files);
         }

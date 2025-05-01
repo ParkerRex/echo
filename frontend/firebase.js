@@ -1,8 +1,3 @@
-// frontend/src/firebase.js
-
-// TODO: Replace the below config object with your Firebase project configuration.
-// You can find this in your Firebase Console > Project Settings > General > Your apps > Firebase SDK snippet.
-
 import { initializeApp, getApps } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 
