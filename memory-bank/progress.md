@@ -34,6 +34,13 @@
     - This supports a seamless, event-driven user experience and aligns with the project's real-time architecture.
 - **TypeScript type safety for Firestore integration is enforced via a dedicated `firebase.d.ts` declaration.**
     - This prevents type errors, improves code completion, and ensures all modules importing `db` from `../../firebase` are type-safe, even though the config is in JS.
+- **Frontend-backend API communication now works properly with Vite server proxy configuration in app.config.ts.**
+    - Fixed the issue where the upload page couldn't reach the backend Flask app for `/api/gcs-upload-url` requests.
+    - Added proper proxy configuration to forward `/api/*` requests to the backend running on port 8080.
+- **Development workflow improved with convenient service management scripts:**
+    - `start-services.sh`: Automates starting both backend and frontend with proper environment setup
+    - `stop-services.sh`: Safely stops all development services
+    - Log files stored in `/logs/` directory for easy debugging
 
 **What's Left to Build:**  
 - Begin E2E and integration test implementation for all main user flows (upload, edit, thumbnail regeneration, real-time updates)
@@ -68,6 +75,11 @@
     - This ensures all video records are valid and portable, and removes a major source of environment-specific bugs.
 - **Video Detail page now uses Firestore `onSnapshot` for real-time UI updates, so users see instant feedback for all backend and pipeline changes.**
 - **TypeScript type safety is enforced for Firestore integration, reducing runtime errors and improving developer experience.**
+- **Frontend-backend API communication now works correctly with Vite server proxy configuration.**
+    - The upload page can now successfully request signed URLs from the backend Flask app.
+- **Development workflow streamlined with service management scripts.**
+    - Services can be started and stopped with single commands.
+    - All necessary environment setup (venv activation, environment variables) is automated.
 - Backend code, scripts, and test data consolidated under `/backend/`.
 - Documentation and memory bank fully updated with rationale and technical decisions for all major changes.
 
@@ -81,6 +93,8 @@
 - **Backend now returns canonical GCS URLs for all uploads, decoupling frontend from deployment config and ensuring all Firestore records are valid and production-ready.**
 - **All main UI routes (Dashboard, Video Detail, Upload, Settings) now use Firestore `onSnapshot` for real-time updates, supporting a true event-driven workflow.**
 - **TypeScript type safety is enforced for Firestore integration, even with a JS-based config, via a dedicated `.d.ts` file.**
+- **Frontend-backend API communication standardized with Vite server proxy configuration.**
+- **Development workflow streamlined with scripted service management.**
 - Adopted frontend/backend split for maintainability and clarity.
 - Chose Vite + React + TanStack for frontend, Firestore for real-time backend data.
 - Roadmap and README.md are referenced for ongoing updates and reprioritization.

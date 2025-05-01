@@ -1,48 +1,74 @@
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import React, { useEffect, useState } from "react";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { db } from "../../firebase";
+import { doc, getDoc, updateDoc, onSnapshot, DocumentSnapshot } from "firebase/firestore";
+import type { DocumentData } from "firebase/firestore";
+import { db } from "../../firebase/index";
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Button } from "../components/ui/button";
 import { Textarea } from "../components/ui/textarea";
 
+interface Thumbnail {
+  url: string;
+  prompt: string;
+  status: string;
+}
+
+interface VideoData {
+  title: string;
+  description: string;
+  tags: string;
+  scheduledTime: string;
+  thumbnails: Thumbnail[];
+  [key: string]: any; // For other properties that might be in the data
+}
+
+interface VideoFormData {
+  title?: string;
+  description?: string;
+  tags?: string;
+  scheduledTime?: string;
+  thumbnails?: Thumbnail[];
+  [key: string]: any;
+}
+
 function VideoDetailComponent() {
   const { videoId } = useParams({ from: "/video/$videoId" });
-  const [videoData, setVideoData] = useState<any>(null);
+  const [videoData, setVideoData] = useState<VideoData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState<any>(null);
+  const [form, setForm] = useState<VideoFormData | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!videoId) return;
     setLoading(true);
     const docRef = doc(db, "videos", videoId);
-    const unsubscribe =
-      // Use onSnapshot for real-time updates
-      require("firebase/firestore").onSnapshot(
-        docRef,
-        (docSnap: any) => {
-          if (docSnap.exists()) {
-            setVideoData(docSnap.data());
-            setForm(docSnap.data());
-          } else {
-            setVideoData(null);
-            setForm(null);
-          }
-          setLoading(false);
-        },
-        (error: any) => {
+    const unsubscribe = onSnapshot(
+      docRef,
+      (docSnap: DocumentSnapshot<DocumentData>) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data() as VideoData;
+          setVideoData(data);
+          setForm(data);
+        } else {
           setVideoData(null);
           setForm(null);
-          setLoading(false);
         }
-      );
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Error fetching video data:", error);
+        setVideoData(null);
+        setForm(null);
+        setLoading(false);
+      }
+    );
     return () => unsubscribe();
   }, [videoId]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (!form) return;
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
@@ -50,12 +76,15 @@ function VideoDetailComponent() {
     if (!form) return;
     setSaving(true);
     const docRef = doc(db, "videos", videoId);
-    await updateDoc(docRef, {
-      title: form.title,
-      description: form.description,
-      tags: form.tags,
-      scheduledTime: form.scheduledTime,
-    });
+
+    // Only include fields that are present in the form
+    const updates: Partial<VideoData> = {};
+    if (form.title !== undefined) updates.title = form.title;
+    if (form.description !== undefined) updates.description = form.description;
+    if (form.tags !== undefined) updates.tags = form.tags;
+    if (form.scheduledTime !== undefined) updates.scheduledTime = form.scheduledTime;
+
+    await updateDoc(docRef, updates);
     setSaving(false);
   };
 
@@ -136,7 +165,7 @@ function VideoDetailComponent() {
           <CardContent>
             {Array.isArray(videoData.thumbnails) && videoData.thumbnails.length > 0 ? (
               <div className="space-y-6">
-                {videoData.thumbnails.map((thumb: any, idx: number) => (
+                {videoData.thumbnails.map((thumb: Thumbnail, idx: number) => (
                   <div key={idx} className="flex items-center space-x-4">
                     <img
                       src={thumb.url}
@@ -150,7 +179,8 @@ function VideoDetailComponent() {
                         name={`thumb-prompt-${idx}`}
                         value={form?.thumbnails?.[idx]?.prompt || thumb.prompt || ""}
                         onChange={e => {
-                          const newThumbs = [...(form?.thumbnails || videoData.thumbnails)];
+                          if (!form) return;
+                          const newThumbs = [...(form.thumbnails || videoData.thumbnails)];
                           newThumbs[idx] = {
                             ...newThumbs[idx],
                             prompt: e.target.value,
@@ -164,12 +194,11 @@ function VideoDetailComponent() {
                       type="button"
                       onClick={async () => {
                         // Save the new prompt and trigger backend regeneration
-                        if (!form) return;
+                        if (!form || !form.thumbnails) return;
                         setSaving(true);
                         const docRef = doc(db, "videos", videoId);
-                        const newThumbs = [...(form?.thumbnails || videoData.thumbnails)];
                         await updateDoc(docRef, {
-                          [`thumbnails.${idx}.prompt`]: newThumbs[idx].prompt,
+                          [`thumbnails.${idx}.prompt`]: form.thumbnails[idx].prompt,
                           [`thumbnails.${idx}.status`]: "pending", // Mark as pending for backend to pick up
                         });
                         setSaving(false);

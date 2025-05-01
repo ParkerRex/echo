@@ -2,19 +2,31 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import React, { useEffect, useState } from "react";
 import { collection, onSnapshot } from "firebase/firestore";
 import type { QuerySnapshot, DocumentData } from "firebase/firestore";
-import { db } from "../../firebase";
+import { db } from "../../firebase/index";
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
 
+interface VideoData extends DocumentData {
+    id: string;
+    title?: string;
+    current_stage?: string;
+    filename?: string;
+    channel?: string;
+}
+
 function DashboardComponent() {
-    const [videos, setVideos] = useState<DocumentData[]>([]);
+    const [videos, setVideos] = useState<VideoData[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const unsubscribe = onSnapshot(
             collection(db, "videos"),
             (snapshot: QuerySnapshot<DocumentData>) => {
-                const vids = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const vids = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as VideoData[];
                 setVideos(vids);
+                setLoading(false);
+            },
+            (error) => {
+                console.error("Error fetching videos:", error);
                 setLoading(false);
             }
         );

@@ -14,6 +14,16 @@ export default defineConfig({
             }),
             tailwindcss(),
         ],
+        server: {
+            // Proxy API requests to the backend Flask app
+            proxy: {
+                '/api': {
+                    target: 'http://localhost:8080',
+                    changeOrigin: true,
+                    secure: false,
+                },
+            },
+        },
         build: {
             // Configure assets including CSS
             assetsDir: 'public',
@@ -24,6 +34,6 @@ export default defineConfig({
             postcss: {
                 plugins: [], // PostCSS plugins are loaded from postcss.config.js
             },
-        }
+        },
     },
 });
