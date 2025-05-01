@@ -10,8 +10,11 @@ The Video Upload + AI Metadata Pipeline automates the process of preparing video
 
 - **Automated Video Processing**: Upload videos to GCS buckets and trigger automatic processing
 - **AI-Generated Metadata**: Generate transcripts, titles, descriptions, and chapters using Gemini AI
+- **Enhanced Frontend UI**: Modern interface with real-time processing status, title selection, and thumbnail management
 - **Flexible Processing Paths**: Support for both daily content and main channel content
 - **YouTube Integration**: Automatic upload to YouTube with proper metadata and captions
+- **Real-time Feedback**: Visual progress tracking for all processing stages with ProgressSteps component
+- **Collaborative Content Management**: Title voting system and thumbnail selection gallery
 - **Comprehensive Testing**: Robust test suite for reliable operation
 - **Scalable Architecture**: Cloud-native design that scales with your content needs
 
@@ -21,10 +24,9 @@ The Video Upload + AI Metadata Pipeline automates the process of preparing video
 
 Before you begin, make sure you have the following installed:
 
-1. **Python 3.9+**: Required for running the application
-2. **Docker**: Required for containerization and testing
-3. **Google Cloud SDK**: Required for deployment and authentication
-4. **Git**: Required for version control
+1. **Docker and Docker Compose**: Required for containerized development and testing
+2. **Google Cloud SDK**: Required for deployment and authentication
+3. **Git**: Required for version control
 
 ### Setup
 
@@ -34,219 +36,277 @@ Before you begin, make sure you have the following installed:
    cd Automations
    ```
 
-2. **Create a virtual environment**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Set up Google Cloud credentials**
+2. **Set up Google Cloud credentials**
    ```bash
    # Copy your service account key to the @credentials directory
    mkdir -p @credentials
    cp /path/to/your/service-account-key.json @credentials/service_account.json
-
-   # Set environment variable
-   export GOOGLE_APPLICATION_CREDENTIALS="$(pwd)/@credentials/service_account.json"
    ```
 
-## 💻 Development Workflow
+3. **Make Docker scripts executable**
+   ```bash
+   chmod +x docker-start.sh docker-stop.sh docker-logs.sh docker-test.sh
+   ```
 
-### Project Structure
+## 💻 Development Environment
 
-The project is now organized for clarity and maintainability, with a clear separation between frontend and backend code:
+We've improved our development workflow with easy-to-use scripts that manage both Docker containers and local development.
 
+### Docker Development Workflow (Recommended)
+
+We use Docker to provide a consistent development environment that matches production. This is the recommended approach for all developers.
+
+```mermaid
+flowchart TD
+    A[docker-start.sh] --> B[Start Frontend Container]
+    A --> C[Start Backend Container]
+    A --> D[Optional: Start Mock GCS Container]
+    
+    B --> E[React/Vite Dev Server]
+    C --> F[Python Flask App]
+    D --> G[Mock GCS Service]
+    
+    E --> |"localhost:3000"| H[Web Browser]
+    F --> |"localhost:8080"| I[API Requests]
+    G --> |"localhost:8081"| J[Test Events]
+    
+    K[docker-stop.sh] --> L[Stop All Containers]
+    M[docker-logs.sh] --> N[View Container Logs]
+    O[docker-test.sh] --> P[Run Integration Tests]
+    Q[monitor-services.sh] --> R[Monitor Deployed Services]
 ```
-Automations/
-├── frontend/              # React (Vite) app for the live-tracking UI
-├── backend/               # All backend code, scripts, and test data
-│   ├── video_processor/   # Main application code (Python, GCP pipeline)
-│   ├── scripts/           # Utility scripts for backend operations
-│   ├── test_data/         # Test data for backend testing
-│   ├── Dockerfile         # Container definition for backend
-│   ├── docker-compose.yml # Docker Compose configuration for backend
-│   └── deploy.sh          # Deployment script for backend
-├── docs/                  # Documentation
-├── memory-bank/           # Project memory bank and context files
-├── @credentials/          # Service account and API credentials (not tracked in git)
-├── credentials/           # Additional credentials (not tracked in git)
-├── logs/                  # Log files for development servers
-├── start-services.sh      # Script to start both frontend and backend servers
-├── stop-services.sh       # Script to stop both frontend and backend servers
-├── requirements.txt       # Python dependencies (legacy, see backend/)
-└── README.md              # Project overview and instructions
-```
 
-- **/frontend** contains all code for the React-based UI (Vite + TanStack Start).
-- **/backend** contains all Python code, GCP pipeline, scripts, and test data.
-- Credentials and documentation remain at the root or in their respective directories.
+#### Starting the Services
 
-For a detailed explanation of the project structure, see [PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md).
-
-### Service Management Scripts
-
-For local development, we provide convenient scripts to manage the frontend and backend services:
-
-#### Starting Services
-
-To start both the backend Flask app and frontend Vite server:
+Start both frontend and backend services with a single command:
 
 ```bash
-# Make the script executable (only needed once)
-chmod +x start-services.sh
-
-# Start both services
-./start-services.sh
+./docker-start.sh
 ```
 
-This script:
-- Activates the Python virtual environment for the backend
-- Sets necessary environment variables
-- Starts the backend Flask app on port 8080
-- Starts the frontend Vite dev server
-- Logs output to the `/logs` directory
-- Saves process IDs for easy termination
+This will:
+- Start the Python backend on port 8080
+- Start the React frontend on port 3000
+- Mount your local directories for real-time development
+
+**Options:**
+- Rebuild containers: `./docker-start.sh --rebuild`
+- Include mock GCS for testing: `./docker-start.sh --with-mock`
+
+#### Viewing Logs
+
+View logs from all services:
+
+```bash
+./docker-logs.sh
+```
+
+**Options:**
+- View specific service logs: `./docker-logs.sh --service backend`
+- View logs without following: `./docker-logs.sh --no-follow`
 
 #### Stopping Services
 
-To stop all running services:
+Stop all services when you're done:
 
 ```bash
-# Make the script executable (only needed once)
-chmod +x stop-services.sh
-
-# Stop all services
-./stop-services.sh
+./docker-stop.sh
 ```
 
-This script:
-- Safely terminates both backend and frontend servers
-- Cleans up process ID files
-- Provides status messages for each service
+**Options:**
+- Remove containers: `./docker-stop.sh --remove`
 
-#### Logs
+#### Running Tests
 
-Service logs are stored in the `/logs` directory:
-- `backend.log`: Flask app logs
-- `frontend.log`: Vite dev server logs
+Run integration tests using Docker:
 
-### Making Changes
+```bash
+./docker-test.sh
+```
 
-1. **Understand the code**: Start by reading the code in the `video_processor` directory
-2. **Make your changes**: Edit the relevant files
-3. **Test your changes**: Run the tests as described in the Testing section
-4. **Commit your changes**: Use descriptive commit messages
+**Options:**
+- Clean test directories: `./docker-test.sh --clean`
+- Use a specific video file: `./docker-test.sh --video "my-test-video.mp4"`
+
+#### Monitoring Services
+
+For deployed services, use our monitoring tool:
+
+```bash
+./monitor-services.sh
+```
+
+This interactive dashboard shows:
+- Cloud Run service status across regions
+- Recent logs and request counts
+- Eventarc triggers
+- GCS bucket contents
+
+### Service Management Features
+
+Our service management scripts provide several key features:
+
+1. **Consistent Environment**: The same Docker setup works for all developers
+2. **Hot Reloading**: Frontend and backend code changes are detected automatically
+3. **Firestore Integration**: Real-time database updates in development
+4. **API Proxying**: Frontend requests are automatically forwarded to the backend
+5. **Isolated Testing**: Test environment with mock services
+6. **Comprehensive Monitoring**: Real-time logs and status information
+
+See [Docker Setup](docs/DOCKER_SETUP.md) for more detailed instructions.
+
+### Project Structure
+
+The project is organized for clarity and maintainability, with a clear separation between frontend and backend code:
 
 ```mermaid
-flowchart LR
-    A[Understand Code] --> B[Make Changes]
-    B --> C[Test Changes]
-    C -->|Tests Pass| D[Commit Changes]
-    C -->|Tests Fail| B
+flowchart TD
+    Root[Automations/] --> Frontend[frontend/]
+    Root --> Backend[backend/]
+    Root --> Docs[docs/]
+    Root --> Creds[@credentials/]
+    Root --> Docker[Docker Files]
+    
+    Frontend --> FComponents[components/]
+    Frontend --> FRoutes[routes/]
+    Frontend --> FDockerfile[Dockerfile]
+    
+    FComponents --> UIComp[ui/]
+    FComponents --> VideoComp[video/]
+    FComponents --> SharedComp[shared/]
+    FComponents --> HomeComp[home/]
+    
+    VideoComp --> ProgressSteps[progress-steps.tsx]
+    VideoComp --> VideoProgress[video-progress-card.tsx]
+    VideoComp --> ProcessingDash[processing-dashboard.tsx]
+    VideoComp --> ContentEdit[content-editor.tsx]
+    VideoComp --> TitleSel[title-selector.tsx]
+    VideoComp --> ThumbGallery[thumbnail-gallery.tsx]
+    VideoComp --> VideoDetail[video-detail.tsx]
+    
+    Backend --> BProcessor[video_processor/]
+    Backend --> BScripts[scripts/]
+    Backend --> BTests[tests/]
+    Backend --> BData[test_data/]
+    Backend --> BDockerfile[Dockerfile]
+    
+    Docker --> DockerCompose[docker-compose.yml]
+    Docker --> DockerScripts[docker-*.sh scripts]
+    
+    BProcessor --> Api[api/]
+    BProcessor --> Core[core/]
+    BProcessor --> Services[services/]
+    BProcessor --> Utils[utils/]
 ```
 
 ## 📊 System Architecture
 
+The complete system architecture is shown below:
+
 ```mermaid
 flowchart TD
-  A[📤 Upload .mp4 to daily-raw/ or main-raw/] --> B[🗂️ GCS Bucket: automations-youtube-videos-2025]
+  Upload[1. Upload Video] --> GCS[2. GCS Bucket]
+  
+  subgraph "Google Cloud Platform"
+    GCS --> Eventarc[3. Eventarc Trigger]
+    Eventarc --> CloudRun[4. Cloud Run Service]
+    
+    subgraph "Cloud Run Container"
+      CloudRun --> Flask[5. Flask App]
+      Flask --> Processor[6. Video Processor]
+      Processor --> AudioExtract[7. Audio Extraction]
+      AudioExtract --> AI[8. Gemini AI]
+      AI --> OutputGen[9. Generate Outputs]
+      OutputGen --> Storage[10. Store Results]
+    end
+    
+    Storage --> YTEventarc[11. YouTube Upload Trigger]
+    YTEventarc --> YouTube[12. YouTube API]
+  end
+  
+  YouTube --> Published[13. Published Video]
+```
 
-  B --> C[🔔 Eventarc Trigger: video-processor-trigger]
-  C --> D[🚀 Cloud Run Service: video-processor in us-east1]
+### Data Flow
 
-  D --> E[📥 app.py handles POST /]
-  E --> F[🧠 process_uploaded_video.py]
-
-  F --> G[🔊 Extract audio via ffmpeg]
-  G --> H[🤖 Gemini API: gemini-2.0-flash-001]
-
-  H --> I[📂 processed-daily/ or processed-main/]
-
-  I --> J[🔔 Eventarc Trigger]
-  J --> K[⬆️ YouTube Upload]
+```mermaid
+flowchart LR
+  UI[Frontend UI] --> |Dropzone| Upload([Upload MP4])
+  Upload --> |Signed URL| GCS[(GCS Bucket)]
+  UI --> |Create Document| Firestore[(Firestore)]
+  
+  GCS --> Process[Video Processor]
+  Firestore --> |Trigger| Process
+  
+  Process --> Audio[Audio Extraction]
+  Audio --> Gemini[Gemini AI]
+  
+  Gemini --> |Generate| Transcript[Transcript]
+  Gemini --> |Generate| Chapters[Chapters]
+  Gemini --> |Generate| Title[Multiple Titles]
+  Gemini --> |Generate| Description[Description]
+  Gemini --> |Generate| Thumbnails[Thumbnails]
+  
+  Transcript --> VTT[Subtitles VTT]
+  
+  Transcript & Chapters & Title & Description & VTT & Thumbnails --> Storage[(Processed Storage)]
+  
+  Storage --> |Update| Firestore
+  Firestore --> |onSnapshot| Components[UI Components]
+  
+  Components --> |ProcessingDashboard| Status[Processing Status]
+  Components --> |TitleSelector| TitleVote[Title Selection]
+  Components --> |ThumbnailGallery| ThumbSelect[Thumbnail Selection]
+  Components --> |ContentEditor| ContentEdit[Content Editing]
+  
+  TitleVote & ThumbSelect & ContentEdit --> |Update| Firestore
+  
+  Storage --> YTUpload[YouTube Uploader]
+  YTUpload --> YouTube[YouTube Video]
 ```
 
 ## 🧪 Testing
 
-We have several methods for testing the application. Choose the one that best fits your needs:
+We have several methods for testing the application:
 
-### Method 1: Quick Python Testing
+### Integrated Docker Testing (Recommended)
 
-This is the simplest method and doesn't require Docker.
-
-```bash
-# Make the script executable (only needed once)
-chmod +x scripts/test_locally.py
-
-# Run the test
-python scripts/test_locally.py --file test-video.mp4 --run-server
-```
-
-**What to look for:**
-- The Flask app should start successfully
-- You should see "Response status code: 204" (indicates success)
-- You should see "Successfully processed gs://automations-videos/test-video.mp4"
-
-### Method 2: Docker-based Testing (Recommended)
-
-This method provides a more comprehensive test using Docker containers.
+Our new Docker setup makes testing simple:
 
 ```bash
-# Make the script executable (only needed once)
-chmod +x scripts/docker_test.sh
-
-# Run the test
-./scripts/docker_test.sh --clean
+./docker-test.sh
 ```
 
-**What to look for:**
-- The test should complete with "✅ Test passed! All outputs were generated correctly."
-- You should see content previews for each output file
-- The test should end with "Test completed successfully!"
-
-### Method 3: Testing with Real API Calls
-
-Use this method when you want to see the actual outputs from the Gemini API.
-
-```bash
-# Make the script executable (only needed once)
-chmod +x scripts/real_api_test.py
-
-# Run the test
-python scripts/real_api_test.py --clean
-```
-
-**What to look for:**
-- The test should complete with "Video processing completed successfully!"
-- You should see actual content in the transcript, subtitles, and other outputs
-- There should be no error messages
-
-**Note:** This method uses real API calls and requires proper Google Cloud authentication.
+This will:
+1. Start all services including mock GCS
+2. Send a test video for processing
+3. Verify that all outputs are generated correctly
 
 ### Examining Test Outputs
 
-After running any of the tests, you can find the output files in the `test_data/processed-daily/` directory. The outputs include:
+After running the test, you'll find these outputs in the test directory:
+- **transcript.txt**: Full text transcript
+- **subtitles.vtt**: WebVTT format subtitles
+- **chapters.txt**: Timestamped chapters
+- **title.txt**: Generated title
 
-- **transcript.txt**: Full text transcript of the video
-- **subtitles.vtt**: WebVTT format subtitles with timestamps
-- **shownotes.txt**: Markdown-formatted show notes
-- **chapters.txt**: Timestamped chapters for the video
-- **title.txt**: Generated title for the video
+### Testing Architecture
 
-For more detailed testing instructions, see the [Testing Guide](docs/TESTING_GUIDE.md).
+```mermaid
+flowchart TD
+    A[docker-test.sh] --> B[Start Containers]
+    B --> C[Process Test Video]
+    C --> D[Verify Outputs]
+    D --> E{All Files Generated?}
+    E -->|Yes| F[Test Passed ✅]
+    E -->|No| G[Test Failed ❌]
+```
+
+For more detailed testing instructions, see the [Testing Guide](docs/TESTING_GUIDE.md) or [Docker Setup](docs/DOCKER_SETUP.md).
 
 ## 🚀 Deployment
 
-Deploying the application to Google Cloud is straightforward:
-
-### Step 1: Prepare for Deployment
-
-Make sure you have the necessary permissions and have authenticated with Google Cloud:
+Deploying the application to Google Cloud:
 
 ```bash
 # Authenticate with Google Cloud
@@ -254,242 +314,89 @@ gcloud auth login
 
 # Set the project ID
 gcloud config set project automations-457120
+
+# Deploy using GitHub Actions
+git push origin master
 ```
 
-### Step 2: Deploy the Application
+Our GitHub Actions workflow will:
+1. Run tests
+2. Build Docker images
+3. Deploy the backend to Cloud Run
+4. Deploy the frontend to Firebase
 
-Use the deployment script to deploy the application:
+### Deployment Flow
 
-```bash
-# Make the script executable (only needed once)
-chmod +x deploy.sh
-
-# Run the deployment script
-./deploy.sh
+```mermaid
+flowchart TD
+    A[Push to Master] --> B[GitHub Actions]
+    B --> C[Run Tests]
+    C --> D{Tests Pass?}
+    D -->|No| E[Deployment Failed]
+    D -->|Yes| F[Build Docker Images]
+    F --> G[Deploy Backend to Cloud Run]
+    F --> H[Deploy Frontend to Firebase]
+    G & H --> I[Deployment Complete]
 ```
-
-**What to look for:**
-- The script should run tests, build the Docker image, and deploy to Cloud Run
-- You should see "Deployment completed successfully!" at the end
-- The script will output the URL of the deployed service
-
-### Step 3: Test the Deployment
-
-After deployment, you can test the application by uploading a video to the GCS bucket:
-
-```bash
-# Upload a video to the GCS bucket
-gsutil cp test_data/test-video.mp4 gs://automations-youtube-videos-2025/daily-raw/
-```
-
-### Step 4: Monitor the Deployment
-
-You can monitor the application using Cloud Run logs:
-
-```bash
-# View the logs
-gcloud logging read 'resource.type=cloud_run_revision AND resource.labels.service_name=video-processor AND resource.labels.location=us-east1' \
-  --limit=10 \
-  --format='table(timestamp, severity, textPayload)'
-```
-
-### Troubleshooting Deployment
-
-If you encounter issues during deployment:
-
-1. Check the deployment logs for error messages
-2. Verify that your service account has the necessary permissions
-3. Make sure your GCS bucket exists and is accessible
-4. Try running the deployment with the `--verbose` flag for more detailed output
-
-For more detailed deployment instructions, see the [Deployment Guide](docs/DEPLOYMENT_GUIDE.md).
 
 ## 📚 Additional Documentation
 
 For more detailed information about the project, refer to the following documentation:
 
-1. **[Project Structure Guide](docs/PROJECT_STRUCTURE.md)**: Detailed explanation of the project structure
-2. **[Testing Guide](docs/TESTING_GUIDE.md)**: Comprehensive testing instructions
-3. **[Visual Testing Guide](docs/VISUAL_TESTING_GUIDE.md)**: Visual examples of what to expect during testing
-4. **[Quick Test Guide](docs/QUICK_TEST_GUIDE.md)**: Simple step-by-step instructions for quick testing
-5. **[Monitoring Guide](docs/MONITORING_GUIDE.md)**: Guide for monitoring the application in production
+1. **[Docker Setup](docs/DOCKER_SETUP.md)**: Guide for using the Docker development environment
+2. **[Project Structure Guide](docs/PROJECT_STRUCTURE.md)**: Detailed explanation of the project structure
+3. **[Testing Guide](docs/TESTING_GUIDE.md)**: Comprehensive testing instructions
+4. **[Monitoring Guide](docs/MONITORING_GUIDE.md)**: Guide for monitoring the application in production
 
 ---
 
 ## 📝 Usage & Expected Outcomes
 
-1.  **Upload:** Drop your `.mp4` video file into the GCS bucket `automations-youtube-videos-2025`.
-2.  **Trigger:** The Eventarc trigger detects the new file and invokes the `video-processor` Cloud Run service.
-3.  **Processing:**
-    *   Cloud Run downloads the video.
-    *   `ffmpeg` extracts the audio into a `.wav` file.
-    *   The audio is sent to Gemini (Vertex AI) for processing.
-    *   Gemini returns the transcript, description, titles, and chapters.
-4.  **Output:** The service writes the following files back to the GCS bucket:
-    *   `transcript.txt`: Full text transcript of the video.
-    *   `description.txt`: A short, engaging YouTube description.
-    *   `title.txt`: Suggested clickbaity title.
-    *   `chapters.txt`: Timestamped chapters for the video.
-    *   `subtitles.vtt`: WebVTT format subtitles with timestamps.
-5.  **YouTube Upload:** The service uploads the video to YouTube with the generated metadata and captions using the integrated YouTube uploader module.
+### Frontend User Flow
 
----
+1. **Upload:** Use the Upload page to drag-and-drop your `.mp4` file or select it from your computer.
+   * The ProgressSteps component shows real-time upload progress
+   * File is uploaded directly to GCS using a secure signed URL
+   * A Firestore document is created to track the video's processing status
 
-## 🧪 Testing Framework
+2. **Processing Dashboard:** Monitor your video's processing progress in real-time.
+   * The ProcessingDashboard component shows all videos currently in processing
+   * VideoProgressCard components display each video's current stage and progress
+   * Firestore real-time updates ensure the UI always reflects the current status
 
-The project includes a comprehensive testing framework to ensure reliability and maintainability. The testing approach combines unit tests, integration tests, and standalone test scripts.
+3. **Video Details:** Once processing completes, view and manage your video's content.
+   * Browse to the Video Detail page to see all generated content
+   * Use the tabbed interface to navigate between Overview, Title, Thumbnail, and Metadata
+   * Use TitleSelector to vote on and select the best AI-generated title
+   * Use ThumbnailGallery to preview and choose from multiple AI-generated thumbnails
+   * Use ContentEditor to review and edit transcript, chapters, and other content
 
-### 📚 Testing Documentation
+4. **YouTube Management:** Manage your YouTube settings and monitor the upload process.
+   * Review your video before publishing to YouTube
+   * Control publication date, privacy settings, and other YouTube-specific options
+   * Track YouTube upload status with real-time updates
 
-We've created detailed testing guides to help developers of all experience levels:
+### Backend Processing Flow
 
-1. **[Quick Test Guide](docs/QUICK_TEST_GUIDE.md)**: Simple step-by-step instructions for quick testing
-2. **[Comprehensive Testing Guide](docs/TESTING_GUIDE.md)**: Detailed instructions for all testing scenarios
-3. **[Visual Testing Guide](docs/VISUAL_TESTING_GUIDE.md)**: Visual examples of what to expect during testing
-4. **[Local Testing Guide](docs/LOCAL_TESTING.md)**: Guide for testing the application locally
+1. **Trigger:** When a video is uploaded to GCS or a Firestore document is updated, the appropriate processing is triggered.
 
-### Testing Architecture
+2. **Processing:**
+   * Cloud Run downloads the video
+   * `ffmpeg` extracts the audio into a `.wav` file
+   * The audio is sent to Gemini (Vertex AI) for processing
+   * Gemini returns the transcript, description, titles, and chapters
+   * Multiple thumbnail options are generated
 
-```mermaid
-flowchart TD
-    A[pytest Test Suite] --> B1[Unit Tests]
-    A --> B2[Integration Tests]
-    B1 --> C1[Transcript Generation]
-    B1 --> C2[VTT Generation]
-    B1 --> C3[Chapters Generation]
-    B1 --> C4[Titles Generation]
-    B1 --> C5[Process Video Event]
-    B2 --> D1[Audio Processing]
-    B2 --> D2[End-to-End Processing]
-    C1 & C2 & C3 & C4 & C5 --> E[Mock Gemini API]
-    D1 --> F1[Real ffmpeg]
-    D2 --> F1
-    D1 --> F2[Mock Gemini API]
-    D2 --> F3[Mock GCS]
-```
+3. **Output:** The service writes the following files back to GCS:
+   * `transcript.txt`: Full text transcript of the video
+   * `description.txt`: A short, engaging YouTube description
+   * `titles.json`: Multiple suggested title options
+   * `chapters.txt`: Timestamped chapters for the video
+   * `subtitles.vtt`: WebVTT format subtitles with timestamps
+   * `thumbnails/`: Directory containing multiple AI-generated thumbnail options
 
-### Implemented Tests
+4. **Firestore Updates:** Processing status and metadata are continuously updated in Firestore.
+   * Real-time status updates trigger UI refreshes via onSnapshot
+   * Generated content is referenced and loaded from GCS when needed
 
-1. **Unit Tests (`pytest`):**
-   * Tests for each generation function in isolation:
-     * `test_transcript_generation.py`
-     * `test_vtt_generation.py`
-     * `test_chapters_generation.py`
-     * `test_titles_generation.py`
-   * Tests for the main processing function:
-     * `test_process_video_event.py`
-   * Tests for the main application:
-     * `test_main.py`: Tests the Flask app and event handling
-   * Tests for YouTube integration:
-     * `test_youtube_uploader.py`: Tests YouTube upload functionality
-     * `test_generate_youtube_token.py`: Tests OAuth token generation
-   * **Mocking:** Uses `unittest.mock` to mock external dependencies:
-     * `google.cloud.storage`: Mocks `storage.Client`, `bucket`, and `blob` interactions
-     * `vertexai`: Mocks `GenerativeModel` and its `generate_content` method
-     * `subprocess.run`: Mocks the `ffmpeg` call
-     * `google.oauth2.credentials`: Mocks YouTube API credentials
-     * `googleapiclient.discovery`: Mocks YouTube API service
-     * `google.cloud.secretmanager`: Mocks Secret Manager client
-   * **Test Cases:**
-     * Normal operation with valid inputs
-     * Edge cases with unusual inputs
-     * Error handling for API failures
-     * Handling of non-MP4 files or files in wrong directories
-     * YouTube upload success and failure scenarios
-     * OAuth token generation and storage
-
-2. **Standalone Test Scripts:**
-   * `test_audio_processing.py`: Tests audio extraction and processing with Gemini API
-   * `test_process_video.py`: Tests the end-to-end video processing workflow
-
----
-
-## 📚 Usage & Expected Outcomes
-
-1.  **Upload:** Drop your `.mp4` video file into the GCS bucket `automations-youtube-videos-2025`.
-2.  **Trigger:** The Eventarc trigger detects the new file and invokes the `video-processor` Cloud Run service.
-3.  **Processing:**
-    *   Cloud Run downloads the video.
-    *   `ffmpeg` extracts the audio into a `.wav` file.
-    *   The audio is sent to Gemini (Vertex AI) for processing.
-    *   Gemini returns the transcript, description, titles, and chapters.
-4.  **Output:** The service writes the following files back to the GCS bucket:
-    *   `transcript.txt`: Full text transcript of the video.
-    *   `description.txt`: A short, engaging YouTube description.
-    *   `title.txt`: Suggested clickbaity title.
-    *   `chapters.txt`: Timestamped chapters for the video.
-    *   `subtitles.vtt`: WebVTT format subtitles with timestamps.
-5.  **YouTube Upload:** The service uploads the video to YouTube with the generated metadata and captions using the integrated YouTube uploader module.
-
-## 🚀 YouTube Uploader Enhancements
-
-The YouTube uploader module can be enhanced with additional features to provide more control over video uploads. Below is an analysis of potential enhancements with ICE scores (Impact, Confidence, Ease) to help prioritize implementation.
-
-| Enhancement                      | Description                                                             | Impact (1-10) | Confidence (1-10) | Ease (1-10) | ICE Score | Priority |
-| -------------------------------- | ----------------------------------------------------------------------- | ------------- | ----------------- | ----------- | --------- | -------- |
-| **Privacy Status Options**       | Change default from "private" to "unlisted" or add configuration option | 9             | 10                | 10          | 900       | 1        |
-| **Keywords/Tags Implementation** | Extract or generate SEO keywords for videos                             | 8             | 8                 | 7           | 448       | 2        |
-| **Custom Thumbnails**            | Support uploading custom thumbnail images                               | 9             | 9                 | 6           | 486       | 3        |
-| **Playlists Integration**        | Add videos to playlists automatically                                   | 7             | 8                 | 7           | 392       | 4        |
-| **Scheduled Publishing**         | Set videos to publish at specific dates/times                           | 8             | 7                 | 6           | 336       | 5        |
-| **Video Language Settings**      | Specify video language and add localized metadata                       | 6             | 8                 | 5           | 240       | 6        |
-| **Content Rating**               | Add content rating information to videos                                | 5             | 9                 | 8           | 360       | 7        |
-| **Advanced Metadata**            | Support for location, recording date, etc.                              | 6             | 7                 | 5           | 210       | 8        |
-
-### Implementation Details
-
-#### 1. Privacy Status Options (ICE: 900)
-
-Currently, videos are set to "private" by default. This enhancement would:
-- Add environment variable or configuration option to set default privacy status
-- Support "unlisted" as the preferred default for most use cases
-- Allow per-video privacy settings via metadata files
-
-#### 2. Keywords/Tags Implementation (ICE: 448)
-
-Currently, no keywords/tags are added to videos. This enhancement would:
-- Support a keywords.txt file for explicit keyword lists
-- Extract keywords from title and description if no explicit list is provided
-- Optionally generate SEO-optimized keywords using AI
-
-#### 3. Custom Thumbnails (ICE: 486)
-
-Currently, YouTube generates automatic thumbnails. This enhancement would:
-- Support uploading custom thumbnail images (JPG, PNG)
-- Detect thumbnail files in the processed folder
-- Apply thumbnails after successful video upload
-
-#### 4. Playlists Integration (ICE: 392)
-
-Currently, videos are not added to playlists. This enhancement would:
-- Support playlist.txt file to specify playlist IDs
-- Add videos to specified playlists after upload
-- Support creating new playlists if needed
-
-#### 5. Scheduled Publishing (ICE: 336)
-
-Currently, videos are published immediately with the specified privacy setting. This enhancement would:
-- Support schedule.txt file with ISO 8601 date format
-- Set videos to private until the scheduled date
-- Automatically change privacy status at the scheduled time
-
-#### 6. Video Language Settings (ICE: 240)
-
-Currently, no language metadata is specified. This enhancement would:
-- Support language specification in metadata
-- Add defaultLanguage parameter to video uploads
-- Support localized titles and descriptions
-
-#### 7. Content Rating (ICE: 360)
-
-Currently, no content rating is specified. This enhancement would:
-- Support content rating specification in metadata
-- Add contentRating parameter to video uploads
-- Provide guidance on appropriate content ratings
-
-#### 8. Advanced Metadata (ICE: 210)
-
-Currently, only basic metadata is supported. This enhancement would:
-- Support additional metadata like location, recording date, etc.
-- Add support for JSON-based metadata configuration
-- Provide more control over video metadata
+5. **YouTube Upload:** The service uploads the video to YouTube with the selected metadata and captions.

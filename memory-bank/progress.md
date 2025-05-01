@@ -41,6 +41,26 @@
     - `start-services.sh`: Automates starting both backend and frontend with proper environment setup
     - `stop-services.sh`: Safely stops all development services
     - Log files stored in `/logs/` directory for easy debugging
+- **Backend architecture completely refactored for improved organization:**
+    - Moved to a module-based structure with clear separation of concerns: `api`, `config`, `core/models`, `core/processors`, `services`, and `utils`
+    - Implemented dependency injection for better testability and flexibility
+    - Created interface-based design with concrete implementations for GCS and local storage
+    - Added centralized configuration management to improve maintainability
+    - Improved error handling with specialized exceptions and retry mechanisms
+    - Added comprehensive logging system with consistent format
+    - Reorganized tests into unit, integration, and e2e categories
+- **Enhanced Frontend UI with improved UX components:**
+  - New multi-step progress indicator (ProgressSteps) that shows each processing stage visually
+  - Video processing dashboard with status cards for all uploads, using VideoProgressCard component
+  - Real-time progress tracking with ProcessingDashboard component and processing-steps.ts utilities
+  - ContentEditor component for managing generated text content with read-only and editable modes
+  - Title selection and voting component (TitleSelector) to choose between AI-generated titles
+  - Thumbnail gallery with 4-up view, editing capabilities, and regeneration controls (ThumbnailGallery)
+  - VideoDetail component providing comprehensive view of processed videos with all assets
+  - Custom thumbnail upload support with preview and regeneration
+  - Tabbed video detail interface for better organization (Overview, Title, Thumbnail, Metadata)
+  - Modern UI design with clean Shadcn/UI components and consistent styling
+  - Real-time Firestore listeners for automatic UI updates (onSnapshot)
 
 **What's Left to Build:**  
 - Begin E2E and integration test implementation for all main user flows (upload, edit, thumbnail regeneration, real-time updates)
@@ -54,12 +74,12 @@
 - Backend enhancements: Skool post generator, daily AI news generator, etc.
 
 ### YouTube Uploader Enhancements
-  - [ ] Add support for custom thumbnails
-  - [ ] Implement scheduling for video publishing
+  - [x] Add support for custom thumbnails (frontend UI completed)
+  - [x] Implement scheduling for video publishing (UI component added)
   - [ ] Add better prompt for the chapter markers
-  - [ ] Generate 10 title options using vid IQ logic and send Discord message to pick one
-  - [ ] Generate 4 thumbnails using custom workflow with Pillow (see prd.txt)
-  - [ ] Add support for video tags and cards
+  - [x] Generate multiple title options with voting system (UI completed)
+  - [x] Generate 4 thumbnails with preview and selection UI
+  - [x] Add support for video tags (UI component added)
   - [ ] Automatically add a comment from my account and pin it to the video with a custom message
 - CI/CD improvements and automated deployment
 - Cloud monitoring and alerting
@@ -82,10 +102,25 @@
     - All necessary environment setup (venv activation, environment variables) is automated.
 - Backend code, scripts, and test data consolidated under `/backend/`.
 - Documentation and memory bank fully updated with rationale and technical decisions for all major changes.
+- **Backend codebase completely reorganized into a modular, maintainable structure with improved:**
+    - Separation of concerns
+    - Testability through dependency injection
+    - Configuration management
+    - Error handling and retry logic
+    - Logging and monitoring
+    - Documentation
+- **Frontend UI enhanced with modern, intuitive components:**
+    - Visual multi-step progress tracking for processing stages
+    - Title selection system with voting and editing capabilities
+    - Thumbnail gallery with 4-up view and editing controls
+    - Tabbed interface for better organization
+    - Responsive design for all screen sizes
+    - Consistent styling with shadcn/UI and Tailwind
 
 **Known Issues:**  
 - Need to ensure all scripts and documentation reference new paths
 - E2E test coverage is not yet complete for the new Firestore trigger flow
+- The backend refactoring needs to be integrated with the deployment pipeline
 
 **Evolution of Project Decisions:**  
 - **Clarified storage architecture: GCS is canonical for video files, Firestore for metadata/status, Firebase Storage not used for video in production.**
@@ -95,6 +130,22 @@
 - **TypeScript type safety is enforced for Firestore integration, even with a JS-based config, via a dedicated `.d.ts` file.**
 - **Frontend-backend API communication standardized with Vite server proxy configuration.**
 - **Development workflow streamlined with scripted service management.**
+- **Backend architecture refactored to modular, testable design with dependency injection and interface-based architecture.**
+- **Frontend user experience enhanced with specialized components and visual processing feedback:**
+  - ProgressSteps component for multi-stage process visualization
+  - VideoProgressCard and ProcessingDashboard for real-time monitoring
+  - ContentEditor component for unified content management
+  - TitleSelector component with voting and management capabilities
+  - ThumbnailGallery with preview, selection, and regeneration features
+  - VideoDetail component with comprehensive asset management
+  - Real-time progress tracking with status indicators and progress bars
+  - Tabbed interface for better content organization and navigation
+- **UI design standardized with shadcn/UI and Tailwind:**
+  - Consistent styling and behavior across all components
+  - Modern, clean aesthetic with proper spacing and typography
+  - Responsive design for all screen sizes with mobile optimizations
+  - Interactive elements with proper loading, success, and error states
+  - Accessible UI with proper ARIA attributes and keyboard navigation
 - Adopted frontend/backend split for maintainability and clarity.
 - Chose Vite + React + TanStack for frontend, Firestore for real-time backend data.
 - Roadmap and README.md are referenced for ongoing updates and reprioritization.
@@ -106,12 +157,46 @@
 
 ```mermaid
 flowchart TD
-    A[User edits video metadata or thumbnail in UI] --> B[Frontend updates Firestore document]
+    A[User edits video metadata or thumbnail in UI] --> |using ContentEditor/ThumbnailGallery| B[Frontend updates Firestore document]
     B --> C[Backend listener detects change]
     C --> D[Backend pipeline processes update]
     D --> E[Firestore updated with new status/results]
-    E --> F[Frontend receives real-time update]
-    F --> G[User sees updated status/metadata]
+    E --> F[Frontend receives real-time update via onSnapshot]
+    F --> G[VideoDetail component refreshes with new data]
+    
+    H[User uploads video] --> I[Frontend sends to GCS via signed URL]
+    I --> J[Frontend creates Firestore document]
+    J --> K[Backend listener detects new video]
+    K --> L[Processing pipeline generates transcript, titles, thumbnails]
+    L --> M[ProgressSteps component tracks processing stages]
+    M --> N[Firestore updated with generated content]
+    N --> O[ProcessingDashboard shows completed processing]
+    O --> P[User navigates to VideoDetail]
+    P --> Q[User selects/edits titles using TitleSelector]
+    Q --> R[User manages thumbnails using ThumbnailGallery]
+    R --> S[Changes trigger backend regeneration]
+    S --> T[UI updates in real-time with new content]
+```
+
+**Backend Architecture (Mermaid):**
+
+```mermaid
+flowchart TD
+    API[API Layer] --> Core[Core Domain Logic]
+    API --> Services[External Services]
+    Core --> Models[Domain Models]
+    Core --> Processors[Processing Components]
+    Services --> Storage[Storage Services]
+    Services --> AIModels[AI Model Services]
+    Services --> YouTube[YouTube Integration]
+    Storage --> GCS[Google Cloud Storage]
+    Storage --> Local[Local Storage]
+    Config[Configuration] --> API
+    Config --> Core
+    Config --> Services
+    Utils[Utilities] --> ErrorHandling[Error Handling]
+    Utils --> Logging[Logging]
+    Utils --> FileHandling[File Handling]
 ```
 
 **Source:**  

@@ -24,6 +24,14 @@
   - pnpm (package manager)
   - PostCSS (with Tailwind)
   - Vite dev server
+  - **Custom UI components:**
+    - ProgressSteps: Visualization of processing stages
+    - VideoProgressCard: Processing status card for individual videos
+    - ProcessingDashboard: Central hub for monitoring all videos in processing
+    - ContentEditor: Universal editor for generated text content
+    - TitleSelector: UI for selecting and managing AI-generated title options
+    - ThumbnailGallery: Interface for managing video thumbnails
+    - VideoDetail: Comprehensive view of a processed video with all assets
   - **Cypress/Playwright (for E2E testing, see testing-strategy.md)**
 
 **Development Setup:**  
@@ -35,7 +43,7 @@
       - Windows: `backend\venv\Scripts\activate`
     - **Install dependencies:**  
       - `pip install -r backend/requirements.txt` (after activating venv)
-  - **Backend file tree structure:**  
+  - **Refactored backend structure:**  
     ```
     backend/
       ├── deploy.sh
@@ -44,14 +52,35 @@
       ├── requirements.txt
       ├── scripts/
       ├── test_data/
+      ├── tests/
+      │   ├── unit/              # Unit tests
+      │   ├── integration/       # Integration tests
+      │   ├── e2e/               # End-to-end tests
+      │   ├── conftest.py        # Common test fixtures
+      │   ├── README.md          # Testing guide
+      │   └── outdated/          # Legacy tests for reference
       ├── venv/
       └── video_processor/
-          ├── app.py
-          ├── main.py
-          ├── process_uploaded_video.py
-          ├── firestore_trigger_listener.py
-          ├── tests/
-          └── ...
+          ├── api/               # API endpoints and controllers
+          │   ├── controllers.py
+          │   ├── routes.py
+          │   └── schemas.py
+          ├── app.py             # Main entry point
+          ├── config/            # Configuration management
+          │   ├── environment.py
+          │   └── settings.py
+          ├── core/              # Core domain logic
+          │   ├── models/        # Domain models
+          │   └── processors/    # Processing components
+          ├── services/          # External service integrations
+          │   ├── storage/       # Storage services (GCS, local)
+          │   ├── ai/            # AI model services
+          │   └── youtube/       # YouTube integration
+          ├── utils/             # Shared utilities
+          │   ├── error_handling.py
+          │   ├── file_handling.py
+          │   └── logging.py
+          └── README.md          # Module documentation
     ```
   - **Rules for running backend scripts and Flask app:**
     - Always activate the venv before running any Python scripts.
@@ -95,6 +124,8 @@
 - Frontend must support real-time Firestore updates and inline editing
 - No authentication required for initial local use
 - Fast, modern, and maintainable UI
+- **Backend follows modular architecture with dependency injection**
+- **Services are interface-based to allow multiple implementations**
 
 **Dependencies:**  
 - **Backend:**  
@@ -111,6 +142,12 @@
 
 **Tool Usage Patterns:**  
 - **Backend:**  
+  - Dependency injection for service composition and testability
+  - Interface-based service design with multiple implementations (e.g., GCS vs local storage)
+  - Centralized configuration management with environment variable validation
+  - Specialized error handling with custom exceptions and retry mechanisms
+  - Structured logging with consistent format
+  - Automated test fixtures for mock services and test data generation
   - Firestore trigger listener (backend/video_processor/firestore_trigger_listener.py) for automated backend processing in response to UI actions
   - `/api/gcs-upload-url` endpoint for generating signed upload URLs for GCS
   - Simulation script (backend/scripts/simulate_firestore_update.py) for testing Firestore-triggered flows
@@ -126,11 +163,28 @@
   - Firebase JS SDK for Firestore integration
   - Single firebase.js at the root of the frontend for all Firestore config/imports (deduplication, avoids confusion)
   - Inline editing and real-time updates for video metadata and thumbnails
+  - **Custom UI components for enhanced user experience:**
+    - ProgressSteps component for visualizing processing workflow
+    - Video processing dashboard with real-time status updates
+    - Title selection interface with voting system for AI-generated titles
+    - Thumbnail gallery with preview, selection, and regeneration options
+    - Content editor for managing transcripts, subtitles, and chapters
+    - Tabbed interface for video details with real-time updates
+  - **Real-time progress tracking with visual feedback for all processing stages**
   - **Uploads video files directly to GCS using signed URLs for production (secure, credentials never exposed to frontend).**
   - **E2E tests use dedicated test GCS buckets and Firestore collections to avoid polluting production data (see testing-strategy.md)**
 
 **Recent Regression & Restoration:**  
 - A recent regression ("video123 header changes") broke Firestore integration and backend triggers. This has been fully restored: frontend now uses a single firebase.js, and backend triggers again respond to UI-driven changes. All new UI uses shadcn components styled with Tailwind.
+
+**Backend Architecture Principles:**
+- **Separation of Concerns**: Clear boundaries between API, core logic, and external services
+- **Dependency Injection**: Services receive dependencies rather than creating them
+- **Interface-Based Design**: Components work with abstractions rather than concrete implementations
+- **Testability**: All components are designed to be easily tested in isolation
+- **Configuration Management**: Environment variables and settings centralized
+- **Error Handling**: Consistent error handling with specialized exceptions and retry mechanisms
+- **Logging**: Structured logging with consistent format throughout the application
 
 **Source:**  
 - [README.md](../README.md) (Prerequisites, Setup, Project Structure)  

@@ -1,6 +1,28 @@
-# Video Processor Module
+# Video Processor Service
 
-This module handles the processing of uploaded videos, extracting audio, and generating AI-powered metadata using Google's Gemini API.
+A modular service for processing videos, extracting audio, generating transcripts, subtitles, and more with AI-powered features.
+
+## Project Structure
+
+The project follows a modular architecture design to improve maintainability, testability, and developer experience:
+
+```
+backend/video_processor/
+├── api/                  # API endpoints and controllers
+├── config/               # Configuration management
+├── core/                 # Core domain logic
+│   ├── models/           # Domain models
+│   └── processors/       # Processing components
+├── services/             # External service integrations
+│   ├── ai/               # AI model integrations
+│   ├── storage/          # Storage service (GCS, local)
+│   └── youtube/          # YouTube API integration
+├── utils/                # Shared utilities
+└── tests/                # Tests organized by type
+    ├── unit/             # Unit tests
+    ├── integration/      # Integration tests
+    └── e2e/              # End-to-end tests
+```
 
 ## Architecture Overview
 
@@ -22,241 +44,119 @@ flowchart TD
     I --> K[Trigger YouTube Upload Function]
 ```
 
-## Files Overview
+## Key Design Features
 
-### Core Files
-- **process_uploaded_video.py**: Core module that handles video processing, audio extraction, and Gemini API integration
-- **main.py**: Cloud Run service entry point that receives GCS events and calls the processing functions
-- **app.py**: Flask application for the video processor service
-- **youtube_uploader.py**: Cloud Function for uploading videos to YouTube
-- **generate_youtube_token.py**: Utility for generating YouTube API OAuth tokens
+1. **Dependency Injection**
+   - Services and components receive dependencies rather than creating them
+   - Improves testability and flexibility
 
-### Test Files
-- **tests/**: Directory containing all pytest test files
-  - **conftest.py**: Common pytest fixtures for testing
-  - **test_transcript_generation.py**: Tests for transcript generation functionality
-  - **test_vtt_generation.py**: Tests for VTT subtitles generation
-  - **test_chapters_generation.py**: Tests for chapters generation
-  - **test_titles_generation.py**: Tests for title and keywords generation
-  - **test_process_video_event.py**: Tests for the main process_video_event function
-  - **test_main.py**: Tests for the Flask app and event handling
-  - **test_youtube_uploader.py**: Tests for YouTube upload functionality
-  - **test_generate_youtube_token.py**: Tests for OAuth token generation
-- **test_audio_processing.py**: Standalone script for testing audio processing with Gemini API
-- **test_process_video.py**: Standalone script for testing the end-to-end video processing workflow
-- **pytest.ini**: Configuration file for pytest
+2. **Interface-Based Design**
+   - Components work with interfaces instead of concrete implementations
+   - Enables easy swapping of implementations (e.g., GCS vs. local storage)
 
-## Debugging and Testing
+3. **Centralized Configuration**
+   - Environment variables managed through dedicated system
+   - Default values and validation in one place
 
-### Recent Bug Fix: Audio Format for Gemini API
+4. **Error Handling**
+   - Consistent error handling with custom exceptions
+   - Retry mechanisms for transient failures
 
-We recently fixed an issue where raw binary WAV audio data was being passed directly to the Gemini API, which expects a properly formatted Part object with the correct MIME type.
+5. **Logging**
+   - Structured logging throughout the application
+   - Consistent format and levels
 
-#### Problem
-The error occurred when trying to process audio data with Gemini API:
-```
-ERROR:root:Gemini API call failed: Unexpected item type: b'RIFF\xf0j=\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00\x80>\x00\x00\x00}\x00\x00\x02\x00\x10\x00LIST\x1a\x00\x00\x00INFOISFT\x0e\x00\x00\x00Lavf59.27.100\x00data\xaaj=\x00...
-```
+## Development Workflow
 
-#### Solution
-1. Modified the code to use the `Part.from_data()` method to properly format the audio data with the correct MIME type
-2. Updated all Gemini API functions to accept the properly formatted audio part
-3. Fixed environment variable issues by using hardcoded project ID instead of relying on environment variables
+### Local Development
 
-## Testing Framework
-
-### Overview
-
-We use pytest as our primary testing framework, with additional support from pytest-mock and pytest-cov for mocking and code coverage analysis. Our testing approach includes both unit tests and integration tests.
-
-```mermaid
-flowchart TD
-    A[pytest Test Suite] --> B1[Unit Tests]
-    A --> B2[Integration Tests]
-    B1 --> C1[Transcript Generation]
-    B1 --> C2[VTT Generation]
-    B1 --> C3[Chapters Generation]
-    B1 --> C4[Titles Generation]
-    B1 --> C5[Process Video Event]
-    B2 --> D1[Audio Processing]
-    B2 --> D2[End-to-End Processing]
-    C1 & C2 & C3 & C4 & C5 --> E[Mock Gemini API]
-    D1 --> F1[Real ffmpeg]
-    D2 --> F1
-    D1 --> F2[Mock Gemini API]
-    D2 --> F3[Mock GCS]
-```
-
-### Test Directory Structure
-
-```
-video_processor/
-├── tests/
-│   ├── __init__.py                    # Makes tests a proper package
-│   ├── conftest.py                    # Common pytest fixtures
-│   ├── test_transcript_generation.py  # Tests for transcript generation
-│   ├── test_vtt_generation.py         # Tests for VTT generation
-│   ├── test_chapters_generation.py    # Tests for chapters generation
-│   ├── test_titles_generation.py      # Tests for title generation
-│   ├── test_process_video_event.py    # Tests for video processing
-│   ├── test_main.py                   # Tests for Flask app and event handling
-│   ├── test_youtube_uploader.py       # Tests for YouTube upload functionality
-│   └── test_generate_youtube_token.py # Tests for OAuth token generation
-├── test_audio_processing.py           # Standalone test script
-├── test_process_video.py              # Standalone test script
-└── pytest.ini                         # pytest configuration
-```
-
-### Setting Up the Test Environment
-
-1. **Install Dependencies**:
+1. Set up your environment:
 
 ```bash
-# Install the required packages for testing
-pip install pytest pytest-mock pytest-cov
+# Create a virtual environment
+python -m venv venv
+source venv/bin/activate
 
-# Or install all requirements including test dependencies
+# Install dependencies
 pip install -r requirements.txt
+
+# Set environment variables for local testing
+export TESTING_MODE=true
+export LOCAL_OUTPUT=true
 ```
 
-2. **Configure Environment Variables** (if needed for integration tests):
+2. Run the service locally:
 
 ```bash
-export PROJECT_ID="your-gcp-project-id"
-export REGION="us-central1"
+python -m video_processor.app
 ```
 
-### Running the Tests
+3. Test a video upload:
+   - Use the `scripts/simulate_firestore_update.py` script, or
+   - Make a POST request to the service
 
-#### Unit Tests with pytest
+### Running Tests
 
-To run the unit tests with pytest:
+Tests are organized by type:
 
 ```bash
-# Navigate to the video_processor directory
-cd video_processor
+# Run unit tests
+pytest tests/unit
 
-# Run all tests with coverage report
-pytest
+# Run integration tests
+pytest tests/integration
 
-# Run specific test file
-pytest tests/test_transcript_generation.py
+# Run end-to-end tests
+pytest tests/e2e
 
-# Run tests with specific markers
-pytest -m "not integration"
-
-# Run tests with verbose output
-pytest -v
-
-# Run tests with coverage report
-pytest --cov=. --cov-report=term-missing
+# Run comprehensive test
+python scripts/run_comprehensive_test.py
 ```
 
-#### Standalone Test Scripts
+## Deployment
 
-We also provide standalone test scripts for quick testing:
+The service can be deployed to Google Cloud Run:
 
 ```bash
-# Test audio processing
-python test_audio_processing.py
+# Deploy to Cloud Run
+./deploy.sh
 
-# Test video processing
-python test_process_video.py
+# Deploy in dry-run mode (no actual deployment)
+./deploy.sh --dry-run
+
+# Skip tests during deployment
+./deploy.sh --skip-tests
 ```
 
-### What to Look For
+## Service Components
 
-When running the tests, pay attention to:
+### Storage Service
 
-1. **Test Coverage**: Ensure all functions have adequate test coverage (aim for >80%)
-2. **Failed Tests**: Any failed tests should be addressed immediately
-3. **Warnings**: Address any deprecation warnings or other issues
-4. **Mock Verification**: Ensure that mocks are being called with the expected parameters
-5. **Edge Cases**: Check that tests cover various edge cases and error conditions
+The `StorageService` interface abstracts storage operations, with implementations for:
 
-### Testability Improvements
+- **GCSStorageService**: Google Cloud Storage
+- **LocalStorageService**: Local filesystem (for testing and development)
 
-We've made several improvements to make the code more testable:
+### Video Processing
 
-#### 1. Dependency Injection
+The core processing pipeline:
 
-The `main.py` module now uses dependency injection to make it easier to test:
+1. **Download Video**: Get video from storage
+2. **Extract Audio**: Convert video to audio
+3. **Generate Transcript**: Create full transcript
+4. **Generate Subtitles**: Create subtitles in VTT format
+5. **Generate Shownotes**: Create detailed notes
+6. **Generate Chapters**: Create timestamped chapters
+7. **Generate Title/Keywords**: Create optimized metadata
+8. **Upload Results**: Store all outputs
 
-```python
-def create_app(process_func: Optional[Callable] = None) -> Flask:
-    """Create and configure the Flask application."""
-    flask_app = Flask(__name__)
+### YouTube Integration
 
-    # Use the provided process function or default to the real one
-    video_processor = process_func if process_func is not None else process_video_event
+Handles automatic uploading to YouTube channels:
 
-    # ... rest of the function
-```
-
-This allows tests to inject a mock processing function instead of the real one.
-
-#### 2. Modular Structure
-
-The code is now organized in a modular structure with clear separation of concerns:
-
-- **main.py**: Handles HTTP requests and routing
-- **process_uploaded_video.py**: Contains the core processing logic
-- **youtube_uploader.py**: Handles YouTube API integration
-- **generate_youtube_token.py**: Manages OAuth token generation
-
-This makes it easier to test each component in isolation.
-
-### Common Testing Issues and Solutions
-
-#### 1. Mocking Vertex AI Part Objects
-
-When mocking Vertex AI Part objects, use `MagicMock(spec=Part)` to ensure the mock behaves like a real Part object:
-
-```python
-from vertexai.preview.generative_models import Part
-
-# Create a mock audio part that is a proper Part instance
-mock_audio_part = MagicMock(spec=Part)
-```
-
-#### 2. Handling Newline Characters in Tests
-
-When comparing strings with newlines, normalize the newlines for comparison:
-
-```python
-# Normalize newlines for comparison
-assert result.replace('\\n', '\n') == expected_result
-```
-
-#### 3. Patching the Correct Import Path
-
-When using `patch`, make sure to patch where the object is used, not where it's defined:
-
-```python
-# Correct way to patch
-with patch("video_processor.process_uploaded_video.GenerativeModel", return_value=mock_model):
-    # Test code here
-```
-
-Note that with our new module structure, all imports should be prefixed with `video_processor.`
-
-### Adding New Tests
-
-When adding new functionality:
-
-1. Create a new test file in the `tests/` directory following the naming convention `test_*.py`
-2. Use the fixtures defined in `conftest.py` where appropriate
-3. Add both positive tests (expected behavior) and negative tests (error handling)
-4. Run the tests to ensure they pass before committing changes
-
-### Debugging Test Failures
-
-If tests are failing, try these steps:
-
-1. Run with verbose output: `pytest -v`
-2. Run a specific failing test: `pytest tests/test_file.py::test_function -v`
-3. Use the `-s` flag to see print statements: `pytest -s`
-4. Check the test coverage to identify untested code: `pytest --cov=.`
+- Authentication using OAuth2
+- Separate channel configurations
+- Caption and metadata management
 
 ## API Integration
 
@@ -277,13 +177,7 @@ When sending audio to Gemini API:
 - Specify the correct MIME type (e.g., "audio/wav")
 - The audio should be in a supported format (WAV, MP3, etc.)
 
-## Deployment
-
-This module is deployed as part of a Cloud Run service that is triggered by GCS events when new videos are uploaded to specific folders.
-
 ## Future Improvements
-
-See the main [ROADMAP.md](../ROADMAP.md) file for a complete list of planned improvements. Key technical improvements for this module include:
 
 1. Add more robust error handling for different types of audio files and formats
 2. Implement retry logic for API calls

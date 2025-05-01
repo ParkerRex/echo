@@ -1,126 +1,231 @@
-# Project Structure Guide
+# 📁 Project Structure Guide
 
-This document provides a clear overview of the project structure to help new developers understand the codebase.
+This document provides a comprehensive overview of the project structure to help developers understand the codebase organization and key components.
 
 ## Directory Structure
 
+The project is organized into a clear frontend/backend split for better maintainability:
+
 ```
 Automations/
-├── video_processor/           # Main application code
-│   ├── __init__.py            # Package initialization
-│   ├── main.py                # Entry point for Cloud Run service
-│   ├── app.py                 # Flask application
-│   ├── process_uploaded_video.py  # Core video processing logic
-│   ├── youtube_uploader.py    # YouTube upload functionality
-│   ├── generate_youtube_token.py  # YouTube OAuth token generation
-│   └── tests/                 # Unit and integration tests
-│       ├── conftest.py        # Pytest fixtures
-│       ├── test_*.py          # Test files
-│       └── ...
-├── scripts/                   # Utility scripts
-│   ├── test_locally.py        # Script for local testing
-│   ├── docker_test.sh         # Docker-based testing script
-│   ├── real_api_test.py       # Testing with real API calls
-│   ├── local_test.sh          # Script to run local Docker environment
-│   └── run_comprehensive_test.py  # Comprehensive test script
-├── test_data/                 # Test data directory
-│   ├── daily-raw/             # Raw test videos
-│   ├── processed-daily/       # Processed test outputs
-│   └── *.mp4                  # Sample test videos
+├── @credentials/              # Service account credentials (not committed to git)
+│   └── service_account.json   # Google Cloud service account key
+├── backend/                   # Python backend code
+│   ├── Dockerfile             # Backend container definition
+│   ├── deploy.sh              # Backend deployment script
+│   ├── docker-compose.yml     # Docker Compose for backend services
+│   ├── requirements.txt       # Python dependencies
+│   ├── scripts/               # Backend utility scripts
+│   │   ├── create_sample_videos_firestore.py
+│   │   ├── docker_test.sh     # Docker-based testing
+│   │   ├── local_test.sh      # Local environment setup
+│   │   ├── real_api_test.py   # Testing with real APIs
+│   │   └── simulate_firestore_update.py  # Test Firestore triggers
+│   ├── test_data/             # Test videos and outputs
+│   │   ├── daily-raw/         # Raw test videos
+│   │   └── processed-daily/   # Processed outputs
+│   ├── tests/                 # Test suite
+│   │   ├── unit/              # Unit tests
+│   │   ├── integration/       # Integration tests
+│   │   ├── e2e/               # End-to-end tests
+│   │   └── conftest.py        # Test fixtures
+│   └── video_processor/       # Core backend application
+│       ├── api/               # API endpoints
+│       │   ├── controllers.py
+│       │   ├── routes.py
+│       │   └── schemas.py
+│       ├── app.py             # Flask application
+│       ├── config/            # Configuration
+│       │   ├── environment.py
+│       │   └── settings.py
+│       ├── core/              # Core domain logic
+│       │   ├── models/        # Domain models
+│       │   └── processors/    # Processing components
+│       ├── services/          # External services
+│       │   ├── storage/       # Storage services (GCS, local)
+│       │   ├── ai/            # AI model services
+│       │   └── youtube/       # YouTube integration
+│       ├── utils/             # Shared utilities
+│       └── youtube_uploader.py  # YouTube upload functionality
 ├── docs/                      # Documentation
-│   ├── TESTING_GUIDE.md       # Comprehensive testing guide
-│   ├── QUICK_TEST_GUIDE.md    # Quick testing guide
+│   ├── DOCKER_SETUP.md        # Docker development setup
+│   ├── MONITORING_GUIDE.md    # Monitoring guide
 │   ├── PROJECT_STRUCTURE.md   # This file
-│   └── VISUAL_TESTING_GUIDE.md # Visual testing guide
-├── credentials/               # Credentials directory
-│   └── service_account.json   # Service account credentials
-├── Dockerfile                 # Container definition
-├── docker-compose.yml         # Docker Compose configuration
-├── requirements.txt           # Python dependencies
-├── deploy.sh                  # Deployment script
+│   ├── TESTING_GUIDE.md       # Testing guide
+│   ├── VISUAL_TESTING_GUIDE.md # Visual test examples
+│   ├── YOUTUBE_UPLOADER_CHANGES.md  # YouTube uploader features
+│   └── archive/               # Archived documentation
+├── frontend/                  # React frontend code
+│   ├── README.md              # Frontend documentation
+│   ├── app/                   # React application
+│   │   ├── api.ts             # API client
+│   │   ├── components/        # UI components
+│   │   │   ├── home/          # Home page components
+│   │   │   ├── shared/        # Shared components
+│   │   │   ├── ui/            # UI library components
+│   │   │   └── video/         # Video-related components
+│   │   ├── lib/               # Utility libraries
+│   │   ├── routes/            # Application routes
+│   │   │   ├── dashboard.tsx  # Dashboard page
+│   │   │   ├── index.tsx      # Home page
+│   │   │   ├── settings.tsx   # Settings page
+│   │   │   ├── upload.tsx     # Upload page
+│   │   │   └── video.$videoId.tsx  # Video detail page
+│   │   └── styles/            # CSS styles
+│   ├── firebase.ts            # Firebase/Firestore configuration
+│   ├── package.json           # Frontend dependencies
+│   └── public/                # Static assets
+├── memory-bank/               # Project context documents
+│   ├── activeContext.md       # Current work context
+│   ├── productContext.md      # Product context
+│   ├── projectbrief.md        # Project overview
+│   ├── techContext.md         # Technology context
+│   └── testing-strategy.md    # Testing strategy
+├── docker-compose.yml         # Main Docker Compose config
+├── docker-start.sh            # Script to start Docker services
+├── docker-stop.sh             # Script to stop Docker services
+├── docker-logs.sh             # Script to view Docker logs
+├── docker-test.sh             # Script to run Docker tests
+├── monitor-services.sh        # Script to monitor Cloud Run services
 └── README.md                  # Project overview
 ```
 
 ## Key Components and Their Relationships
 
-### Core Application Components
+### System Architecture
 
 ```mermaid
 flowchart TD
-    A[main.py] -->|Initializes| B[app.py]
-    B -->|Handles requests| C[process_uploaded_video.py]
-    C -->|Processes videos| D[Gemini API]
-    C -->|Uploads results| E[GCS]
-    C -->|Optional| F[youtube_uploader.py]
-    F -->|Authenticates with| G[generate_youtube_token.py]
-    G -->|Uses| H[YouTube API]
+    Upload[User Upload] --> Frontend[React Frontend]
+    Frontend --> |Create Doc| Firestore[(Firestore)]
+    Frontend --> |Upload Video| GCS[(GCS Bucket)]
+    GCS --> |Trigger| CloudRun[Cloud Run]
+    CloudRun --> |Process Video| AI[Gemini AI]
+    CloudRun --> |Update Status| Firestore
+    CloudRun --> |Store Results| GCS
+    GCS --> |Trigger| YouTube[YouTube Uploader]
+    YouTube --> |Upload| YT[(YouTube)]
+    Firestore --> |Real-time Updates| Frontend
 ```
 
-### Testing Components
+### Frontend Architecture
 
 ```mermaid
 flowchart TD
-    A[test_locally.py] -->|Tests| B[app.py]
-    C[docker_test.sh] -->|Tests with Docker| D[docker-compose.yml]
-    D -->|Runs| E[video_processor]
-    D -->|Runs| F[mock_gcs_service]
-    G[real_api_test.py] -->|Tests with real APIs| H[process_uploaded_video.py]
-    I[run_comprehensive_test.py] -->|Comprehensive testing| J[app.py]
+    Routes[TanStack Routes] --> Pages[Application Pages]
+    Pages --> Components[UI Components]
+    Firebase[Firebase SDK] --> |Read/Write| Firestore[(Firestore)]
+    Pages --> |useQuery| Firebase
+    Components --> |Events| Firebase
+    API[API Client] --> |GCS Upload URL| Backend[Backend API]
+    Pages --> API
+```
+
+### Backend Architecture
+
+```mermaid
+flowchart TD
+    App[Flask App] --> |Routes| API[API Controllers]
+    App --> |GCS Events| EventHandler[Event Handler]
+    EventHandler --> Processor[Video Processor]
+    API --> |Generate URLs| GCS[GCS Service]
+    Processor --> |Extract Audio| Audio[Audio Extractor]
+    Audio --> |Process| Gemini[Gemini AI]
+    Gemini --> |Generate| Outputs[Processing Outputs]
+    Outputs --> |Store| Storage[Storage Service]
+    Storage --> |Trigger| YouTube[YouTube Uploader]
 ```
 
 ## Component Descriptions
 
-### Core Components
+### Frontend Components
 
-- **main.py**: Entry point for the Cloud Run service. Initializes the Flask app and handles configuration.
-- **app.py**: Flask application that handles HTTP requests and routes them to the appropriate handlers.
-- **process_uploaded_video.py**: Core logic for processing videos, including audio extraction, Gemini API calls, and result storage.
-- **youtube_uploader.py**: Handles uploading videos to YouTube with the generated metadata.
-- **generate_youtube_token.py**: Utility for generating and managing YouTube API OAuth tokens.
+- **app/routes/**: TanStack Router routes for different pages
+- **app/components/**: React components organized by feature
+- **app/api.ts**: API client for backend communication
+- **firebase.ts**: Firebase/Firestore configuration and integration
+- **app/components/video/**: Components for video processing UI
+- **app/components/ui/**: Reusable UI components using shadcn
 
-### Testing Components
+### Backend Components
 
-- **test_locally.py**: Script for testing the application locally without Docker.
-- **docker_test.sh**: Script for testing the application with Docker Compose.
-- **real_api_test.py**: Script for testing with real API calls to see actual outputs.
-- **run_comprehensive_test.py**: Comprehensive test script that verifies all aspects of the application.
-- **local_test.sh**: Script to run the local Docker environment for development and testing.
+- **video_processor/api/**: API endpoints and controllers
+- **video_processor/core/processors/**: Video processing logic
+- **video_processor/services/storage/**: Storage service implementations (GCS, local)
+- **video_processor/services/ai/**: AI service integrations (Gemini)
+- **video_processor/services/youtube/**: YouTube API integration
+- **video_processor/youtube_uploader.py**: YouTube upload functionality
 
-### Configuration Files
+### Utility Scripts
 
-- **Dockerfile**: Defines the container image for the application.
-- **docker-compose.yml**: Defines the Docker Compose configuration for local development and testing.
-- **requirements.txt**: Lists the Python dependencies for the application.
-- **deploy.sh**: Script for deploying the application to Cloud Run.
+- **docker-start.sh**: Starts frontend and backend Docker containers
+- **docker-stop.sh**: Stops Docker containers
+- **docker-logs.sh**: Views Docker container logs
+- **docker-test.sh**: Runs automated tests with Docker
+- **monitor-services.sh**: Monitors deployed Cloud Run services
+- **backend/scripts/**: Backend-specific utility scripts
 
-## Testing Workflow
+## Key Workflows
 
-1. **Quick Local Testing**: Use `test_locally.py` for quick tests without Docker.
-2. **Docker-based Testing**: Use `docker_test.sh` for more comprehensive testing with Docker.
-3. **Real API Testing**: Use `real_api_test.py` to test with real API calls and see actual outputs.
-4. **Comprehensive Testing**: Use `run_comprehensive_test.py` for end-to-end testing.
-5. **Deployment Testing**: Use `deploy.sh --dry-run` to test the deployment process without actually deploying.
+### Development Workflow
 
-## Development Workflow
+1. **Start the environment**: `./docker-start.sh`
+2. **Make code changes** in frontend or backend
+3. **Test changes**: 
+   - Frontend: View at http://localhost:3000
+   - Backend: Test API at http://localhost:8080
+4. **Run automated tests**: `./docker-test.sh`
+5. **Stop the environment**: `./docker-stop.sh`
 
-1. Make changes to the code
-2. Run local tests to verify changes
-3. Run Docker-based tests for more comprehensive verification
-4. Run real API tests if needed to see actual outputs
-5. Deploy to Cloud Run using the deployment script
+### Video Processing Workflow
 
-## Common Paths and Patterns
+1. User **uploads video** on frontend
+2. Frontend gets **signed URL** from backend API
+3. Frontend **uploads to GCS** directly
+4. GCS trigger **invokes Cloud Run**
+5. Backend **processes video** using Gemini
+6. Backend **stores results** in GCS and updates Firestore
+7. Frontend shows **real-time updates** via Firestore
+8. YouTube uploader **publishes to YouTube**
 
-- **Raw Videos**: Uploaded to `daily-raw/` or `main-raw/` in the GCS bucket
-- **Processed Results**: Stored in `processed-daily/` or `processed-main/` in the GCS bucket
-- **Test Data**: Stored in the `test_data/` directory for local testing
-- **Logs**: Deployment logs are stored in the `logs/` directory
+## Storage Organization
+
+### Google Cloud Storage
+
+- **automations-youtube-videos-2025**: Main GCS bucket
+  - **/daily-raw/**: Raw videos for daily content
+  - **/processed-daily/**: Processed outputs for daily content
+  - **/main-raw/**: Raw videos for main channel content
+  - **/processed-main/**: Processed outputs for main channel content
+
+### Firestore
+
+- **"videos"** collection: Document per video
+  - **video_id**: Unique identifier
+  - **filename**: Original filename
+  - **current_stage**: Current processing stage
+  - **stages_completed**: Array of completed stages
+  - **error**: Error information (if any)
+  - **metadata**: Video metadata (title, description, etc.)
+  - **thumbnails**: Array of thumbnail information
+  - **editable_fields**: User-editable fields
 
 ## Environment Variables
 
-- **TESTING_MODE**: Set to "true" to enable testing mode (mock APIs)
-- **REAL_API_TEST**: Set to "true" to use real API calls in testing
-- **LOCAL_OUTPUT**: Set to "true" to write outputs to the local filesystem
-- **GOOGLE_APPLICATION_CREDENTIALS**: Path to service account credentials
+### Backend Environment Variables
+
+- **GOOGLE_APPLICATION_CREDENTIALS**: Path to service account JSON
+- **GCS_UPLOAD_BUCKET**: GCS bucket for video uploads
+- **TESTING_MODE**: Enable testing mode (mock APIs)
 - **GOOGLE_CLOUD_PROJECT**: Google Cloud project ID
-- **PORT**: Port for the Flask application to listen on
+- **GEMINI_MODEL**: Gemini model to use
+- **DEFAULT_PRIVACY_STATUS**: Default YouTube privacy (unlisted/private/public)
+
+### Frontend Environment Variables
+
+- **VITE_API_URL**: Backend API URL
+- **VITE_FIREBASE_CONFIG**: Firebase configuration (in .env)
+
+## Testing Strategy
+
+For a detailed testing strategy, see [testing-strategy.md](../memory-bank/testing-strategy.md).

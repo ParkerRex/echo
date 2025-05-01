@@ -43,3 +43,5 @@ test_data/daily-raw/*.mp4
 test_data/processed-daily/
 test_data/main-raw/
 test_data/processed-main/
+
+**/.claude/settings.local.json

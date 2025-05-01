@@ -1,323 +1,264 @@
-# Video Processor Testing Guide
+# 🧪 Video Processor Testing Guide
 
-This guide provides step-by-step instructions for testing the Video Processor application. It's designed for developers of all experience levels, with a focus on clarity for junior developers.
+This guide provides step-by-step instructions for testing the Video Processor application. It covers the new Docker-based development workflow and testing methods.
 
 ## Table of Contents
 
 1. [Prerequisites](#prerequisites)
-2. [Local Testing](#local-testing)
-   - [Method 1: Using the Python Script](#method-1-using-the-python-script)
-   - [Method 2: Using Docker](#method-2-using-docker)
-3. [Deployment Testing](#deployment-testing)
+2. [Development Setup](#development-setup)
+   - [Starting Services](#starting-services)
+   - [Stopping Services](#stopping-services)
+   - [Viewing Logs](#viewing-logs)
+3. [Testing Methods](#testing-methods)
+   - [Method 1: Docker-based Testing](#method-1-docker-based-testing) (Recommended)
+   - [Method 2: Local Python Testing](#method-2-local-python-testing)
+   - [Method 3: Real API Testing](#method-3-real-api-testing)
+4. [Deployment Testing](#deployment-testing)
    - [Dry Run Deployment](#dry-run-deployment)
    - [Full Deployment](#full-deployment)
-4. [Monitoring and Debugging](#monitoring-and-debugging)
-   - [Viewing Local Logs](#viewing-local-logs)
-   - [Viewing Cloud Run Logs](#viewing-cloud-run-logs)
-5. [Troubleshooting](#troubleshooting)
+5. [Monitoring](#monitoring)
+   - [Local Monitoring](#local-monitoring)
+   - [Cloud Monitoring](#cloud-monitoring)
+6. [Troubleshooting](#troubleshooting)
 
 ## Prerequisites
 
 Before you begin testing, make sure you have:
 
-- Python 3.11 or later installed
-- Docker installed (optional, for Docker-based testing)
+- Docker and Docker Compose installed
+- Python 3.11+ installed (for non-Docker testing)
 - Google Cloud SDK (gcloud) installed and configured
 - Access to the project's Google Cloud resources
 
 To check if you have the required tools:
 
 ```bash
-# Check Python version
+# Check Docker version
+docker --version
+docker compose version
+
+# Check Python version (for non-Docker testing)
 python --version
 
-# Check if Docker is installed
-docker --version
-
-# Check if gcloud is installed and configured
+# Check gcloud configuration
 gcloud --version
 gcloud auth list
 ```
 
-## Local Testing
+## Development Setup
 
-There are two main ways to test the application locally:
+Our new Docker-based workflow simplifies development and testing.
 
-### Method 1: Using the Python Script
+### Starting Services
 
-This is the simplest method and doesn't require Docker.
-
-#### Step 1: Prepare your environment
+To start both frontend and backend services:
 
 ```bash
-# Make sure you're in the project root directory
-cd /path/to/Automations
+# Start services with default settings
+./docker-start.sh
 
-# Activate the virtual environment (if you have one)
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# Rebuild containers if you've made changes to dependencies
+./docker-start.sh --rebuild
+
+# Include the mock GCS service for testing
+./docker-start.sh --with-mock
 ```
 
-#### Step 2: Run the local test script
+When started successfully, you can access:
+- Frontend: http://localhost:3000
+- Backend: http://localhost:8080
+- Mock GCS (if enabled): http://localhost:8081
+
+### Stopping Services
+
+To stop all services:
 
 ```bash
-# Make the script executable (only needed once)
-chmod +x scripts/test_locally.py
+# Stop but keep containers
+./docker-stop.sh
 
-# Run the Flask app and send a test event
+# Stop and remove containers
+./docker-stop.sh --remove
+```
+
+### Viewing Logs
+
+To view logs from all services:
+
+```bash
+# View all logs
+./docker-logs.sh
+
+# View logs for a specific service
+./docker-logs.sh --service backend
+./docker-logs.sh --service frontend
+
+# View logs without following (just display and exit)
+./docker-logs.sh --no-follow
+```
+
+## Testing Methods
+
+### Method 1: Docker-based Testing
+
+This is the recommended method for comprehensive testing using our new Docker setup.
+
+```bash
+# Run the automated Docker test
+./docker-test.sh
+
+# Clean test directories before running
+./docker-test.sh --clean
+
+# Use a specific video file
+./docker-test.sh --video "my-test-video.mp4"
+```
+
+This script will:
+1. Set up the test environment
+2. Start the Docker containers (backend, frontend, and mock GCS)
+3. Send a test event
+4. Verify that all outputs are generated correctly
+5. Clean up the containers automatically
+
+Success indicators:
+- "✅ Test passed! All outputs were generated correctly."
+- "Test completed successfully!"
+- No error messages
+
+### Method 2: Local Python Testing
+
+For backend-only testing without Docker:
+
+```bash
+# Activate the virtual environment
+source backend/venv/bin/activate  # On Windows: backend\venv\Scripts\activate
+
+# Install dependencies
+pip install -r backend/requirements.txt
+
+# Run the local test script
+cd backend
 python scripts/test_locally.py --file test-video.mp4 --run-server
 ```
 
-This command:
-1. Starts the Flask application
-2. Creates a mock GCS event for "test-video.mp4"
-3. Sends the event to the application
-4. Shows the application's response
+This method is useful for quick backend testing without starting the full Docker environment.
 
-#### Step 3: Interpret the results
+### Method 3: Real API Testing
 
-Look for these indicators of success:
-- A 204 status code in the response
-- Log messages showing "Successfully processed"
-- No error messages
-
-Example of successful output:
-```
-INFO - Sending request to http://localhost:8080/
-INFO - Response status code: 204
-INFO - Successfully processed gs://automations-videos/test-video.mp4
-```
-
-### Method 2: Using Docker
-
-If you have Docker installed, you can test using Docker Compose.
-
-#### Step 1: Prepare your environment
+To test with real API calls and see actual AI-generated outputs:
 
 ```bash
-# Make sure you're in the project root directory
-cd /path/to/Automations
+# Activate the virtual environment
+source backend/venv/bin/activate
 
-# Make the script executable (only needed once)
-chmod +x scripts/local_test.sh
-```
-
-#### Step 2: Start the Docker containers
-
-```bash
-# Start the services (first time or after changes)
-./scripts/local_test.sh --rebuild
-
-# For subsequent runs (no rebuild needed)
-./scripts/local_test.sh
-```
-
-This command:
-1. Builds and starts the Video Processor container
-2. Starts a mock GCS service container
-3. Shows logs from both services
-
-#### Step 3: Send a test event
-
-In a new terminal window:
-
-```bash
-# Send a test event to the mock GCS service
-curl -X POST http://localhost:8081/trigger \
-  -H "Content-Type: application/json" \
-  -d '{"bucket":"automations-videos","name":"test-video.mp4"}'
-```
-
-#### Step 4: Clean up when done
-
-```bash
-# Stop and remove the containers
-./scripts/local_test.sh --clean
-```
-
-### Method 3: Automated Docker Testing
-
-For a fully automated test that verifies the entire workflow, use the Docker test script:
-
-```bash
-# Run the Docker test with default settings
-./scripts/docker_test.sh
-
-# Clean test directories before running
-./scripts/docker_test.sh --clean
-
-# Use a specific video file
-./scripts/docker_test.sh --video "my-test-video.mp4"
-```
-
-This script will:
-1. Set up the test environment
-2. Start the Docker containers
-3. Send a test event
-4. Verify that the outputs are generated correctly
-5. Clean up the containers
-
-The test will pass if all expected output files are generated correctly.
-
-### Method 4: Testing with Real API Calls
-
-To test with real API calls and see the actual outputs, use the real API test script:
-
-```bash
-# Make the script executable (only needed once)
-chmod +x scripts/real_api_test.py
-
-# Run the test with default settings
-python scripts/real_api_test.py
-
-# Clean test directories before running
+# Run the real API test
+cd backend
 python scripts/real_api_test.py --clean
-
-# Use a specific video file
-python scripts/real_api_test.py --video "my-test-video.mp4"
-
-# Only display outputs from a previous run
-python scripts/real_api_test.py --display-only
 ```
 
-This script will:
-1. Set up the test environment
-2. Process the video with real API calls (Gemini, GCS, etc.)
-3. Display the actual outputs (transcript, subtitles, chapters, etc.)
+This script will use actual Gemini API calls to process the video and display the real outputs.
 
 > **Note:** This method requires proper Google Cloud authentication and will use actual API credits.
 
 ## Deployment Testing
 
-Before deploying to production, you should test the deployment process.
+Before deploying to production, test the deployment process.
 
 ### Dry Run Deployment
-
-A dry run tests the deployment process without actually deploying.
 
 ```bash
 # Run a dry deployment
 ./deploy.sh --dry-run
 
-# If you want to skip running tests
+# Skip tests if needed
 ./deploy.sh --dry-run --skip-tests
 ```
 
-This command:
-1. Checks all prerequisites
-2. Validates your GCP configuration
-3. Simulates building and testing the Docker image
-4. Simulates deploying to Cloud Run
-5. Shows what would happen during a real deployment
+This simulates the deployment process without making any actual changes.
 
 ### Full Deployment
 
-When you're ready to deploy:
+When you're ready for actual deployment:
 
 ```bash
 # Deploy to Cloud Run
 ./deploy.sh
 
-# If you want to skip running tests
+# Skip tests if you've already tested
 ./deploy.sh --skip-tests
 ```
 
-This command:
-1. Runs all tests (unless skipped)
-2. Builds and tests the Docker image locally
-3. Deploys to Cloud Run
-4. Sets up the Eventarc trigger (if needed)
-5. Shows the deployment logs and service URL
+## Monitoring
 
-## Monitoring and Debugging
+### Local Monitoring
 
-### Viewing Local Logs
-
-When testing locally:
+For local development, use the Docker logs commands:
 
 ```bash
-# If using the Python script
-# Logs are printed directly to the console
+# View all container logs
+./docker-logs.sh
 
-# If using Docker
-docker-compose logs -f
+# View backend logs only
+./docker-logs.sh --service backend
 ```
 
-### Viewing Cloud Run Logs
+### Cloud Monitoring
 
-After deployment:
+After deployment, monitor your Cloud Run services:
 
 ```bash
-# View recent logs
+# Use our custom monitoring script
+./monitor-services.sh
+
+# Or view logs directly with gcloud
 gcloud logging read 'resource.type=cloud_run_revision AND resource.labels.service_name=video-processor' \
   --limit=50 \
   --format='table(timestamp, severity, textPayload)'
-
-# View logs in real-time
-gcloud logging read 'resource.type=cloud_run_revision AND resource.labels.service_name=video-processor' \
-  --limit=50 \
-  --format='table(timestamp, severity, textPayload)' \
-  --follow
 ```
 
-You can also view logs in the Google Cloud Console:
-1. Go to [Cloud Run](https://console.cloud.google.com/run)
-2. Click on the "video-processor" service
-3. Click on "Logs" tab
+The `monitor-services.sh` script provides an interactive dashboard showing:
+- Service status across all regions
+- Recent logs
+- Eventarc triggers
+- GCS bucket contents
 
-### Deployment Logs
-
-Deployment logs are saved in the `logs` directory:
-
-```bash
-# List all deployment logs
-ls -la logs/
-
-# View the most recent deployment log
-cat logs/deploy-*.log | less
-```
+For more details on monitoring, see [Monitoring Guide](MONITORING_GUIDE.md).
 
 ## Troubleshooting
 
 ### Common Issues and Solutions
 
-#### 1. "Module not found" errors
+#### 1. Docker container fails to start
 
 ```bash
-# Make sure you're in the project root directory
-cd /path/to/Automations
+# Check for port conflicts
+lsof -i :3000  # Frontend port
+lsof -i :8080  # Backend port
 
-# Install required packages
-pip install -r requirements.txt
-```
-
-#### 2. Permission denied when running scripts
-
-```bash
-# Make scripts executable
-chmod +x scripts/test_locally.py
-chmod +x scripts/local_test.sh
-chmod +x deploy.sh
-```
-
-#### 3. Docker container fails to start
-
-```bash
 # Check Docker logs
-docker logs $(docker ps -q --filter "name=video-processor")
-
-# Make sure port 8080 is not in use
-lsof -i :8080
+./docker-logs.sh --service backend
 ```
 
-#### 4. Deployment fails
+#### 2. Missing service account credentials
 
 ```bash
-# Check the deployment logs
-cat logs/deploy-*.log | grep ERROR
+# Ensure credentials exist
+ls -la ./@credentials/service_account.json
 
-# Run with verbose flag
-./deploy.sh --verbose
+# Create credentials directory if needed
+mkdir -p ./@credentials
 ```
+
+The `docker-start.sh` script will offer to create mock credentials for testing if needed.
+
+#### 3. Frontend can't reach backend API
+
+The frontend development server is configured to proxy API requests to the backend. Make sure both services are running.
+
+#### 4. Firestore connection issues
+
+Check that your Firebase configuration is correct in `frontend/firebase.ts`.
 
 #### 5. GCP authentication issues
 
@@ -333,7 +274,7 @@ gcloud config set project automations-457120
 
 If you encounter issues not covered here:
 
-1. Check the logs in the `logs` directory
-2. Run commands with verbose flags
+1. Check the Docker logs for detailed error messages
+2. Review the service status using `./monitor-services.sh`
 3. Ask a senior developer for assistance
 4. Document the issue and solution for future reference
