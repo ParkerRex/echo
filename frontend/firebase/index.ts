@@ -1,3 +1,3 @@
-import { db } from '../firebase.ts';
+import { db } from '../firebase';
 
 export { db }; 
