@@ -1,0 +1,983 @@
+# VIDEO PROCESSING PIPELINE - PRODUCT REQUIREMENTS DOCUMENT
+
+## 1. Overview
+
+This Product Requirements Document (PRD) outlines the specifications for developing a modern, scalable video processing pipeline system that automates the conversion of raw video content into publishable assets complete with AI-generated metadata. The system utilizes Google Cloud Platform services, particularly Cloud Run and Vertex AI, to process videos, extract audio, and generate high-quality transcripts, subtitles, chapters, titles, and other metadata to streamline the content publishing workflow.
+
+## 2. Project goals
+
+### 2.1 Primary goals
+
+- Create a scalable, modular backend architecture for processing video files
+- Implement AI-powered content generation for video metadata
+- Develop a flexible system that supports multiple content channels
+- Ensure maintainability through modern Python development practices
+- Deliver a reliable system with comprehensive testing
+- Automate YouTube publishing with complete metadata
+
+### 2.2 Success metrics
+
+- 99.5% processing success rate for videos
+- Average processing time under 5 minutes for 10-minute videos
+- 95% accuracy for transcript generation
+- 90% of generated titles deemed usable without modification
+- 80% reduction in manual metadata creation time
+
+## 3. User personas
+
+### 3.1 Content creator
+
+Content creators upload raw video files and want them processed efficiently with minimal manual intervention. They expect accurate transcripts, engaging titles, and properly formatted subtitles.
+
+### 3.2 Video editor
+
+Video editors review and potentially modify AI-generated content before publishing. They need a clear interface to review and edit metadata components.
+
+### 3.3 Administrator
+
+Administrators oversee the entire pipeline, monitor system health, and troubleshoot issues. They need access to logs, metrics, and configuration.
+
+### 3.4 Developer
+
+Developers maintain and extend the system. They require clean code, clear documentation, and a sensible architecture.
+
+## 4. System architecture
+
+### 4.1 Backend components
+
+#### 4.1.1 Core services
+
+- **VideoProcessorService**: Coordinates the overall processing workflow
+- **TranscriptionService**: Handles audio extraction and transcript generation
+- **SubtitleService**: Creates properly formatted subtitle files
+- **ChapterService**: Generates timestamped chapters
+- **TitleGeneratorService**: Creates multiple title options
+- **DescriptionService**: Generates video descriptions
+- **YouTubeUploaderService**: Manages YouTube API integration
+
+#### 4.1.2 Infrastructure adapters
+
+- **AIProvider**: Interface for AI service integration (Vertex AI/Gemini)
+- **StorageProvider**: Interface for storage operations (GCS/local)
+- **YouTubeProvider**: Interface for YouTube API operations
+- **FirebaseProvider**: Interface for Firebase operations (real-time updates)
+- **FFmpegProvider**: Interface for video processing operations
+
+#### 4.1.3 API layer
+
+- **FastAPI Application**: Handles HTTP requests and WebSocket connections
+- **Route Handlers**: Process specific API endpoints
+- **Dependency Injection**: Manages service dependencies
+- **Schema Validation**: Ensures request/response data validity
+- **Middleware**: Handles authentication, logging, and error handling
+
+#### 4.1.4 Domain models
+
+- **Video**: Core entity representing video content and metadata
+- **Transcript**: Value object for transcript content
+- **Subtitles**: Value object for subtitle content with timing
+- **Chapters**: Collection of chapter markers with timestamps
+- **TitleOptions**: Collection of generated title candidates
+- **ProcessingStatus**: Enum representing processing state
+
+### 4.2 Data flow
+
+1. Video upload to GCS bucket or local storage
+2. Event-triggered processing initiation
+3. Audio extraction from video
+4. Parallel AI processing for various metadata components
+5. Storage of generated assets
+6. WebSocket or Firebase notification of completion
+7. Optional review/editing of assets
+8. YouTube upload with selected metadata
+
+### 4.3 External integrations
+
+- **Google Cloud Storage**: File storage for videos and generated assets
+- **Vertex AI/Gemini**: AI processing for metadata generation
+- **YouTube API**: Video publishing with metadata
+- **Firebase**: Real-time status updates and data storage
+  - Firestore for structured data and metadata
+  - Firebase Storage for assets (optional)
+  - Firebase Authentication for user management (optional)
+- **ffmpeg**: Video and audio processing utilities
+
+### 4.4 Deployment architecture
+
+- **Cloud Run**: Primary deployment target for containerized services
+- **Docker**: Container platform for both development and production
+- **GitHub Actions**: CI/CD pipeline for testing and deployment
+- **Google Cloud Build**: Integration with GCP deployment
+- **Container Registry**: Storage for Docker images
+- **Secret Manager**: Secure storage for credentials and secrets
+
+### 4.5 Architecture patterns
+
+- **Hexagonal Architecture**: Separates domain logic from external dependencies
+- **Dependency Injection**: Provides dependencies to components as needed
+- **Protocol-based Interfaces**: Defines clear contracts between components
+- **Factory Pattern**: Creates appropriate implementations at runtime
+- **Repository Pattern**: Abstracts data access behind consistent interfaces
+- **Service Layer**: Orchestrates domain operations and external interactions
+- **Adapter Pattern**: Translates external systems to domain interfaces
+- **Event-driven Processing**: Reacts to system events asynchronously
+
+## 5. Feature requirements
+
+### 5.1 Video processing capabilities
+
+- Process MP4 video files
+- Extract audio in WAV format
+- Generate full transcript text
+- Create WebVTT subtitle files with proper timing
+- Generate chapter markers with timestamps and titles
+- Create multiple title options
+- Generate video descriptions
+- Produce keywords/tags for video SEO
+
+### 5.2 APIs and interfaces
+
+- RESTful API for video submission
+- WebSocket connections for real-time status updates
+- Health check endpoints for monitoring
+- Admin APIs for system management
+- Event-based triggers for processing steps
+
+### 5.3 Development standards
+
+- Type-annotated Python code
+- Clear interface definitions using Protocols
+- Comprehensive test coverage (unit, integration, e2e)
+- Consistent dependency injection patterns
+- Performance profiling and benchmarking support
+- Docker-based local development environment
+
+## 6. User stories
+
+### 6.1 Content upload and processing
+
+- **US-001**: As a content creator, I can upload MP4 files directly to the system so that they can be processed automatically.
+  - **Acceptance Criteria**:
+    - System accepts MP4 files up to 10GB
+    - Upload progress is displayed
+    - Confirmation is provided upon successful upload
+    - Files are stored securely in the designated storage
+    - Processing begins automatically after upload completes
+
+- **US-002**: As a content creator, I can view the processing status of my uploaded videos so that I know when they will be ready.
+  - **Acceptance Criteria**:
+    - Status updates appear in real-time
+    - Current processing stage is clearly shown
+    - Estimated time remaining is displayed when possible
+    - Error states are clearly communicated
+    - Notification is sent when processing completes
+
+- **US-003**: As a content creator, I can cancel processing of a video if needed.
+  - **Acceptance Criteria**:
+    - Cancel button is available during processing
+    - System confirms cancellation request
+    - Resources are properly released
+    - Status is updated to "Cancelled"
+
+### 6.2 Metadata generation and editing
+
+- **US-004**: As a content creator, I can view AI-generated transcript so that I can verify its accuracy.
+  - **Acceptance Criteria**:
+    - Full transcript is displayed in readable format
+    - Text is searchable
+    - Timestamp information is maintained
+    - Accuracy metrics are shown if available
+
+- **US-005**: As a video editor, I can edit the generated transcript to correct any errors.
+  - **Acceptance Criteria**:
+    - Text is editable in a user-friendly interface
+    - Changes are saved automatically
+    - Original and edited versions are maintained
+    - Edited transcript is used for subtitle generation
+
+- **US-006**: As a content creator, I can select from multiple AI-generated title options.
+  - **Acceptance Criteria**:
+    - At least 5 title options are presented
+    - Selected title is highlighted
+    - Custom title can be entered
+    - Selection is saved and used for publishing
+
+- **US-007**: As a video editor, I can adjust chapter markers and titles.
+  - **Acceptance Criteria**:
+    - Chapter timestamps can be modified
+    - Chapter titles can be edited
+    - Chapters can be added or removed
+    - Changes are saved and reflected in YouTube upload
+
+- **US-008**: As a content creator, I can preview how subtitles will appear in the video.
+  - **Acceptance Criteria**:
+    - Subtitles are displayed with proper timing
+    - Format matches YouTube expectations
+    - Visual representation matches actual appearance
+    - Editing capabilities are provided
+
+### 6.3 YouTube integration
+
+- **US-009**: As a content creator, I can publish processed videos directly to YouTube.
+  - **Acceptance Criteria**:
+    - YouTube account connection is verified
+    - Channel selection is available for accounts with multiple channels
+    - All metadata is properly attached to the upload
+    - Upload progress is displayed
+    - Link to published video is provided upon completion
+
+- **US-010**: As a content creator, I can schedule YouTube videos for future publication.
+  - **Acceptance Criteria**:
+    - Date and time selector is provided
+    - Timezone is clearly indicated
+    - Scheduled time is validated against YouTube policies
+    - Confirmation of scheduled upload is provided
+
+- **US-011**: As a content creator, I can set YouTube-specific metadata like privacy settings and categories.
+  - **Acceptance Criteria**:
+    - All relevant YouTube settings are available
+    - Options are presented in a user-friendly manner
+    - Default settings can be saved for future uploads
+    - Settings are properly applied to YouTube upload
+
+### 6.4 System management
+
+- **US-012**: As an administrator, I can view system health metrics.
+  - **Acceptance Criteria**:
+    - Service status is displayed
+    - Resource usage statistics are available
+    - Error rates are shown
+    - Processing queue status is visible
+
+- **US-013**: As an administrator, I can configure system settings.
+  - **Acceptance Criteria**:
+    - AI model selection is configurable
+    - Storage bucket configurations can be updated
+    - Processing parameters can be adjusted
+    - Changes are applied without system restart when possible
+
+- **US-014**: As a developer, I can access logs for troubleshooting.
+  - **Acceptance Criteria**:
+    - Logs are structured and searchable
+    - Log levels are properly used
+    - Correlation IDs link related log entries
+    - Critical errors trigger alerts
+
+- **US-015**: As a system user, I can authenticate securely to access the system.
+  - **Acceptance Criteria**:
+    - Industry-standard authentication methods are supported
+    - User roles determine access permissions
+    - Password policies ensure security
+    - Session management handles timeouts appropriately
+    - Failed login attempts are rate-limited
+
+- **US-016**: As a developer, I can switch between local and cloud storage for testing.
+  - **Acceptance Criteria**:
+    - Environment variable controls storage provider
+    - Local storage mimics GCS folder structure
+    - All operations work identically with either provider
+    - Test data is isolated from production data
+
+## 7. Technical requirements
+
+### 7.1 Backend architecture
+
+- **TR-001**: Implement hexagonal architecture pattern with clear domain boundaries
+  - Domain models free from external dependencies
+  - Business logic isolated in domain services
+  - Clear interfaces (Protocols) for external services
+
+- **TR-002**: Use Protocol interfaces for all external dependencies
+  - Define contracts with Python Protocol classes
+  - Support structural subtyping for implementations
+  - Enable mock implementations for testing
+
+- **TR-003**: Implement dependency injection for service components
+  - Use FastAPI Depends system for route dependencies
+  - Constructor-based injection for service dependencies
+  - Factory functions to create appropriate implementations
+
+- **TR-004**: Create adapters for all external services with mock implementations for testing
+  - GCS adapter with local filesystem mock
+  - Vertex AI adapter with deterministic mock responses
+  - YouTube API adapter with verification capabilities
+  - Firebase adapter with in-memory implementation
+
+- **TR-005**: Ensure all code has proper type annotations
+  - Use Python typing module extensively
+  - Add Generic types where appropriate
+  - Document complex type relationships
+
+- **TR-006**: Implement structured logging throughout the application
+  - Use JSON-formatted logs
+  - Include correlation IDs across services
+  - Log appropriate levels (debug, info, warning, error)
+  - Capture relevant context in log entries
+
+- **TR-007**: Use Pydantic for data validation and settings management
+  - Define models for all request/response schemas
+  - Use pydantic-settings for configuration
+  - Implement custom validators where needed
+  - Ensure proper error messages for validation failures
+
+### 7.2 API design
+
+- **TR-008**: Develop a FastAPI application with OpenAPI documentation
+  - Auto-generated Swagger/ReDoc documentation
+  - Interactive API testing interface
+  - Clear parameter descriptions
+  - Proper response examples
+
+- **TR-009**: Implement WebSocket support for real-time updates
+  - Connection for status updates
+  - Authentication for WebSocket connections
+  - Proper error handling and reconnection
+  - Message serialization standards
+
+- **TR-010**: Create consistent error handling with appropriate HTTP status codes
+  - Custom exception classes
+  - Exception handlers that return appropriate status codes
+  - Detailed error messages for debugging
+  - User-friendly error messages for production
+
+- **TR-011**: Design RESTful endpoints following best practices
+  - Proper HTTP method usage
+  - Resource-oriented URL structure
+  - Consistent response formats
+  - Pagination for collection endpoints
+
+- **TR-012**: Include health check endpoints for monitoring
+  - Basic endpoint returning service status
+  - Detailed endpoint checking dependencies
+  - Metrics for system performance
+  - Readiness and liveness checks for Kubernetes
+
+- **TR-013**: Implement proper request validation
+  - Input validation with Pydantic models
+  - Request size limitations
+  - CORS configuration
+  - Rate limiting for public endpoints
+
+- **TR-014**: Support async operations for long-running processes
+  - Background tasks for processing
+  - Status endpoints for checking progress
+  - Webhook callbacks for completion notifications
+  - Cancellation mechanisms
+
+### 7.3 AI integration
+
+- **TR-015**: Create adapter for Vertex AI/Gemini integration
+  - Abstract AI client behind Protocol interface
+  - Configure model selection via settings
+  - Support for audio content processing
+  - Proper error handling for API failures
+
+- **TR-016**: Implement configurable AI model selection
+  - Environment-based configuration
+  - Support for different Gemini models
+  - Fallback model options
+  - Model-specific prompt templates
+
+- **TR-017**: Design prompts for optimal AI performance
+  - Clear prompt engineering guidelines
+  - Template system for prompts
+  - Separate prompts for different metadata types
+  - Example-based prompting where appropriate
+
+- **TR-018**: Implement fallback mechanisms for AI service failures
+  - Retry logic with exponential backoff
+  - Circuit breaker pattern for persistent failures
+  - Local processing options for critical failures
+  - Manual intervention workflow
+
+- **TR-019**: Ensure AI requests are properly chunked for large videos
+  - Audio segmentation for long videos
+  - Smart splitting at natural boundaries
+  - Recombination of segmented responses
+  - Consistency checking across segments
+
+- **TR-020**: Implement retry logic for transient AI service errors
+  - Configurable retry count and delay
+  - Differentiation between recoverable and non-recoverable errors
+  - Logging of retry attempts
+  - Alerting for excessive retries
+
+### 7.4 Storage and data management
+
+- **TR-021**: Create storage abstraction for GCS with local fallback
+  - Common interface for all storage operations
+  - Transparent switching between providers
+  - Performance optimization for common operations
+  - Proper error handling for storage failures
+
+- **TR-022**: Implement proper file organization for generated assets
+  - Consistent folder structure
+  - Standardized naming conventions
+  - Metadata linking to asset locations
+  - Access control appropriate for asset types
+
+- **TR-023**: Ensure secure access to stored files
+  - Signed URLs for temporary access
+  - Proper IAM permissions
+  - Encryption for sensitive content
+  - Access logging and auditing
+
+- **TR-024**: Implement cleanup procedures for temporary files
+  - Scheduled cleanup tasks
+  - Proper error handling during cleanup
+  - Logging of cleanup operations
+  - Retention policy enforcement
+
+- **TR-025**: Design metadata storage schema for efficient retrieval
+  - Optimized Firestore collections
+  - Appropriate indexing for common queries
+  - Denormalized data for performance
+  - Versioning for schema evolution
+
+### 7.5 Testing and quality assurance
+
+- **TR-026**: Achieve minimum 80% test coverage for all code
+  - Unit tests for domain logic
+  - Integration tests for component interactions
+  - End-to-end tests for critical paths
+  - Coverage reporting in CI pipeline
+
+- **TR-027**: Implement unit tests for all components
+  - Test individual functions and methods
+  - Use pytest fixtures for test setup
+  - Mock external dependencies
+  - Test edge cases and error scenarios
+
+- **TR-028**: Create integration tests for service interactions
+  - Test component interactions
+  - Use test containers where appropriate
+  - Verify adapter implementations
+  - Test transaction boundaries
+
+- **TR-029**: Develop end-to-end tests for critical user flows
+  - Simulate complete workflows
+  - Test with realistic data
+  - Verify system behavior from user perspective
+  - Include timing and performance assertions
+
+- **TR-030**: Set up performance benchmarks for key operations
+  - Define baseline performance metrics
+  - Implement automated benchmarking
+  - Monitor performance in CI pipeline
+  - Alert on performance regressions
+
+- **TR-031**: Implement continuous integration with GitHub Actions
+  - Run tests on pull requests
+  - Enforce code style and typing
+  - Build and test Docker containers
+  - Generate and publish test reports
+
+- **TR-032**: Use static type checking with mypy
+  - Strict typing mode
+  - No implicit Any types
+  - Custom type stubs for third-party libraries
+  - Type checking in CI pipeline
+
+- **TR-033**: Enforce code style with ruff and black
+  - Consistent formatting with black
+  - Linting with ruff
+  - Import sorting
+  - Pre-commit hooks for local enforcement
+
+### 7.6 Deployment and operations
+
+- **TR-034**: Package application as Docker containers
+  - Multi-stage build for efficiency
+  - Small base images
+  - Proper layer caching
+  - Non-root user for security
+
+- **TR-035**: Deploy services to Cloud Run
+  - Autoscaling configuration
+  - Memory and CPU allocation
+  - Concurrency settings
+  - Revision management
+
+- **TR-036**: Implement proper environment configuration
+  - Environment-specific settings
+  - Secret injection
+  - Environment variable validation
+  - Documentation of required variables
+
+- **TR-037**: Set up monitoring and alerting
+  - Cloud Monitoring integration
+  - Custom metrics for business processes
+  - Alert thresholds and notification channels
+  - Dashboards for key metrics
+
+- **TR-038**: Create deployment pipeline with rollback capabilities
+  - Blue/green deployment strategy
+  - Automated smoke tests
+  - Rollback triggers and procedures
+  - Deployment history retention
+
+- **TR-039**: Ensure secure handling of credentials and secrets
+  - Secret Manager integration
+  - No hardcoded credentials
+  - Rotation policies
+  - Principle of least privilege
+
+- **TR-040**: Document operational procedures
+  - System architecture documentation
+  - Deployment instructions
+  - Troubleshooting guides
+  - Runbooks for common issues
+
+## 8. Implementation approach
+
+### 8.1 Development environment
+
+- **Poetry for dependency management**
+  - Deterministic dependency resolution
+  - Virtual environment management
+  - Build and packaging tools
+  - Clear separation of main and dev dependencies
+
+- **Docker Compose for local development**
+  - Local service orchestration
+  - Development parity with production
+  - Volume mounts for code changes
+  - Network configuration for service communication
+
+- **Pre-commit hooks for code quality**
+  - Automated code formatting with black
+  - Linting with ruff
+  - Import sorting
+  - Type checking with mypy
+
+- **pytest for testing**
+  - Fixture-based test setup
+  - Parameterized tests
+  - Coverage reporting
+  - Integration with third-party services
+
+- **FastAPI for API development**
+  - Type-based request validation
+  - Automatic documentation
+  - Dependency injection
+  - WebSocket support
+
+- **Pydantic for data validation**
+  - Schema definition and validation
+  - Setting management
+  - JSON serialization/deserialization
+  - Type coercion
+
+### 8.2 Technology stack
+
+- **Python 3.11+ for backend development**
+  - Latest language features
+  - Performance improvements
+  - Type checking enhancements
+  - Pattern matching capabilities
+
+- **FastAPI for API framework**
+  - ASGI-based for high performance
+  - Native async/await support
+  - OpenAPI documentation
+  - Dependency injection system
+
+- **Google Cloud Platform for infrastructure**
+  - Cloud Run for containerized services
+  - Cloud Storage for file storage
+  - Vertex AI for AI processing
+  - Firestore for structured data
+  - Secret Manager for credentials
+
+- **Vertex AI/Gemini for AI processing**
+  - Advanced language model capabilities
+  - Audio processing features
+  - Efficient API usage
+  - Scalable processing
+
+- **Docker for containerization**
+  - Consistent deployment environment
+  - Isolated dependencies
+  - Efficient resource usage
+  - Simple scaling
+
+- **GitHub Actions for CI/CD**
+  - Automated testing
+  - Container building
+  - Deployment automation
+  - Quality assurance steps
+
+- **ffmpeg for video/audio processing**
+  - Audio extraction
+  - Format conversion
+  - Stream processing
+  - Performance optimization
+
+### 8.3 Development phases
+
+#### Phase 1: Architecture and foundation
+- Set up project structure
+  - Configure Poetry project
+  - Create Docker files
+  - Configure pre-commit hooks
+  - Set up GitHub Actions
+
+- Implement core interfaces and adapters
+  - Define Protocol interfaces
+  - Create concrete adapter implementations
+  - Implement mocks for testing
+  - Build dependency injection system
+
+- Create basic API endpoints
+  - Set up FastAPI application
+  - Implement health check endpoints
+  - Create video upload endpoint
+  - Define status retrieval endpoints
+
+- Establish testing framework
+  - Configure pytest
+  - Create fixtures for common dependencies
+  - Set up mocking strategy
+  - Implement basic test cases
+
+#### Phase 2: Core functionality
+- Implement video processing workflow
+  - Build processing service
+  - Create event handling system
+  - Implement video download and storage
+  - Set up status tracking
+
+- Develop AI integration for transcription
+  - Implement AI provider adapter
+  - Design transcript generation prompts
+  - Create audio processing pipeline
+  - Build error handling and retries
+
+- Create subtitle generation
+  - Implement subtitle formatter
+  - Create WebVTT output
+  - Build timing alignment
+  - Implement subtitle editor API
+
+- Build chapter marker functionality
+  - Create chapter generation service
+  - Implement timestamp extraction
+  - Build chapter storage and retrieval
+  - Create chapter editing API
+
+#### Phase 3: Advanced features
+- Implement title and description generation
+  - Create title generation service
+  - Build keyword extraction
+  - Implement title voting mechanism
+  - Create description formatter
+
+- Develop YouTube integration
+  - Implement YouTube API client
+  - Create upload service
+  - Build metadata packaging
+  - Implement status tracking
+
+- Create WebSocket status updates
+  - Implement WebSocket handlers
+  - Create real-time notification system
+  - Build client reconnection handling
+  - Implement security for connections
+
+- Build review/editing capabilities
+  - Create editing interfaces
+  - Implement version tracking
+  - Build approval workflow
+  - Create preview capabilities
+
+#### Phase 4: Refinement and deployment
+- Optimize performance
+  - Profile key operations
+  - Implement caching where appropriate
+  - Optimize database queries
+  - Tune container resources
+
+- Enhance error handling
+  - Implement global exception handlers
+  - Create more detailed error responses
+  - Build retry mechanisms
+  - Implement circuit breakers
+
+- Improve documentation
+  - Complete API documentation
+  - Create architecture diagrams
+  - Write deployment guides
+  - Develop troubleshooting documentation
+
+- Deploy to production environment
+  - Set up Cloud Run services
+  - Configure scaling parameters
+  - Implement monitoring and alerts
+  - Test rollback procedures
+
+### 8.4 Timeline
+
+- **Phase 1**: 2 weeks
+- **Phase 2**: 3 weeks
+- **Phase 3**: 3 weeks
+- **Phase 4**: 2 weeks
+- **Total**: 10 weeks
+
+## 9. Risks and mitigations
+
+### 9.1 Identified risks
+
+- **Risk-001**: AI service may produce unreliable results for certain content types
+  - **Mitigation**: Implement review process and manual override capabilities
+  - **Mitigation**: Develop content-specific prompt templates
+  - **Mitigation**: Implement result validation and filtering
+  
+- **Risk-002**: Processing large videos may exceed Cloud Run timeout limits
+  - **Mitigation**: Implement chunking strategy and asynchronous processing
+  - **Mitigation**: Use event-based architecture for long-running operations
+  - **Mitigation**: Implement progress tracking and resumable processing
+
+- **Risk-003**: YouTube API quotas may limit upload volume
+  - **Mitigation**: Implement queue system with rate limiting
+  - **Mitigation**: Apply for quota increases proactively
+  - **Mitigation**: Cache results to reduce API calls
+
+- **Risk-004**: System may experience high load during peak usage
+  - **Mitigation**: Design for horizontal scaling and implement load testing
+  - **Mitigation**: Implement backpressure mechanisms
+  - **Mitigation**: Configure appropriate autoscaling parameters
+
+- **Risk-005**: Security vulnerabilities in external dependencies
+  - **Mitigation**: Regular dependency updates and security scanning
+  - **Mitigation**: Implement CVE monitoring
+  - **Mitigation**: Use minimal container images
+
+- **Risk-006**: Firebase/Firestore costs may scale unexpectedly
+  - **Mitigation**: Implement usage monitoring and alerting
+  - **Mitigation**: Optimize read/write patterns
+  - **Mitigation**: Consider caching strategies for frequent data
+
+### 9.2 Assumptions
+
+- Users have Google Cloud credentials configured
+- Videos are in standard MP4 format
+- Content complies with YouTube policies
+- Gemini AI model remains available and supported
+- Network connectivity is reliable
+
+## 10. Future considerations
+
+### 10.1 Potential enhancements
+
+- Support for additional video formats beyond MP4
+- Expansion to other publishing platforms besides YouTube
+- Enhanced AI-based thumbnail generation
+- Automated content categorization and tagging
+- Integration with content planning tools
+- Multi-language support for international content
+- Analytics dashboard for content performance
+
+### 10.2 Scaling considerations
+
+- Distributed processing for very large videos
+- Geographic distribution for global user base
+- Multi-tenant architecture for service provider model
+- Integration with existing content management systems
+
+## 11. Appendix
+
+### 11.1 Glossary
+
+- **API**: Application Programming Interface
+- **GCS**: Google Cloud Storage
+- **PRD**: Product Requirements Document
+- **CI/CD**: Continuous Integration/Continuous Deployment
+- **WebVTT**: Web Video Text Tracks Format (for subtitles)
+- **Vertex AI**: Google's machine learning platform
+- **Gemini**: Google's large language model
+- **FastAPI**: Modern, high-performance web framework for Python
+- **Protocol**: Type hint for defining interfaces in Python
+- **Dependency Injection**: Design pattern where dependencies are provided to components
+- **Hexagonal Architecture**: Design pattern separating domain logic from external dependencies
+- **WebSocket**: Protocol providing full-duplex communication over TCP
+- **Firebase**: Google's platform for mobile and web applications
+- **Firestore**: NoSQL document database by Google
+- **Adapter**: Design pattern that allows incompatible interfaces to work together
+
+### 11.2 References
+
+- [FastAPI Documentation](https://fastapi.tiangolo.com/)
+- [Python Type Hints](https://docs.python.org/3/library/typing.html)
+- [Google Cloud Run Documentation](https://cloud.google.com/run/docs)
+- [Vertex AI Documentation](https://cloud.google.com/vertex-ai/docs)
+- [YouTube API Documentation](https://developers.google.com/youtube/v3)
+- [WebVTT Format Specification](https://www.w3.org/TR/webvtt1/)
+- [Firebase Documentation](https://firebase.google.com/docs)
+- [Poetry Documentation](https://python-poetry.org/docs/)
+- [Pydantic Documentation](https://docs.pydantic.dev/)
+- [pytest Documentation](https://docs.pytest.org/)
+- [Docker Compose Documentation](https://docs.docker.com/compose/)
+- [GitHub Actions Documentation](https://docs.github.com/en/actions)
+- [ffmpeg Documentation](https://ffmpeg.org/documentation.html)
+
+### 11.3 Example implementation patterns
+
+#### Protocol interface example
+```python
+from typing import Protocol, AsyncIterator
+
+class StorageProvider(Protocol):
+    """Interface for storage operations."""
+    
+    async def upload_file(self, bucket: str, path: str, content: bytes) -> str:
+        """Upload a file to storage and return its public URL."""
+        ...
+    
+    async def download_file(self, bucket: str, path: str) -> bytes:
+        """Download a file from storage and return its contents."""
+        ...
+    
+    async def list_files(self, bucket: str, prefix: str) -> AsyncIterator[str]:
+        """List files in a bucket with given prefix."""
+        ...
+```
+
+#### FastAPI dependency injection example
+```python
+from fastapi import FastAPI, Depends, HTTPException
+from typing import Annotated
+
+app = FastAPI()
+
+def get_video_service(
+    storage: Annotated[StorageProvider, Depends(get_storage_provider)],
+    ai_provider: Annotated[AIProvider, Depends(get_ai_provider)]
+) -> VideoService:
+    """Factory function providing a VideoService with required dependencies."""
+    return VideoService(storage=storage, ai_provider=ai_provider)
+
+@app.post("/videos/{video_id}/process")
+async def process_video(
+    video_id: str,
+    service: Annotated[VideoService, Depends(get_video_service)]
+):
+    """Process a video with specified ID."""
+    try:
+        return await service.process_video(video_id)
+    except VideoNotFoundError:
+        raise HTTPException(status_code=404, detail="Video not found")
+```
+
+#### Domain model example
+```python
+from enum import Enum
+from typing import Optional, List
+from datetime import datetime
+from pydantic import BaseModel
+
+class ProcessingStatus(str, Enum):
+    """Video processing status states."""
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+class Video:
+    """Domain entity representing a video."""
+    
+    def __init__(
+        self,
+        id: str,
+        filename: str,
+        upload_time: datetime,
+        status: ProcessingStatus = ProcessingStatus.PENDING,
+        duration_seconds: Optional[float] = None,
+        metadata: Optional["VideoMetadata"] = None
+    ):
+        self.id = id
+        self.filename = filename
+        self.upload_time = upload_time
+        self.status = status
+        self.duration_seconds = duration_seconds
+        self.metadata = metadata
+        self.processing_stages: List["ProcessingStage"] = []
+    
+    def start_processing(self) -> None:
+        """Mark video as processing."""
+        if self.status != ProcessingStatus.PENDING:
+            raise ValueError(f"Cannot start processing from {self.status} state")
+        self.status = ProcessingStatus.PROCESSING
+    
+    def complete_processing(self, metadata: "VideoMetadata") -> None:
+        """Mark video as completed with metadata."""
+        if self.status != ProcessingStatus.PROCESSING:
+            raise ValueError(f"Cannot complete from {self.status} state")
+        self.status = ProcessingStatus.COMPLETED
+        self.metadata = metadata
+```
+
+#### Firebase integration example
+```python
+from typing import Dict, Any, Optional
+from firebase_admin import firestore
+
+class FirestoreVideoRepository:
+    """Repository implementation using Firestore."""
+    
+    def __init__(self, db: firestore.Client):
+        self.db = db
+        self.collection = db.collection("videos")
+    
+    async def get_video(self, video_id: str) -> Optional[Video]:
+        """Retrieve a video by ID."""
+        doc_ref = self.collection.document(video_id)
+        doc = doc_ref.get()
+        
+        if not doc.exists:
+            return None
+            
+        data = doc.to_dict()
+        return self._map_to_video(data)
+    
+    async def save_video(self, video: Video) -> None:
+        """Save a video to the repository."""
+        doc_ref = self.collection.document(video.id)
+        doc_ref.set(self._map_to_dict(video))
+    
+    async def update_status(self, video_id: str, status: ProcessingStatus) -> None:
+        """Update just the status field of a video."""
+        doc_ref = self.collection.document(video_id)
+        doc_ref.update({"status": status.value})
+    
+    def _map_to_dict(self, video: Video) -> Dict[str, Any]:
+        """Map a Video domain entity to a Firestore-compatible dict."""
+        result = {
+            "id": video.id,
+            "filename": video.filename,
+            "upload_time": video.upload_time,
+            "status": video.status.value,
+            "processing_stages": [
+                {
+                    "name": stage.name,
+                    "status": stage.status.value,
+                    "start_time": stage.start_time,
+                    "end_time": stage.end_time
+                }
+                for stage in video.processing_stages
+            ]
+        }
+        
+        if video.duration_seconds:
+            result["duration_seconds"] = video.duration_seconds
+            
+        if video.metadata:
+            result["metadata"] = {
+                "transcript_url": video.metadata.transcript_url,
+                "subtitle_url": video.metadata.subtitle_url,
+                "selected_title": video.metadata.selected_title,
+                # Add other metadata fields
+            }
+            
+        return result
+```
