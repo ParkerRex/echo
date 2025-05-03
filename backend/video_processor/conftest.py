@@ -3,8 +3,9 @@ Global pytest fixtures and configuration.
 """
 
 import os
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 # Set environment variables for testing
 os.environ["GOOGLE_CLOUD_PROJECT"] = "automations-457120"
@@ -27,12 +28,14 @@ else:
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = ci_credentials_path
     else:
         # If no credentials file is found, we'll use mock authentication
-        import pytest
         from unittest.mock import patch
+
+        import pytest
 
         @pytest.fixture(autouse=True, scope="session")
         def mock_google_auth():
-            """Mock Google Cloud authentication for all tests if no credentials file is found."""
+            """Mock Google Cloud authentication for all tests if no credentials
+            file is found."""
             with patch(
                 "google.auth.default", return_value=(None, "automations-457120")
             ):

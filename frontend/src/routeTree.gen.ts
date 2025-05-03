@@ -15,7 +15,9 @@ import { Route as SignupImport } from './routes/signup'
 import { Route as SettingsImport } from './routes/settings'
 import { Route as LogoutImport } from './routes/logout'
 import { Route as LoginImport } from './routes/login'
+import { Route as DeferredImport } from './routes/deferred'
 import { Route as DashboardImport } from './routes/dashboard'
+import { Route as PathlessLayoutImport } from './routes/_pathlessLayout'
 import { Route as AuthedImport } from './routes/_authed'
 import { Route as IndexImport } from './routes/index'
 import { Route as VideoVideoIdImport } from './routes/video.$videoId'
@@ -49,9 +51,20 @@ const LoginRoute = LoginImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
+const DeferredRoute = DeferredImport.update({
+  id: '/deferred',
+  path: '/deferred',
+  getParentRoute: () => rootRoute,
+} as any)
+
 const DashboardRoute = DashboardImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const PathlessLayoutRoute = PathlessLayoutImport.update({
+  id: '/_pathlessLayout',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -108,11 +121,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedImport
       parentRoute: typeof rootRoute
     }
+    '/_pathlessLayout': {
+      id: '/_pathlessLayout'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof PathlessLayoutImport
+      parentRoute: typeof rootRoute
+    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardImport
+      parentRoute: typeof rootRoute
+    }
+    '/deferred': {
+      id: '/deferred'
+      path: '/deferred'
+      fullPath: '/deferred'
+      preLoaderRoute: typeof DeferredImport
       parentRoute: typeof rootRoute
     }
     '/login': {
@@ -203,8 +230,9 @@ const AuthedRouteWithChildren =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '': typeof AuthedRouteWithChildren
+  '': typeof PathlessLayoutRoute
   '/dashboard': typeof DashboardRoute
+  '/deferred': typeof DeferredRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/settings': typeof SettingsRoute
@@ -217,8 +245,9 @@ export interface FileRoutesByFullPath {
 
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '': typeof AuthedRouteWithChildren
+  '': typeof PathlessLayoutRoute
   '/dashboard': typeof DashboardRoute
+  '/deferred': typeof DeferredRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/settings': typeof SettingsRoute
@@ -232,7 +261,9 @@ export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexRoute
   '/_authed': typeof AuthedRouteWithChildren
+  '/_pathlessLayout': typeof PathlessLayoutRoute
   '/dashboard': typeof DashboardRoute
+  '/deferred': typeof DeferredRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/settings': typeof SettingsRoute
@@ -249,6 +280,7 @@ export interface FileRouteTypes {
     | '/'
     | ''
     | '/dashboard'
+    | '/deferred'
     | '/login'
     | '/logout'
     | '/settings'
@@ -262,6 +294,7 @@ export interface FileRouteTypes {
     | '/'
     | ''
     | '/dashboard'
+    | '/deferred'
     | '/login'
     | '/logout'
     | '/settings'
@@ -273,7 +306,9 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_authed'
+    | '/_pathlessLayout'
     | '/dashboard'
+    | '/deferred'
     | '/login'
     | '/logout'
     | '/settings'
@@ -288,7 +323,9 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthedRoute: typeof AuthedRouteWithChildren
+  PathlessLayoutRoute: typeof PathlessLayoutRoute
   DashboardRoute: typeof DashboardRoute
+  DeferredRoute: typeof DeferredRoute
   LoginRoute: typeof LoginRoute
   LogoutRoute: typeof LogoutRoute
   SettingsRoute: typeof SettingsRoute
@@ -299,7 +336,9 @@ export interface RootRouteChildren {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthedRoute: AuthedRouteWithChildren,
+  PathlessLayoutRoute: PathlessLayoutRoute,
   DashboardRoute: DashboardRoute,
+  DeferredRoute: DeferredRoute,
   LoginRoute: LoginRoute,
   LogoutRoute: LogoutRoute,
   SettingsRoute: SettingsRoute,
@@ -319,7 +358,9 @@ export const routeTree = rootRoute
       "children": [
         "/",
         "/_authed",
+        "/_pathlessLayout",
         "/dashboard",
+        "/deferred",
         "/login",
         "/logout",
         "/settings",
@@ -336,8 +377,14 @@ export const routeTree = rootRoute
         "/_authed/posts"
       ]
     },
+    "/_pathlessLayout": {
+      "filePath": "_pathlessLayout.tsx"
+    },
     "/dashboard": {
       "filePath": "dashboard.tsx"
+    },
+    "/deferred": {
+      "filePath": "deferred.tsx"
     },
     "/login": {
       "filePath": "login.tsx"

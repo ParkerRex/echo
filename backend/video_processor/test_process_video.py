@@ -3,11 +3,10 @@
 Test script to verify the video processing with the fixed code.
 """
 
-import os
 import logging
-import tempfile
+import os
 import subprocess
-from video_processor.process_uploaded_video import process_video_event
+import tempfile
 
 # Configure logging
 logging.basicConfig(
@@ -59,7 +58,8 @@ def test_process_video():
         # Mock the GCS operations for testing
         logging.info("Testing process_video_event function...")
         try:
-            # In a real test, we would upload the file to GCS and then call process_video_event
+            # In a real test, we would upload the file to GCS and then call
+            # process_video_event
             # For this test, we'll just log that we would call the function
             logging.info(f"Would call process_video_event({bucket_name}, {file_name})")
             logging.info("Test completed successfully!")

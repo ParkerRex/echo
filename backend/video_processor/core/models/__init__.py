@@ -1,11 +1,7 @@
 """
 Domain models for the video processor.
 """
-from .video_job import VideoJob, VideoMetadata, ProcessingStage, ProcessingStatus
 
-__all__ = [
-    "VideoJob",
-    "VideoMetadata",
-    "ProcessingStage",
-    "ProcessingStatus"
-]
+from .video_job import ProcessingStage, ProcessingStatus, VideoJob, VideoMetadata
+
+__all__ = ["VideoJob", "VideoMetadata", "ProcessingStage", "ProcessingStatus"]

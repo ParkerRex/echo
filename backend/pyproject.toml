@@ -1,0 +1,46 @@
+# backend/pyproject.toml
+
+[tool.black]
+line-length = 88
+# You can add other Black options here if needed:
+# https://black.readthedocs.io/en/stable/usage_and_configuration/the_basics.html#configuration-via-a-file
+
+[tool.ruff]
+# Match Black's line length
+line-length = 88
+# Specify the Python version(s) you are targeting
+# Adjust this based on your venv (seems like 3.12 or 3.13 from the structure)
+target-version = "py312"
+
+[tool.ruff.lint]
+# Select the rules Ruff should enforce. This is a good starting set.
+# E/W: pycodestyle errors/warnings
+# F: Pyflakes
+# I: isort (import sorting)
+# C90: McCabe complexity
+# B: flake8-bugbear (potential bugs)
+# TID: flake8-tidy-imports (cleaner imports)
+# For all rules, see: https://docs.astral.sh/ruff/rules/
+select = ["E", "W", "F", "I", "C90", "B", "TID"]
+ignore = [] # Add rule codes here if you need to disable specific ones
+
+# Define directories/files Ruff should ignore
+exclude = [
+    ".bzr", ".direnv", ".eggs", ".git", ".hg", ".mypy_cache", ".nox",
+    ".pants.d", ".ruff_cache", ".svn", ".tox", ".venv", "__pypackages__",
+    "_build", "buck-out", "build", "dist", "node_modules", "venv",
+    "tests/outdated", # Added based on your structure
+    "test_data"      # Added based on your structure
+]
+
+[tool.ruff.lint.isort]
+# Helps Ruff sort your project's imports correctly.
+# List your main source directories here.
+known-first-party = ["video_processor"] # Adjust if your main module is named differently
+
+# If you wanted Ruff to format instead of Black, you'd uncomment and configure this:
+# [tool.ruff.format]
+# quote-style = "double"
+# indent-style = "space"
+# skip-magic-trailing-comma = false
+# line-ending = "lf" 

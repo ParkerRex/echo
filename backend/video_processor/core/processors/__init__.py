@@ -1,14 +1,15 @@
 """
 Processor modules for different aspects of video processing.
 """
-from .video import VideoProcessor
+
 from .audio import AudioProcessor
-from .transcript import TranscriptProcessor
 from .chapters import ChaptersProcessor
+from .transcript import TranscriptProcessor
+from .video import VideoProcessor
 
 __all__ = [
     "VideoProcessor",
-    "AudioProcessor", 
+    "AudioProcessor",
     "TranscriptProcessor",
-    "ChaptersProcessor"
+    "ChaptersProcessor",
 ]

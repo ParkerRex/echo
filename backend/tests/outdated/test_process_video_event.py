@@ -2,14 +2,13 @@
 Tests for the main process_video_event function.
 """
 
-import pytest
 import os
-import tempfile
-from unittest.mock import patch, MagicMock, call
 
 # Import the function to test
 import sys
-import os
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 # Add the parent directory to the path so we can import the module
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -19,7 +18,7 @@ from process_uploaded_video import process_video_event
 def test_process_video_event_skips_non_mp4(mock_storage_client):
     """Test that process_video_event skips non-MP4 files."""
     # Call the function with a non-MP4 file
-    result = process_video_event("test-bucket", "daily-raw/test_file.txt")
+    process_video_event("test-bucket", "daily-raw/test_file.txt")
 
     # Verify that the function returns early
     mock_client, mock_bucket, mock_blob = mock_storage_client
@@ -29,7 +28,7 @@ def test_process_video_event_skips_non_mp4(mock_storage_client):
 def test_process_video_event_skips_wrong_path(mock_storage_client):
     """Test that process_video_event skips files not in the correct paths."""
     # Call the function with a file in the wrong path
-    result = process_video_event("test-bucket", "wrong-path/test_file.mp4")
+    process_video_event("test-bucket", "wrong-path/test_file.mp4")
 
     # Verify that the function returns early
     mock_client, mock_bucket, mock_blob = mock_storage_client

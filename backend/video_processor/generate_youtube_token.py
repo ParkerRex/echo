@@ -1,6 +1,6 @@
-import os
-import sys
 import argparse
+import os
+
 import google_auth_oauthlib.flow
 from google.cloud import secretmanager
 
@@ -39,7 +39,8 @@ def save_refresh_token_to_secret(project_id, secret_id, token):
         )
         print(f"Saved refresh token to secret manager version: {response.name}")
         print(
-            f"IMPORTANT: Ensure your Cloud Function service account has the 'Secret Manager Secret Accessor' role for {secret_id}."
+            f"IMPORTANT: Ensure your Cloud Function service account has the "
+            f"'Secret Manager Secret Accessor' role for {secret_id}."
         )
 
     except Exception as e:
@@ -81,7 +82,8 @@ def main():
         print("2. Create an OAuth 2.0 Client ID (Web application type)")
         print("3. Add http://localhost:8080 as an authorized redirect URI")
         print(
-            "4. Download the JSON file and save it as 'client_secret.json' in the docs directory"
+            "4. Download the JSON file and save it as 'client_secret.json' "
+            "in the docs directory"
         )
         return
 
@@ -93,7 +95,8 @@ def main():
     # Run the console flow instead of local server
     print("\nStarting OAuth authentication flow...")
     print(
-        "\nIMPORTANT: You will need to authenticate with the Google account that owns the YouTube channel."
+        "\nIMPORTANT: You will need to authenticate with the Google account "
+        "that owns the YouTube channel."
     )
     print("\nPlease visit the following URL in your browser:")
     auth_url, _ = flow.authorization_url(prompt="consent")
@@ -120,7 +123,7 @@ def main():
 
     # Optionally save to Secret Manager
     if save_to_secret_manager and refresh_token:
-        print(f"\nAttempting to save refresh token to Secret Manager...")
+        print("\nAttempting to save refresh token to Secret Manager...")
         print(f"Project: {PROJECT_ID}")
         print(f"Secret ID: {secret_id_to_save}")
         save_refresh_token_to_secret(PROJECT_ID, secret_id_to_save, refresh_token)
@@ -134,10 +137,12 @@ def main():
         print("3. Add a new version with the refresh token as the value")
         print("\nYou'll also need to create/update these secrets:")
         print(
-            f"- '{secret_id_to_save.replace('refresh_token', 'client_id')}': The client ID from your OAuth credentials"
+            f"- '{secret_id_to_save.replace('refresh_token', 'client_id')}': "
+            f"The client ID from your OAuth credentials"
         )
         print(
-            f"- '{secret_id_to_save.replace('refresh_token', 'client_secret')}': The client secret from your OAuth credentials"
+            f"- '{secret_id_to_save.replace('refresh_token', 'client_secret')}': "
+            f"The client secret from your OAuth credentials"
         )
 
 

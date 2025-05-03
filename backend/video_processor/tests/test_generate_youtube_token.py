@@ -2,10 +2,9 @@
 Tests for the generate_youtube_token.py module.
 """
 
-import sys
 import os
-import pytest
-from unittest.mock import patch, MagicMock, mock_open
+import sys
+from unittest.mock import MagicMock, patch
 
 # Add the root directory to the path so we can import the module
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
@@ -48,7 +47,8 @@ def test_main_client_secrets_not_found():
 
                 # Verify error message was printed
                 mock_print.assert_any_call(
-                    f"\nError: Client secrets file not found at '{generate_youtube_token.CLIENT_SECRETS_FILE}'"
+                    f"\nError: Client secrets file not found at "
+                    f"'{generate_youtube_token.CLIENT_SECRETS_FILE}'"
                 )
 
 
@@ -95,7 +95,7 @@ def test_main_successful_flow():
 
                             # Verify the refresh token was printed
                             mock_print.assert_any_call(
-                                f"Refresh Token: test-refresh-token"
+                                "Refresh Token: test-refresh-token"
                             )
 
 

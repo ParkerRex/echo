@@ -1,6 +1,7 @@
 """
 Video job models for tracking processing state.
 """
+
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum, auto
@@ -9,6 +10,7 @@ from typing import Dict, List, Optional
 
 class ProcessingStage(Enum):
     """Stages of video processing."""
+
     DOWNLOAD = auto()
     EXTRACT_AUDIO = auto()
     GENERATE_TRANSCRIPT = auto()
@@ -23,6 +25,7 @@ class ProcessingStage(Enum):
 
 class ProcessingStatus(Enum):
     """Status of job processing."""
+
     PENDING = auto()
     IN_PROGRESS = auto()
     COMPLETED = auto()
@@ -33,6 +36,7 @@ class ProcessingStatus(Enum):
 @dataclass
 class VideoMetadata:
     """Metadata for a video."""
+
     title: str
     description: Optional[str] = None
     keywords: Optional[str] = None
@@ -41,7 +45,7 @@ class VideoMetadata:
     width: Optional[int] = None
     height: Optional[int] = None
     channel: str = "daily"  # 'daily' or 'main'
-    
+
     def to_dict(self) -> Dict:
         """Convert to dictionary for storage."""
         return {
@@ -54,7 +58,7 @@ class VideoMetadata:
             "height": self.height,
             "channel": self.channel,
         }
-        
+
     @classmethod
     def from_dict(cls, data: Dict) -> "VideoMetadata":
         """Create from dictionary."""
@@ -74,10 +78,11 @@ class VideoMetadata:
 class VideoJob:
     """
     A video processing job.
-    
-    Tracks the state of a video being processed, including its 
+
+    Tracks the state of a video being processed, including its
     metadata, processing stage, and output paths.
     """
+
     bucket_name: str
     file_name: str
     job_id: str
@@ -91,36 +96,38 @@ class VideoJob:
     processed_path: Optional[str] = None
     output_files: Dict[str, str] = field(default_factory=dict)
     youtube_video_id: Optional[str] = None
-    
-    def update_status(self, status: ProcessingStatus, error: Optional[str] = None) -> None:
+
+    def update_status(
+        self, status: ProcessingStatus, error: Optional[str] = None
+    ) -> None:
         """Update the job status and timestamp."""
         self.status = status
         self.updated_at = datetime.now()
         if error:
             self.error_message = error
-    
+
     def move_to_stage(self, stage: ProcessingStage) -> None:
         """Move to a new processing stage."""
         if self.current_stage not in self.completed_stages:
             self.completed_stages.append(self.current_stage)
         self.current_stage = stage
         self.updated_at = datetime.now()
-    
+
     def complete_current_stage(self) -> None:
         """Mark the current stage as completed."""
         if self.current_stage not in self.completed_stages:
             self.completed_stages.append(self.current_stage)
         self.updated_at = datetime.now()
-    
+
     def is_stage_completed(self, stage: ProcessingStage) -> bool:
         """Check if a stage has been completed."""
         return stage in self.completed_stages
-    
+
     def add_output_file(self, file_type: str, file_path: str) -> None:
         """Add an output file to the job."""
         self.output_files[file_type] = file_path
         self.updated_at = datetime.now()
-    
+
     def to_dict(self) -> Dict:
         """Convert to dictionary for storage."""
         return {
@@ -138,7 +145,7 @@ class VideoJob:
             "output_files": self.output_files,
             "youtube_video_id": self.youtube_video_id,
         }
-    
+
     @classmethod
     def from_dict(cls, data: Dict) -> "VideoJob":
         """Create from dictionary."""

@@ -4,13 +4,14 @@ Local testing script for the Video Processor application.
 This script simulates a Cloud Run environment and GCS events locally.
 """
 
-import os
-import sys
+import argparse
 import json
 import logging
-import argparse
-import requests
+import os
+import sys
 from pathlib import Path
+
+import requests
 
 # Add the parent directory to the path so we can import the video_processor module
 sys.path.append(str(Path(__file__).parent.parent))

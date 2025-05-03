@@ -1,17 +1,18 @@
-import functions_framework
-import os
 import json
 import logging
-import time  # Add time for sleep
+import os
 import random  # Add random for jitter
-from google.cloud import secretmanager
-from google.cloud import storage
+import tempfile
+import time  # Add time for sleep
+import traceback
+
+import functions_framework
+from google.auth.transport.requests import Request
+from google.cloud import secretmanager, storage
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import Flow  # Might be needed for refresh token logic
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
-from google.auth.transport.requests import Request
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -80,7 +81,7 @@ def get_youtube_credentials(secret_config):
             # This requires manual re-authentication outside the function
             raise RuntimeError(
                 "Could not refresh YouTube credentials. Refresh token might be invalid."
-            )
+            ) from e
 
         return credentials
 
@@ -97,7 +98,9 @@ def download_blob(bucket_name, source_blob_name, destination_file_name):
         blob = bucket.blob(source_blob_name)
 
         logging.info(
-            f"Downloading gs://{bucket_name}/{source_blob_name} to {destination_file_name}"
+            "Downloading gs://{}/{} to {}".format(
+                bucket_name, source_blob_name, destination_file_name
+            )
         )
         blob.download_to_filename(destination_file_name)
         logging.info("Download complete.")
@@ -186,13 +189,15 @@ def upload_video(
     description,
     privacy_status=None,  # Will use DEFAULT_PRIVACY_STATUS if None
     category_id="22",  # Default: People & Blogs
-    tags=[],
+    tags=None,
     max_retries=5,  # Max retries for 5xx errors
     initial_backoff=1,  # Initial wait time in seconds
     max_backoff=16,  # Max wait time
     backoff_factor=2,  # Factor to increase wait time
 ):
     """Uploads a video from a local file path to YouTube with retries."""
+    if tags is None:
+        tags = []
     logging.info(f"Starting upload for local file: {local_file_path}")
 
     # Use DEFAULT_PRIVACY_STATUS if privacy_status is None
@@ -231,21 +236,27 @@ def upload_video(
                 retries += 1
                 if retries > max_retries:
                     logging.error(
-                        f"An HTTP error {e.resp.status} occurred and max retries reached: {e.content}"
+                        "An HTTP error {} occurred and max retries reached: {}".format(
+                            e.resp.status, e.content
+                        )
                     )
                     raise  # Max retries exceeded
                 else:
                     # Exponential backoff with jitter
                     sleep_time = min(backoff + (random.random() * 0.5), max_backoff)
                     logging.warning(
-                        f"HTTP error {e.resp.status} occurred (Attempt {retries}/{max_retries}). Retrying in {sleep_time:.2f}s..."
+                        "HTTP error {} occurred (Attempt {}/{}). "
+                        "Retrying in {:.2f}s...".format(
+                            e.resp.status, retries, max_retries, sleep_time
+                        )
                     )
                     time.sleep(sleep_time)
                     backoff = min(backoff * backoff_factor, max_backoff)
                     # Continue loop to call next_chunk() again
             elif e.resp.status == 404:
                 logging.error(
-                    f"HTTP error 404 occurred: {e.content}. Upload session lost, requires restart."
+                    "HTTP error 404 occurred: {}. "
+                    "Upload session lost, requires restart.".format(e.content)
                 )
                 raise  # Indicate restart needed
             else:
@@ -303,7 +314,8 @@ def upload_captions(
                 retries += 1
                 sleep_time = min(backoff + (random.random() * 0.5), max_backoff)
                 logging.warning(
-                    f"HTTP error {e.resp.status} on caption upload (Attempt {retries}/{max_retries}). Retrying in {sleep_time:.2f}s..."
+                    "Error on caption upload (Attempt {}/{}). "
+                    "Retrying in {:.2f}s...".format(retries, max_retries, sleep_time)
                 )
                 time.sleep(sleep_time)
                 backoff = min(backoff * backoff_factor, max_backoff)
@@ -311,7 +323,10 @@ def upload_captions(
             else:
                 # Max retries reached or non-retryable HTTP error
                 logging.error(
-                    f"An HTTP error {e.resp.status} occurred uploading captions: {e.content}. Max retries ({max_retries}) reached or error non-retryable."
+                    "Failed uploading captions: {}. "
+                    "Max retries ({}) reached or error non-retryable.".format(
+                        e.content, max_retries
+                    )
                 )
                 return None  # Fail gracefully for captions
         except Exception as e:
@@ -323,271 +338,197 @@ def upload_captions(
     return None
 
 
-# --- Cloud Functions ---
+def get_video_folder_path(bucket_name, blob_name):
+    """
+    Get the folder path for the video files.
+
+    Args:
+        bucket_name: Name of the bucket
+        blob_name: Name of the blob that triggered the event
+
+    Returns:
+        str: Folder path for the video files
+    """
+    # If the trigger was for a video file, get the folder it's in
+    folder_path = "/".join(blob_name.split("/")[:-1])
+    logging.info(f"Folder path: {folder_path}")
+    return folder_path
+
+
+def find_folder_files(storage_client, bucket_name, folder_path, expected_extensions):
+    """
+    Find files in a folder with specific extensions.
+
+    Args:
+        storage_client: Storage client
+        bucket_name: Name of the bucket
+        folder_path: Path to the folder
+        expected_extensions: Dict mapping file types to extensions
+
+    Returns:
+        dict: Mapping of file types to blob names
+    """
+    # List all blobs in the folder
+    blobs = storage_client.list_blobs(bucket_name, prefix=folder_path)
+
+    # Find the necessary files
+    found_files = {}
+    for blob in blobs:
+        for file_type, extension in expected_extensions.items():
+            if blob.name.endswith(extension):
+                found_files[file_type] = blob.name
+                logging.info(f"Found {file_type}: {blob.name}")
+
+    return found_files
+
+
+def process_youtube_upload(cloud_event, channel_type):
+    """
+    Process YouTube upload for a specific channel type.
+
+    Args:
+        cloud_event: Cloud event that triggered the function
+        channel_type: Type of channel ("daily" or "main")
+
+    Returns:
+        None
+    """
+    try:
+        # Get the bucket and blob name from the cloud event
+        bucket_name = cloud_event.data["bucket"]
+        blob_name = cloud_event.data["name"]
+        logging.info(
+            f"Processing {channel_type} channel upload: gs://{bucket_name}/{blob_name}"
+        )
+
+        # Skip if this is not a video file
+        if not blob_name.endswith(".mp4"):
+            logging.info(f"Skipping non-video file: {blob_name}")
+            return
+
+        # Make sure it's in the correct folder
+        prefix = f"processed-{channel_type}/"
+        if not blob_name.startswith(prefix):
+            logging.info(f"Skipping file not in {prefix} folder: {blob_name}")
+            return
+
+        # Get the folder path for the video files
+        folder_path = get_video_folder_path(bucket_name, blob_name)
+
+        # Create a storage client
+        storage_client = storage.Client()
+
+        # Find video, description, and subtitles files
+        expected_extensions = {
+            "video": "video.mp4",
+            "description": "description.txt",
+            "subtitles": "subtitles.vtt",
+        }
+
+        found_files = find_folder_files(
+            storage_client, bucket_name, folder_path, expected_extensions
+        )
+
+        # Make sure we have the video file
+        video_blob_name = found_files.get("video")
+        if video_blob_name is None:
+            logging.warning(f"No video file found in folder {folder_path}. Exiting.")
+            # If the trigger was for a metadata file, another trigger might
+            # come for the video.
+            # If the trigger was for the video, but it's not found (??),
+            # something is wrong.
+            return  # Stop processing
+
+        # We need at minimum a video file and description
+        description_blob_name = found_files.get("description")
+        if description_blob_name is None:
+            logging.warning(
+                f"No description file found in folder {folder_path}. Exiting."
+            )
+            return  # Stop processing
+
+        # Get the description text
+        description_text = read_blob_content(bucket_name, description_blob_name)
+
+        # Parse the description - first line is the title, rest is description
+        lines = description_text.strip().split("\n")
+        video_title = lines[0]
+        video_description = "\n".join(lines[1:]) if len(lines) > 1 else ""
+
+        # Get YouTube credentials
+        secret_prefix = f"youtube-{channel_type}"
+        youtube_creds = {
+            "client_id": get_secret(f"{secret_prefix}-client-id", PROJECT_ID),
+            "client_secret": get_secret(f"{secret_prefix}-client-secret", PROJECT_ID),
+            "refresh_token": get_secret(f"{secret_prefix}-refresh-token", PROJECT_ID),
+        }
+
+        credentials = get_youtube_credentials(youtube_creds)
+
+        # Create a YouTube API client
+        youtube = build("youtube", "v3", credentials=credentials)
+
+        # Download the video file
+        with tempfile.TemporaryDirectory() as temp_dir:
+            video_path = os.path.join(temp_dir, "video.mp4")
+            download_blob(bucket_name, video_blob_name, video_path)
+
+            # Upload the video to YouTube
+            upload_response = upload_video(
+                youtube, video_path, video_title, video_description
+            )
+
+            # Get the video ID from the response
+            if "id" in upload_response:
+                video_id = upload_response["id"]
+                logging.info(
+                    "Uploaded video to YouTube {} channel. Video ID: {}".format(
+                        channel_type, video_id
+                    )
+                )
+
+                # Upload captions if available
+                subtitles_blob_name = found_files.get("subtitles")
+                if subtitles_blob_name:
+                    subtitles_path = os.path.join(temp_dir, "subtitles.vtt")
+                    download_blob(bucket_name, subtitles_blob_name, subtitles_path)
+
+                    # Upload captions to YouTube
+                    captions_response = upload_captions(
+                        youtube, video_id, subtitles_path
+                    )
+                    logging.info(
+                        "Uploaded captions to YouTube. Caption ID: {}".format(
+                            captions_response.get("id")
+                        )
+                    )
+                else:
+                    logging.info("No subtitles file found. Skipping captions upload.")
+
+                # Clean up temporary files
+                if os.path.exists(video_path):
+                    os.remove(video_path)
+                if subtitles_blob_name and os.path.exists(subtitles_path):
+                    os.remove(subtitles_path)
+            else:
+                logging.error(
+                    "Could not get video ID from upload response. "
+                    "Upload may have failed."
+                )
+
+    except Exception as e:
+        logging.error(f"Error in upload_to_youtube_{channel_type}: {e}")
+        traceback.print_exc()
+        raise
 
 
 @functions_framework.cloud_event
 def upload_to_youtube_daily(cloud_event):
     """Triggers YouTube upload for the Daily channel based on GCS events."""
-    try:
-        data = cloud_event.data
-        bucket_name = data.get("bucket")
-        triggered_file_name = data.get(
-            "name"
-        )  # e.g., processed-daily/video_title/video.mp4 or description.txt
-
-        logging.info(
-            f"Received trigger for file: gs://{bucket_name}/{triggered_file_name}"
-        )
-
-        if not triggered_file_name or not triggered_file_name.startswith(
-            "processed-daily/"
-        ):
-            logging.info("File is not in processed-daily/, skipping.")
-            return
-
-        # Determine the folder path from the triggered file
-        folder_path = os.path.dirname(triggered_file_name) + "/"
-        video_title = os.path.basename(
-            folder_path.strip("/")
-        )  # Extract title from folder name
-        logging.info(f"Processing folder: {folder_path} for video title: {video_title}")
-
-        # List files in the folder to find video and metadata
-        storage_client = storage.Client()
-        blobs = storage_client.list_blobs(bucket_name, prefix=folder_path)
-
-        video_blob_name = None
-        description_content = (
-            f"Processed video: {video_title}\nUploaded via automation."  # Default
-        )
-        caption_blob_name = None
-        chapters_content = None  # Placeholder for chapters
-
-        for blob in blobs:
-            blob_basename = os.path.basename(blob.name)
-            if (
-                blob_basename.lower().endswith((".mp4", ".mov", ".avi"))
-                and video_blob_name is None
-            ):
-                video_blob_name = blob.name
-                logging.info(f"Found video file: {video_blob_name}")
-            elif blob_basename.lower() == "description.txt":
-                desc = read_blob_content(bucket_name, blob.name)
-                if desc:
-                    description_content = desc
-            elif (
-                blob_basename.lower().endswith((".vtt", ".srt"))
-                and caption_blob_name is None
-            ):
-                caption_blob_name = blob.name
-                logging.info(f"Found caption file: {caption_blob_name}")
-            elif blob_basename.lower() == "chapters.txt":
-                chapters_content = read_blob_content(bucket_name, blob.name)
-                # Add chapters to the description if available
-                if chapters_content:
-                    description_content += "\n\n## Chapters\n" + chapters_content
-
-        # --- Validation: Proceed only if video file is found ---
-        if video_blob_name is None:
-            logging.warning(f"No video file found in folder {folder_path}. Exiting.")
-            # If the trigger was for a metadata file, another trigger might come for the video.
-            # If the trigger was for the video, but it's not found (??), something is wrong.
-            return  # Stop processing
-
-        # Check if this video has already been uploaded
-        if check_upload_marker(bucket_name, folder_path):
-            logging.info(f"Video in {folder_path} has already been uploaded. Skipping.")
-            return
-
-        # --- Download Video File ---
-        temp_video_path = f"/tmp/{os.path.basename(video_blob_name)}"
-        download_blob(bucket_name, video_blob_name, temp_video_path)
-
-        # --- Download Caption File (if exists) ---
-        temp_caption_path = None
-        if caption_blob_name:
-            temp_caption_path = f"/tmp/{os.path.basename(caption_blob_name)}"
-            download_blob(bucket_name, caption_blob_name, temp_caption_path)
-
-        # --- Get Credentials & Build YouTube Service ---
-        credentials = get_youtube_credentials(DAILY_SECRETS)
-        youtube = build(API_SERVICE_NAME, API_VERSION, credentials=credentials)
-
-        # --- Perform Upload ---
-        youtube_response = upload_video(
-            youtube,
-            temp_video_path,  # Use downloaded path
-            video_title,
-            description_content,  # Use content from description.txt
-            privacy_status=DEFAULT_PRIVACY_STATUS,
-        )
-
-        # --- Upload Captions and Create Marker (if video upload succeeded) ---
-        if youtube_response:
-            video_id = youtube_response.get("id")
-            if video_id:
-                # Upload captions if available
-                if temp_caption_path:
-                    upload_captions(youtube, video_id, temp_caption_path)
-
-                # Create upload marker to prevent duplicate uploads
-                create_upload_marker(bucket_name, folder_path, video_id)
-                logging.info(
-                    f"Successfully uploaded video to YouTube with ID: {video_id}"
-                )
-            else:
-                logging.error(
-                    "Could not get video ID from upload response. Upload may have failed."
-                )
-
-        # --- Cleanup Temporary Files ---
-        try:
-            if os.path.exists(temp_video_path):
-                os.remove(temp_video_path)
-                logging.info(f"Cleaned up {temp_video_path}")
-            if temp_caption_path and os.path.exists(temp_caption_path):
-                os.remove(temp_caption_path)
-                logging.info(f"Cleaned up {temp_caption_path}")
-        except Exception as e:
-            logging.warning(f"Error during temp file cleanup: {e}")
-
-        logging.info("YouTube Daily upload function finished processing folder.")
-
-    except Exception as e:
-        logging.error(f"Error in upload_to_youtube_daily: {e}")
-        # Depending on the error, might want to retry or send alert
-        raise  # Re-raise to potentially trigger Cloud Functions retry mechanisms
+    process_youtube_upload(cloud_event, "daily")
 
 
 @functions_framework.cloud_event
 def upload_to_youtube_main(cloud_event):
     """Triggers YouTube upload for the Main channel based on GCS events."""
-    try:
-        data = cloud_event.data
-        bucket_name = data.get("bucket")
-        triggered_file_name = data.get("name")
-
-        logging.info(
-            f"Received trigger for Main channel: gs://{bucket_name}/{triggered_file_name}"
-        )
-
-        if not triggered_file_name or not triggered_file_name.startswith(
-            "processed-main/"  # Check for main channel path
-        ):
-            logging.info("File is not in processed-main/, skipping.")
-            return
-
-        # Determine the folder path from the triggered file
-        folder_path = os.path.dirname(triggered_file_name) + "/"
-        video_title = os.path.basename(
-            folder_path.strip("/")
-        )  # Extract title from folder name
-        logging.info(
-            f"Processing folder (Main): {folder_path} for video title: {video_title}"
-        )
-
-        # List files in the folder to find video and metadata
-        storage_client = storage.Client()
-        blobs = storage_client.list_blobs(bucket_name, prefix=folder_path)
-
-        video_blob_name = None
-        description_content = (
-            f"Processed video: {video_title}\nUploaded via automation."  # Default
-        )
-        caption_blob_name = None
-        chapters_content = None  # Placeholder for chapters
-
-        for blob in blobs:
-            blob_basename = os.path.basename(blob.name)
-            if (
-                blob_basename.lower().endswith((".mp4", ".mov", ".avi"))
-                and video_blob_name is None
-            ):
-                video_blob_name = blob.name
-                logging.info(f"Found video file: {video_blob_name}")
-            elif blob_basename.lower() == "description.txt":
-                desc = read_blob_content(bucket_name, blob.name)
-                if desc:
-                    description_content = desc
-            elif (
-                blob_basename.lower().endswith((".vtt", ".srt"))
-                and caption_blob_name is None
-            ):
-                caption_blob_name = blob.name
-                logging.info(f"Found caption file: {caption_blob_name}")
-            elif blob_basename.lower() == "chapters.txt":
-                chapters_content = read_blob_content(bucket_name, blob.name)
-                # Add chapters to the description if available
-                if chapters_content:
-                    description_content += "\n\n## Chapters\n" + chapters_content
-
-        # --- Validation: Proceed only if video file is found ---
-        if video_blob_name is None:
-            logging.warning(f"No video file found in folder {folder_path}. Exiting.")
-            return  # Stop processing
-
-        # Check if this video has already been uploaded
-        if check_upload_marker(bucket_name, folder_path):
-            logging.info(f"Video in {folder_path} has already been uploaded. Skipping.")
-            return
-
-        # --- Download Video File ---
-        temp_video_path = f"/tmp/{os.path.basename(video_blob_name)}"
-        download_blob(bucket_name, video_blob_name, temp_video_path)
-
-        # --- Download Caption File (if exists) ---
-        temp_caption_path = None
-        if caption_blob_name:
-            temp_caption_path = f"/tmp/{os.path.basename(caption_blob_name)}"
-            download_blob(bucket_name, caption_blob_name, temp_caption_path)
-
-        # --- Get Credentials & Build YouTube Service ---
-        # Use MAIN_SECRETS for the main channel
-        credentials = get_youtube_credentials(MAIN_SECRETS)
-        youtube = build(API_SERVICE_NAME, API_VERSION, credentials=credentials)
-
-        # --- Perform Upload ---
-        youtube_response = upload_video(
-            youtube,
-            temp_video_path,
-            video_title,
-            description_content,
-            privacy_status=DEFAULT_PRIVACY_STATUS,
-        )
-
-        # --- Upload Captions and Create Marker (if video upload succeeded) ---
-        if youtube_response:
-            video_id = youtube_response.get("id")
-            if video_id:
-                # Upload captions if available
-                if temp_caption_path:
-                    upload_captions(youtube, video_id, temp_caption_path)
-
-                # Create upload marker to prevent duplicate uploads
-                create_upload_marker(bucket_name, folder_path, video_id)
-                logging.info(
-                    f"Successfully uploaded video to YouTube with ID: {video_id}"
-                )
-            else:
-                logging.error(
-                    "Could not get video ID from upload response. Upload may have failed."
-                )
-
-        # --- Cleanup Temporary Files ---
-        try:
-            if os.path.exists(temp_video_path):
-                os.remove(temp_video_path)
-                logging.info(f"Cleaned up {temp_video_path}")
-            if temp_caption_path and os.path.exists(temp_caption_path):
-                os.remove(temp_caption_path)
-                logging.info(f"Cleaned up {temp_caption_path}")
-        except Exception as e:
-            logging.warning(f"Error during temp file cleanup: {e}")
-
-        logging.info("YouTube Main upload function finished processing folder.")
-
-    except Exception as e:
-        logging.error(f"Error in upload_to_youtube_main: {e}")
-        # Depending on the error, might want to retry or send alert
-        raise  # Re-raise to potentially trigger Cloud Functions retry mechanisms
+    process_youtube_upload(cloud_event, "main")

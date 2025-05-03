@@ -4,13 +4,11 @@ Real API Test Script for the Video Processor application.
 This script runs the video processor with real API calls to see actual outputs.
 """
 
-import os
-import sys
-import time
-import json
-import logging
 import argparse
+import logging
+import os
 import shutil
+import sys
 from pathlib import Path
 
 # Configure logging
@@ -25,7 +23,8 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 def setup_test_environment(video_file, clean=False):
     """
-    Set up the test environment by creating the necessary directories and copying the test video file.
+    Set up the test environment by creating the necessary directories and
+    copying the test video file.
 
     Args:
         video_file: The name of the video file to use for testing
@@ -73,11 +72,12 @@ def process_video_with_real_apis(video_file):
     Args:
         video_file: The name of the video file to process
     """
+    import shutil
     import subprocess
     import tempfile
-    import shutil
-    from google.oauth2 import service_account
+
     import vertexai
+    from google.oauth2 import service_account
     from vertexai.preview.generative_models import GenerativeModel, Part
 
     # Set environment variables for real API calls
@@ -85,12 +85,14 @@ def process_video_with_real_apis(video_file):
     os.environ["REAL_API_TEST"] = "true"
     os.environ["LOCAL_OUTPUT"] = "true"  # Write outputs to local filesystem
 
-    # Set the GOOGLE_APPLICATION_CREDENTIALS environment variable to point to the service account file
+    # Set the GOOGLE_APPLICATION_CREDENTIALS environment variable to point to
+    # the service account file
     service_account_path = Path("credentials/service_account.json").absolute()
     if not service_account_path.exists():
         logger.error(f"Service account credentials not found at {service_account_path}")
         logger.error(
-            "Please place your service account credentials at credentials/service_account.json"
+            "Please place your service account credentials at "
+            "credentials/service_account.json"
         )
         return False
 
@@ -105,7 +107,8 @@ def process_video_with_real_apis(video_file):
             scopes=["https://www.googleapis.com/auth/cloud-platform"],
         )
         logger.info(
-            f"Successfully authenticated with service account: {credentials.service_account_email}"
+            f"Successfully authenticated with service account: "
+            f"{credentials.service_account_email}"
         )
     except Exception as e:
         logger.error(f"Failed to authenticate with service account: {e}")
@@ -171,7 +174,8 @@ def process_video_with_real_apis(video_file):
             logger.info("Generating transcript...")
             transcript_response = model.generate_content(
                 [
-                    "Generate a transcript of this audio. Format it as plain text with no timestamps or speaker labels.",
+                    "Generate a transcript of this audio. Format it as plain text with "
+                    "no timestamps or speaker labels.",
                     audio_part,
                 ]
             )
@@ -181,7 +185,8 @@ def process_video_with_real_apis(video_file):
             logger.info("Generating subtitles...")
             subtitles_response = model.generate_content(
                 [
-                    "Generate WebVTT subtitles for this audio. Include proper timestamps.",
+                    "Generate WebVTT subtitles for this audio. "
+                    "Include proper timestamps.",
                     audio_part,
                 ]
             )
@@ -191,7 +196,8 @@ def process_video_with_real_apis(video_file):
             logger.info("Generating shownotes...")
             shownotes_response = model.generate_content(
                 [
-                    "Generate detailed shownotes for this audio in Markdown format. Include key points and timestamps.",
+                    "Generate detailed shownotes for this audio in Markdown format. "
+                    "Include key points and timestamps.",
                     audio_part,
                 ]
             )
@@ -201,7 +207,9 @@ def process_video_with_real_apis(video_file):
             logger.info("Generating chapters...")
             chapters_response = model.generate_content(
                 [
-                    "Generate chapters for this audio. Format as 'MM:SS - Chapter Title' with one chapter per line.",
+                    "Generate chapters for this audio. Format as "
+                    "'MM:SS - Chapter Title' "
+                    "with one chapter per line.",
                     audio_part,
                 ]
             )

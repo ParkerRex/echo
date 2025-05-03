@@ -7,13 +7,13 @@ This script:
 3. Verifies the outputs
 """
 
+import argparse
+import logging
 import os
+import shutil
+import subprocess
 import sys
 import time
-import logging
-import argparse
-import subprocess
-import shutil
 from pathlib import Path
 
 # Configure logging
@@ -32,7 +32,8 @@ os.environ["GOOGLE_CLOUD_PROJECT"] = "automations-457120"
 
 def setup_test_environment(video_file, clean=False):
     """
-    Set up the test environment by creating the necessary directories and copying the test video file.
+    Set up the test environment by creating the necessary directories and
+    copying the test video file.
 
     Args:
         video_file: The name of the video file to use for testing
@@ -83,7 +84,6 @@ def run_flask_app(port=8082):
     Returns:
         subprocess.Popen: The process object
     """
-    from video_processor.main import run_app
 
     # Set the PORT environment variable
     os.environ["PORT"] = str(port)
@@ -92,14 +92,14 @@ def run_flask_app(port=8082):
     logger.info(f"Starting Flask application on port {port}...")
 
     # Use subprocess to run the Flask app
-    cmd = [
-        sys.executable,
-        "-c",
-        'import sys; sys.path.append("."); from video_processor.main import run_app; run_app(debug=True)',
-    ]
-
     process = subprocess.Popen(
-        cmd,
+        [
+            sys.executable,
+            "-c",
+            'import sys; sys.path.append("."); '
+            "from video_processor.main import run_app; "
+            "run_app(debug=True)",
+        ],
         env=dict(
             os.environ,
             PORT=str(port),
@@ -161,131 +161,127 @@ def send_test_event(video_file, port=8082):
         return False
 
 
+def check_output_file(file_path, file_type):
+    """
+    Check if an output file exists and log its status.
+
+    Args:
+        file_path: Path to the file to check
+        file_type: Description of the file type for logging
+
+    Returns:
+        bool: True if file exists and is not empty
+    """
+    logger.info(f"Checking for {file_type} file: {file_path}")
+    if not os.path.exists(file_path):
+        logger.warning(f"⚠️ {file_type} file not found")
+        return False
+
+    file_size = os.path.getsize(file_path)
+    if file_size == 0:
+        logger.warning(f"⚠️ {file_type} file is empty")
+        return False
+
+    logger.info(f"✅ {file_type} file exists ({file_size} bytes)")
+    return True
+
+
+def preview_file_content(file, logger):
+    """
+    Try to preview the content of a file and log the first part of it.
+
+    Args:
+        file: Path to the file to preview
+        logger: Logger instance to use for logging
+    """
+    try:
+        with open(file, "r") as f:
+            content = f.read(500)  # Read first 500 characters
+            logger.info(f"Content preview: {content[:100]}...")
+    except Exception:
+        # If that fails, try to read as binary
+        try:
+            with open(file, "rb") as f:
+                content = f.read(100)  # Just read a bit in binary mode
+                logger.info(f"Binary content (hex): {content.hex()[:100]}")
+        except Exception as e:
+            logger.error(f"Could not read file: {e}")
+
+
 def verify_outputs(video_file):
     """
     Verify that the outputs were generated correctly.
 
     Args:
-        video_file: The name of the video file used for testing
+        video_file: Path to the input video file
 
     Returns:
-        bool: Whether the outputs were generated correctly
+        bool: True if all required outputs were found
     """
-    # Define paths
-    test_data_dir = Path("test_data")
-    video_name = Path(video_file).stem
+    logger.info("Verifying outputs...")
 
-    # Handle spaces in filenames - the processor replaces spaces with hyphens
-    processed_dir_name = video_name.replace(" ", "-")
-    processed_dir = test_data_dir / "processed-daily" / processed_dir_name
+    # Extract base name from the video file
+    base_name = os.path.basename(video_file).rsplit(".", 1)[0]
 
-    # Also try with the original name if the hyphenated version doesn't exist
-    if not processed_dir.exists():
-        processed_dir = test_data_dir / "processed-daily" / video_name
+    # Define output paths
+    output_dir = os.path.join("outputs", base_name)
 
-    # Also check if any directory in processed-daily contains the output files
-    if not processed_dir.exists():
-        for dir_path in (test_data_dir / "processed-daily").glob("*"):
-            if dir_path.is_dir():
-                logger.info(f"Found directory: {dir_path}")
-                # Check if this directory contains any of the expected output files
-                if any(
-                    (dir_path / f).exists() for f in ["transcript.txt", "subtitles.vtt"]
-                ):
-                    processed_dir = dir_path
-                    logger.info(f"Found output files in: {processed_dir}")
-                    break
-
-    logger.info(f"Looking for processed directory at: {processed_dir}")
-
-    # Check if the processed directory exists
-    if not processed_dir.exists():
-        logger.error(f"Processed directory {processed_dir} does not exist!")
+    if not os.path.exists(output_dir):
+        logger.error(f"❌ Output directory not found: {output_dir}")
         return False
 
-    # Check if the expected output files exist
-    # The video file might have spaces replaced with hyphens
-    video_filename = f"{video_name}.mp4"
-    video_filename_hyphenated = f"{video_name.replace(' ', '-')}.mp4"
+    logger.info(f"Output directory: {output_dir}")
 
-    expected_files = [
-        # Try both original and hyphenated filenames for the video
-        processed_dir / video_filename,
-        processed_dir / video_filename_hyphenated,
-        processed_dir / "transcript.txt",
-        processed_dir / "subtitles.vtt",
-        processed_dir / "shownotes.txt",
-        processed_dir / "chapters.txt",
-        processed_dir / "title.txt",
+    # List of required output files and their types
+    required_outputs = [
+        (os.path.join(output_dir, "audio.wav"), "Audio"),
+        (os.path.join(output_dir, "transcript.txt"), "Transcript"),
+        (os.path.join(output_dir, "subtitles.vtt"), "Subtitles"),
+        (os.path.join(output_dir, "shownotes.md"), "Shownotes"),
+        (os.path.join(output_dir, "chapters.json"), "Chapters"),
+        (os.path.join(output_dir, "metadata.json"), "Metadata"),
     ]
 
-    # Remove duplicates if the filenames are the same
-    expected_files = list(set(expected_files))
+    # Check all required output files
+    missing_files = 0
+    for output_file, file_type in required_outputs:
+        if not check_output_file(output_file, file_type):
+            missing_files += 1
 
-    all_files_exist = False
-    found_files = []
+    if missing_files > 0:
+        logger.warning(f"⚠️ {missing_files} required output files are missing")
 
-    # First check if at least one of the video files exists
-    video_files = [
-        processed_dir / video_filename,
-        processed_dir / video_filename_hyphenated,
-    ]
-    found_video = False
-    for video_file in video_files:
-        if video_file.exists():
-            found_video = True
-            found_files.append(video_file)
-            logger.info(f"Found video file: {video_file}")
-            break
+    # Check processed video files
+    processed_daily_dir = os.path.join(output_dir, "processed-daily", base_name)
+    processed_main_dir = os.path.join(output_dir, "processed-main", base_name)
 
-    if not found_video:
-        logger.error(f"No video file found in {processed_dir}!")
+    total_files = 0
+    for directory in [processed_daily_dir, processed_main_dir]:
+        if os.path.exists(directory):
+            files = os.listdir(directory)
+            logger.info(f"Files in {directory}: {files}")
+            total_files += len(files)
 
-    # Then check for the other expected files
-    other_files = [
-        processed_dir / "transcript.txt",
-        processed_dir / "subtitles.vtt",
-        processed_dir / "shownotes.txt",
-        processed_dir / "chapters.txt",
-        processed_dir / "title.txt",
-    ]
+            # Preview content of some key files
+            for file in files:
+                if (
+                    file.endswith(".txt")
+                    or file.endswith(".vtt")
+                    or file.endswith(".json")
+                ):
+                    file_path = os.path.join(directory, file)
+                    logger.info(f"Previewing {file_path}")
+                    preview_file_content(file_path, logger)
 
-    for file in other_files:
-        if file.exists():
-            found_files.append(file)
-            logger.info(f"Found output file: {file}")
-            # Print the first few lines of the file
-            try:
-                # Try to read as text first
-                with open(file, "r", errors="ignore") as f:
-                    content = f.read(500)  # Read first 500 characters
-                    logger.info(f"Content preview: {content[:100]}...")
-            except:
-                # If that fails, try to read as binary
-                try:
-                    with open(file, "rb") as f:
-                        content = f.read(50)  # Read first 50 bytes
-                        logger.info(f"Binary content (hex): {content.hex()[:100]}")
-                except Exception as e:
-                    logger.error(f"Could not read file {file}: {e}")
-        else:
-            logger.error(f"Expected output file {file} does not exist!")
-
-    # Check if we found at least the video file and transcript
-    required_files = ["transcript.txt"]
-    all_required_exist = found_video and all(
-        any(str(f).endswith(req) for f in found_files) for req in required_files
-    )
-
-    if all_required_exist:
-        all_files_exist = True
-        logger.info(
-            f"Found {len(found_files)} out of {len(other_files) + 1} expected files"
-        )
+    if total_files == 0:
+        logger.warning("⚠️ No processed files found")
     else:
-        logger.error(f"Missing required files!")
+        logger.info(f"✅ Found {total_files} processed files")
 
-    return all_files_exist
+    # Return success if we found at least some outputs
+    success = missing_files == 0 and total_files > 0
+    logger.info(f"Verification {'succeeded' if success else 'failed'}")
+    return success
 
 
 def main():

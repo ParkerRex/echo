@@ -21,3 +21,10 @@ functions-framework
 pytest==7.4.0
 pytest-mock==3.11.1
 pytest-cov==4.1.0
+
+# Data validation
+pydantic>=2.0.0
+
+# Development tools - versions pinned for consistency
+black==24.1.1        # Code formatter
+ruff==0.2.1         # Fast linter and import sorter

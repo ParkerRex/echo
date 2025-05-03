@@ -1,20 +1,26 @@
 import os
 import time
+
 from google.cloud import firestore
 
 # Path to service account key
-SERVICE_ACCOUNT_PATH = os.path.abspath(os.path.join(
-    os.path.dirname(__file__),
-    "../../credentials/service_account.json"
-))
+SERVICE_ACCOUNT_PATH = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "../../credentials/service_account.json")
+)
+
 
 def regenerate_thumbnail(video_id, thumbnail_idx, prompt):
     # Placeholder: implement actual thumbnail regeneration logic
-    print(f"[THUMBNAIL] Regenerating thumbnail {thumbnail_idx} for video {video_id} with prompt: {prompt}")
+    print(
+        f"[THUMBNAIL] Regenerating thumbnail {thumbnail_idx} for video {video_id} "
+        f"with prompt: {prompt}"
+    )
+
 
 def update_metadata(video_id, updated_fields):
     # Placeholder: implement actual metadata update logic
     print(f"[METADATA] Updating metadata for video {video_id}: {updated_fields}")
+
 
 def main():
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = SERVICE_ACCOUNT_PATH
@@ -40,7 +46,11 @@ def main():
                     if key == "thumbnails" and "thumbnails" in prev:
                         # Check for prompt changes in thumbnails array
                         for idx, thumb in enumerate(value):
-                            prev_thumb = prev["thumbnails"][idx] if idx < len(prev["thumbnails"]) else {}
+                            prev_thumb = (
+                                prev["thumbnails"][idx]
+                                if idx < len(prev["thumbnails"])
+                                else {}
+                            )
                             if thumb.get("prompt") != prev_thumb.get("prompt"):
                                 regenerate_thumbnail(doc_id, idx, thumb.get("prompt"))
                     elif key in ["title", "tags", "description", "scheduledTime"]:
@@ -52,6 +62,7 @@ def main():
             last_snapshots[doc_id] = data
 
         time.sleep(2)  # Poll every 2 seconds
+
 
 if __name__ == "__main__":
     main()

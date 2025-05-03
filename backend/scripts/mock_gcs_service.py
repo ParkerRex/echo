@@ -1,15 +1,18 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
-Mock GCS service for local testing.
+Mock GCS service for testing.
 This service simulates GCS events and sends them to the video processor.
 """
 
-import os
+import argparse
 import json
 import logging
-import argparse
+import os
+import sys
+from unittest.mock import MagicMock
+
 import requests
-from flask import Flask, request, jsonify
+from flask import Flask, jsonify, request
 
 # Configure logging
 logging.basicConfig(
@@ -30,9 +33,6 @@ os.environ["TESTING_MODE"] = "true"
 os.environ["GOOGLE_CLOUD_PROJECT"] = "automations-457120"
 
 # Mock Google Cloud libraries
-from unittest.mock import MagicMock
-import sys
-
 sys.modules["google.cloud.storage"] = MagicMock()
 sys.modules["google.cloud.aiplatform"] = MagicMock()
 sys.modules["vertexai"] = MagicMock()
@@ -72,7 +72,9 @@ def send_event_to_processor(event_data):
         "Content-Type": "application/json",
         "Ce-Id": "test-event-id",
         "Ce-Type": "google.cloud.storage.object.v1.finalized",
-        "Ce-Source": f"//storage.googleapis.com/projects/_/buckets/{event_data['bucket']}",
+        "Ce-Source": (
+            f"//storage.googleapis.com/projects/_/buckets/{event_data['bucket']}"
+        ),
         "Ce-Subject": f"objects/{event_data['name']}",
     }
 

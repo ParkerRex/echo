@@ -2,13 +2,12 @@
 Tests for the chapters generation functionality.
 """
 
-import pytest
 import json
-from unittest.mock import patch, MagicMock
+import os
 
 # Import the functions to test
 import sys
-import os
+from unittest.mock import MagicMock, patch
 
 # Add the parent directory to the path so we can import the module
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))

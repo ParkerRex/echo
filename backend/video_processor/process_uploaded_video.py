@@ -1,13 +1,13 @@
-import os
-import tempfile
-import logging
 import json
-
-from google.cloud import storage, aiplatform
-from vertexai.preview.generative_models import GenerativeModel
+import logging
+import os
+import shutil
 import subprocess
-import vertexai
 from unittest.mock import MagicMock
+
+import vertexai
+from google.cloud import aiplatform, storage
+from vertexai.preview.generative_models import GenerativeModel, Part
 
 PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT", "automations-457120")
 REGION = "us-east1"
@@ -60,15 +60,21 @@ else:
 
 
 def generate_transcript(audio_part):
-    """Generates a full transcript from audio data using a specific model."""
+    """Generates transcript from audio data."""
     if TESTING_MODE:
         # In testing mode, return a mock transcript
         logging.info("TESTING MODE: Returning mock transcript")
-        return "This is a mock transcript for testing purposes. It simulates what would be returned by the Gemini API in production."
+        return (
+            "This is a mock transcript for testing purposes. "
+            "It simulates what would be returned by the Gemini API in production."
+        )
     else:
         # Use a model optimized for transcription if needed
         transcription_model = GenerativeModel("gemini-2.0-flash-001")
-        prompt = "Generate a transcription of the audio, only extract speech and ignore background audio."
+        prompt = (
+            "Generate a transcription of the audio, only extract speech "
+            "and ignore background audio."
+        )
         response = transcription_model.generate_content(  # Use the specific model
             [prompt, audio_part],
             generation_config={"temperature": 0.2},  # Lower temp for accuracy
@@ -92,7 +98,8 @@ It simulates what would be returned by the Gemini API in production."""
     else:
         vtt_model = GenerativeModel("gemini-2.0-flash-001")
         prompt = (
-            "Generate subtitles in VTT format for the following audio. Ensure accurate timing.\\n"
+            "Generate subtitles in VTT format for the following audio. "
+            "Ensure accurate timing.\\n"
             "Example format:\\n"
             "WEBVTT\\n\\n"
             "00:00:00.000 --> 00:00:05.000\\n"
@@ -134,8 +141,9 @@ def generate_shownotes(audio_part):
 - 05:45 - Conclusion"""
     else:
         prompt = (
-            "Analyze the following audio and generate detailed shownotes. Include key takeaways, "
-            "any mentioned links or resources, and relevant timestamps for important points."
+            "Analyze the following audio and generate detailed shownotes. "
+            "Include key takeaways, any mentioned links or resources, "
+            "and relevant timestamps for important points."
         )
         shownotes_model = GenerativeModel("gemini-2.0-flash-001")
         response = shownotes_model.generate_content(
@@ -167,14 +175,21 @@ def generate_chapters(audio_part):
         # Updated prompt asking for JSON output
         chapters_model = GenerativeModel("gemini-2.0-flash-001")
         prompt = (
-            "Chapterize the video content by grouping the content into chapters and providing a summary for each chapter. "
-            "Please only capture key events and highlights. If you are not sure about any info, please do not make it up. "
-            'Return the result ONLY as a valid JSON array of objects, where each object has the keys "timecode" (string, e.g., "00:00") '
-            'and "chapterSummary" (string). Aim for chapters roughly every 2 minutes.\\n'
+            "Chapterize the video content by grouping the content into chapters "
+            "and providing a summary for each chapter. "
+            "Please only capture key events and highlights. "
+            "If you are not sure about any info, please do not make it up. "
+            "Return the result ONLY as a valid JSON array of objects, "
+            "where each object "
+            'has the keys "timecode" (string, e.g., "00:00") '
+            'and "chapterSummary" (string). Aim for chapters roughly '
+            "every 2 minutes.\\n"
             "Example JSON output format:\\n"
             "[\\n"
-            '  {\\"timecode\\": \\"00:00\\", \\"chapterSummary\\": \\"Introduction to the topic...\\"},\\n'
-            '  {\\"timecode\\": \\"02:01\\", \\"chapterSummary\\": \\"Discussing the first main point...\\"}\\n'
+            '  {\\"timecode\\": \\"00:00\\", \\"chapterSummary\\": '
+            '\\"Introduction to the topic...\\"},\\n'
+            '  {\\"timecode\\": \\"02:01\\", \\"chapterSummary\\": '
+            '\\"Discussing the first main point...\\"}\\n'
             "]"
         )
     response = chapters_model.generate_content(  # Use the specific model
@@ -211,16 +226,21 @@ def generate_titles(audio_part):
         logging.info("TESTING MODE: Returning mock title and keywords")
         return {
             "Description": "Mock Video Title for Testing Purposes",
-            "Keywords": "testing,mock,video,automation,example,demo,sample,test,keywords,tags",
+            "Keywords": (
+                "testing,mock,video,automation,example,demo,sample,"
+                "test,keywords,tags"
+            ),
         }
     else:
         # Use a specific model if desired
         title_model = GenerativeModel("gemini-2.0-flash-001")
         prompt = (
-            "Please write a 40-character long intriguing title for this video and 10 comma-separated hashtags "
-            "suitable for YouTube Shorts based on the audio. Format the response strictly as a valid JSON object "
-            "with two keys: 'Description' (containing the title, max 50 characters) and 'Keywords' "
-            "(containing the comma-separated hashtags as a single string)."
+            "Please write a 40-character long intriguing title for this video "
+            "and 10 comma-separated hashtags suitable for YouTube Shorts "
+            "based on the audio. Format the response strictly as a valid JSON object "
+            "with two keys: 'Description' (containing the title, max 50 characters) "
+            "and 'Keywords' (containing the comma-separated hashtags "
+            "as a single string)."
         )
     response = title_model.generate_content(  # Use the specific model
         [prompt, audio_part],
@@ -279,287 +299,412 @@ def write_blob(bucket_name, blob_path, content):
         logging.info(f"Uploaded {blob_path} to bucket {bucket_name}")
 
 
+def should_process_file(file_name):
+    """
+    Determine if a file should be processed based on file type and path.
+
+    Args:
+        file_name: Name of the file
+
+    Returns:
+        bool: True if file should be processed
+    """
+    # Check if the file is in the daily-raw or main-raw folders
+    if not (file_name.startswith("daily-raw/") or file_name.startswith("main-raw/")):
+        logging.info(
+            f"File {file_name} is not in daily-raw/ or main-raw/ folder. Skipping."
+        )
+        return False
+
+    # Check if the file is an MP4
+    if not file_name.lower().endswith(".mp4"):
+        logging.info(f"File {file_name} is not an MP4 file. Skipping.")
+        return False
+
+    return True
+
+
+def setup_output_paths(bucket_name, file_name):
+    """
+    Set up all the necessary paths for processing.
+
+    Args:
+        bucket_name: The bucket name
+        file_name: The file name
+
+    Returns:
+        tuple: Contains all the necessary paths for processing
+    """
+    # Determine if it's a daily or main channel video
+    channel_type = "daily" if file_name.startswith("daily-raw/") else "main"
+
+    # Extract the base filename without the path or extension
+    base_filename = os.path.splitext(os.path.basename(file_name))[0]
+
+    # Set up paths for the output files
+    base_folder = "processed-daily" if channel_type == "daily" else "processed-main"
+    output_folder = f"{base_folder}/{base_filename}"
+
+    # Local paths for testing
+    local_dir = f"local_output/{output_folder}"
+    video_path = f"{local_dir}/{base_filename}.mp4"
+    audio_path = f"{local_dir}/{base_filename}.wav"
+    transcript_path = f"{local_dir}/{base_filename}.txt"
+    vtt_path = f"{local_dir}/{base_filename}.vtt"
+    shownotes_path = f"{local_dir}/{base_filename}.md"
+    chapters_path = f"{local_dir}/{base_filename}.chapters.json"
+    titles_path = f"{local_dir}/{base_filename}.titles.json"
+
+    return (
+        channel_type,
+        base_filename,
+        output_folder,
+        local_dir,
+        video_path,
+        audio_path,
+        transcript_path,
+        vtt_path,
+        shownotes_path,
+        chapters_path,
+        titles_path,
+    )
+
+
+def download_and_setup_local(bucket_name, file_name, video_path, local_dir):
+    """
+    Download the file from GCS and set up local directory.
+
+    Args:
+        bucket_name: The bucket name
+        file_name: The file name
+        video_path: Path to save the video
+        local_dir: Local directory to create
+
+    Returns:
+        bool: True if successful
+    """
+    # Create local output directory if it doesn't exist
+    os.makedirs(local_dir, exist_ok=True)
+
+    # Download the video file from GCS
+    if not TESTING_MODE or REAL_API_TEST:
+        logging.info(f"Downloading gs://{bucket_name}/{file_name} to {video_path}")
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(bucket_name)
+        blob = bucket.blob(file_name)
+
+        try:
+            blob.download_to_filename(video_path)
+            logging.info(f"Downloaded gs://{bucket_name}/{file_name} to {video_path}")
+        except Exception as e:
+            logging.error(f"Error downloading file: {e}")
+            return False
+    else:
+        # In testing mode, create a dummy video file
+        logging.info(f"TESTING MODE: Creating dummy file at {video_path}")
+        os.makedirs(os.path.dirname(video_path), exist_ok=True)
+        with open(video_path, "wb") as f:
+            f.write(b"Dummy test video file for testing.")
+
+    return True
+
+
+def move_processed_file(
+    file_name, bucket_name, destination_blob_name, source_path=None, dest_path=None
+):
+    """Move a processed file to the appropriate destination."""
+    try:
+        if LOCAL_OUTPUT and source_path and dest_path:
+            # In local output mode, move the file locally
+            os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+            if os.path.exists(source_path):
+                shutil.copy2(source_path, dest_path)
+                if not TESTING_MODE:
+                    os.remove(source_path)
+                logging.info(
+                    f"Successfully moved local file from {source_path} to {dest_path}"
+                )
+            else:
+                logging.warning(
+                    f"Source file {source_path} does not exist. Skipping move."
+                )
+        else:
+            if not TESTING_MODE or REAL_API_TEST:
+                # In production mode, move the file in GCS
+                # blob refers to the original blob object fetched earlier for download
+                storage_client = storage.Client()
+                bucket = storage_client.bucket(bucket_name)
+                blob = bucket.blob(file_name)
+                bucket.copy_blob(blob, bucket, destination_blob_name)
+                blob.delete()  # Delete the original blob after successful copy
+                logging.info(
+                    f"Successfully moved gs://{bucket_name}/{file_name} to gs://{bucket_name}/{destination_blob_name}"
+                )
+    except Exception as move_error:
+        # Log error but don't fail the entire process if move fails
+        logging.error(
+            f"Failed to move original file {file_name} to "
+            f"{destination_blob_name}: {move_error}"
+        )
+
+
+def handle_processing_results(
+    bucket_name,
+    output_folder,
+    base_filename,
+    local_dir,
+    video_path,
+    audio_path,
+    transcript_path,
+    vtt_path,
+    shownotes_path,
+    chapters_path,
+    titles_path,
+):
+    """Handle all processing results and output files."""
+    try:
+        # Define additional GCS paths
+        bucket = None
+        if not TESTING_MODE or REAL_API_TEST:
+            storage_client = storage.Client()
+            bucket = storage_client.bucket(bucket_name)
+
+        # Upload all files to GCS if not in local-only mode
+        if not LOCAL_OUTPUT:
+            try:
+                # Upload video to the processed folder in GCS
+                if os.path.exists(video_path) and (not TESTING_MODE or REAL_API_TEST):
+                    video_blob = bucket.blob(f"{output_folder}/{base_filename}.mp4")
+                    video_blob.upload_from_filename(video_path)
+
+                # Upload metadata files to GCS
+                for local_path, filename in [
+                    (audio_path, f"{base_filename}.wav"),
+                    (transcript_path, f"{base_filename}.txt"),
+                    (vtt_path, f"{base_filename}.vtt"),
+                    (shownotes_path, f"{base_filename}.md"),
+                    (chapters_path, f"{base_filename}.chapters.json"),
+                    (titles_path, f"{base_filename}.titles.json"),
+                ]:
+                    if os.path.exists(local_path) and (
+                        not TESTING_MODE or REAL_API_TEST
+                    ):
+                        metadata_blob = bucket.blob(f"{output_folder}/{filename}")
+                        metadata_blob.upload_from_filename(local_path)
+                        logging.info(
+                            f"Uploaded {local_path} to gs://{bucket_name}/{output_folder}/{filename}"
+                        )
+
+                # The YouTube uploader will be triggered automatically by the GCS event
+                # when the files are uploaded to the processed-daily/ or
+                # processed-main/ folders
+                logging.info("YouTube uploader will be triggered by GCS event.")
+            except Exception as upload_error:
+                logging.error(f"Error uploading processed files: {upload_error}")
+                return False
+
+        return True
+    except Exception as e:
+        logging.error(f"Error handling processing results: {e}")
+        return False
+
+
+def extract_audio(video_path, output_path=None, sample_rate=16000, channels=1):
+    """
+    Extract audio from a video file using ffmpeg.
+
+    Args:
+        video_path: Path to the video file
+        output_path: Path to save the audio file (if None, uses video path with .wav)
+        sample_rate: Audio sample rate in Hz
+        channels: Number of audio channels (1=mono, 2=stereo)
+
+    Returns:
+        Path to the output audio file
+    """
+    if output_path is None:
+        # Generate output path based on video path
+        output_path = os.path.splitext(video_path)[0] + ".wav"
+
+    logging.info(f"Extracting audio from {video_path} to {output_path}")
+
+    try:
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-y",  # Overwrite output files without asking
+                "-i",
+                video_path,
+                "-vn",  # No video output
+                "-acodec",
+                "pcm_s16le",  # Standard WAV format
+                "-ar",
+                str(sample_rate),  # Audio sample rate
+                "-ac",
+                str(channels),  # Number of audio channels
+                output_path,
+            ],
+            check=True,  # Raise exception on non-zero exit code
+            capture_output=True,  # Capture stderr/stdout
+            text=True,  # Decode stderr/stdout as text
+        )
+        logging.info("Audio extraction complete")
+        return output_path
+    except subprocess.CalledProcessError as e:
+        logging.error(f"ffmpeg failed: {e}\nStderr: {e.stderr}")
+        raise
+    except Exception as e:
+        logging.error(f"Error during audio extraction: {e}")
+        raise
+
+
+def process_audio_and_generate_content(
+    video_path,
+    audio_path,
+    transcript_path,
+    vtt_path,
+    shownotes_path,
+    chapters_path,
+    titles_path,
+):
+    """
+    Process audio and generate content using AI.
+
+    Args:
+        video_path: Path to the video file
+        audio_path: Path to the audio file
+        transcript_path: Path to save the transcript
+        vtt_path: Path to save the VTT subtitles
+        shownotes_path: Path to save the shownotes
+        chapters_path: Path to save the chapters data
+        titles_path: Path to save the titles data
+
+    Returns:
+        bool: True if successful
+    """
+    try:
+        # Extract audio from video
+        extract_audio(video_path, audio_path)
+        logging.info(f"Extracted audio from {video_path} to {audio_path}")
+
+        # Load the audio file for AI processing
+        audio_part = None
+        if os.path.exists(audio_path) and os.path.getsize(audio_path) > 0:
+            try:
+                with open(audio_path, "rb") as f:
+                    audio_data = f.read()
+                    audio_part = Part.from_data(audio_data, mime_type="audio/wav")
+            except Exception as e:
+                logging.error(f"Error loading audio file: {e}")
+                # Create dummy audio data for testing
+                if TESTING_MODE:
+                    audio_part = Part.from_data(
+                        b"Dummy audio data for testing", mime_type="audio/wav"
+                    )
+
+        # Generate transcript
+        transcript = generate_transcript(audio_part)
+        if transcript:
+            with open(transcript_path, "w") as f:
+                f.write(transcript)
+            logging.info(f"Saved transcript to {transcript_path}")
+
+        # Generate VTT subtitles
+        vtt = generate_vtt(audio_part)
+        if vtt:
+            with open(vtt_path, "w") as f:
+                f.write(vtt)
+            logging.info(f"Saved VTT subtitles to {vtt_path}")
+
+        # Generate shownotes
+        shownotes = generate_shownotes(audio_part)
+        if shownotes:
+            with open(shownotes_path, "w") as f:
+                f.write(shownotes)
+            logging.info(f"Saved shownotes to {shownotes_path}")
+
+        # Generate chapters
+        chapters = generate_chapters(audio_part)
+        if chapters:
+            with open(chapters_path, "w") as f:
+                json.dump(chapters, f, indent=2)
+            logging.info(f"Saved chapters to {chapters_path}")
+
+        # Generate title and keywords
+        titles_data = generate_titles(audio_part)
+        if titles_data:
+            with open(titles_path, "w") as f:
+                json.dump(titles_data, f, indent=2)
+            logging.info(f"Saved titles to {titles_path}")
+
+        return True
+    except Exception as e:
+        logging.error(f"Error processing audio and generating content: {e}")
+        logging.exception("Stack trace:")
+        return False
+
+
 # Rename function and change signature to accept bucket and file name directly
 def process_video_event(bucket_name, file_name):
     logging.info(f"Processing video event for gs://{bucket_name}/{file_name}")
 
-    # Assuming storage_client is initialized globally
-    if not file_name.endswith(".mp4") or not file_name.startswith(
-        ("daily-raw/", "main-raw/")
-    ):
-        logging.info(f"Skipping non-target file: {file_name}")
+    # Skip files that don't need processing
+    if not should_process_file(file_name):
         return
 
-    base_name = os.path.splitext(os.path.basename(file_name))[0]
-    # Replace spaces with hyphens in the base name for better compatibility
-    base_name_normalized = base_name.replace(" ", "-")
-    channel = "daily" if file_name.startswith("daily-raw/") else "main"
-    processed_path = f"processed-{channel}/{base_name_normalized}/"
+    # Set up all the paths
+    (
+        channel_type,
+        base_filename,
+        output_folder,
+        local_dir,
+        video_path,
+        audio_path,
+        transcript_path,
+        vtt_path,
+        shownotes_path,
+        chapters_path,
+        titles_path,
+    ) = setup_output_paths(bucket_name, file_name)
 
-    logging.info(f"Original base name: {base_name}")
-    logging.info(f"Normalized base name: {base_name_normalized}")
-    logging.info(f"Processed path: {processed_path}")
+    # Download the file from GCS and set up local directory
+    if not download_and_setup_local(bucket_name, file_name, video_path, local_dir):
+        logging.error("Failed to download and set up files. Aborting.")
+        return
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        video_path = os.path.join(tmpdir, base_name + ".mp4")
-        audio_path = os.path.join(tmpdir, base_name + ".wav")
+    # --- Process the video file and generate content ---
+    if not process_audio_and_generate_content(
+        video_path,
+        audio_path,
+        transcript_path,
+        vtt_path,
+        shownotes_path,
+        chapters_path,
+        titles_path,
+    ):
+        logging.error("Failed to process video and generate content. Aborting.")
+        return
 
-        # Download video
-        logging.info(f"Downloading {file_name} to {video_path}...")
+    # --- Move the original video file to a processed folder ---
+    original_video_destination = f"raw-processed/{file_name}"
+    move_processed_file(file_name, bucket_name, original_video_destination)
 
-        if TESTING_MODE:
-            # In testing mode, create a dummy file instead of downloading
-            logging.info(
-                "TESTING MODE: Creating dummy video file instead of downloading"
-            )
-            try:
-                # Create a small dummy MP4 file
-                with open(video_path, "wb") as f:
-                    f.write(b"DUMMY MP4 FILE")
-                logging.info("Created dummy video file for testing.")
-                # Create a mock blob for later operations
-                bucket = MagicMock()
-                blob = MagicMock()
-            except Exception as e:
-                logging.error(f"Failed to create dummy file: {e}")
-                raise
-        else:
-            # Normal download in production mode
-            bucket = storage_client.bucket(bucket_name)
-            blob = bucket.blob(file_name)
-            try:
-                # Check if the blob exists before downloading
-                if not blob.exists():
-                    logging.error(
-                        f"Blob {file_name} does not exist in bucket {bucket_name}"
-                    )
-                    # Create a dummy file for testing purposes
-                    with open(video_path, "wb") as f:
-                        # Create a minimal valid MP4 header
-                        f.write(
-                            b"\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00mp42mp41\x00\x00\x00\x01moov"
-                        )
-                    logging.info(
-                        f"Created dummy MP4 file for non-existent blob {file_name}"
-                    )
-                else:
-                    blob.download_to_filename(video_path)
-                    logging.info("Download complete.")
-            except Exception as e:
-                logging.error(f"Failed to download {file_name}: {e}")
-                # Create a dummy file instead of failing
-                with open(video_path, "wb") as f:
-                    # Create a minimal valid MP4 header
-                    f.write(
-                        b"\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00mp42mp41\x00\x00\x00\x01moov"
-                    )
-                logging.info(
-                    f"Created dummy MP4 file after download failure for {file_name}"
-                )
+    # --- Handle the processing results ---
+    if not handle_processing_results(
+        bucket_name,
+        output_folder,
+        base_filename,
+        local_dir,
+        video_path,
+        audio_path,
+        transcript_path,
+        vtt_path,
+        shownotes_path,
+        chapters_path,
+        titles_path,
+    ):
+        logging.error("Failed to handle processing results.")
+        return False
 
-        # Extract audio using ffmpeg
-        logging.info(f"Extracting audio from {video_path} to {audio_path}...")
-
-        if TESTING_MODE:
-            # In testing mode, create a dummy WAV file instead of running ffmpeg
-            logging.info(
-                "TESTING MODE: Creating dummy WAV file instead of running ffmpeg"
-            )
-            try:
-                # Create a small dummy WAV file
-                with open(audio_path, "wb") as f:
-                    # Write a minimal WAV header + some data
-                    f.write(
-                        b"RIFF\x24\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00\x80>\x00\x00\x00\x7d\x00\x00\x02\x00\x10\x00data\x00\x00\x00\x00"
-                    )
-                logging.info("Created dummy WAV file for testing.")
-            except Exception as e:
-                logging.error(f"Failed to create dummy WAV file: {e}")
-                raise
-        else:
-            # Normal ffmpeg processing in production mode
-            try:
-                # First check if the file is a valid MP4
-                try:
-                    file_info = subprocess.run(
-                        ["file", video_path],
-                        check=True,
-                        capture_output=True,
-                        text=True,
-                    )
-                    logging.info(f"File info: {file_info.stdout}")
-
-                    # If file doesn't look like a valid video, create a dummy WAV file
-                    if (
-                        "MP4" not in file_info.stdout
-                        and "video" not in file_info.stdout
-                    ):
-                        logging.warning(
-                            f"File {video_path} doesn't appear to be a valid video file. Creating dummy WAV file."
-                        )
-                        with open(audio_path, "wb") as f:
-                            # Write a minimal WAV header + some data
-                            f.write(
-                                b"RIFF\x24\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00\x80>\x00\x00\x00\x7d\x00\x00\x02\x00\x10\x00data\x00\x00\x00\x00"
-                            )
-                        logging.info("Created dummy WAV file for invalid video.")
-                        return
-                except Exception as e:
-                    logging.warning(
-                        f"Failed to check file type: {e}. Proceeding with ffmpeg anyway."
-                    )
-
-                # Try to run ffmpeg with more lenient options
-                try:
-                    subprocess.run(
-                        [
-                            "ffmpeg",
-                            "-y",  # Overwrite output files without asking
-                            "-i",
-                            video_path,
-                            "-vn",  # No video output
-                            "-acodec",
-                            "pcm_s16le",  # Standard WAV format
-                            "-ar",
-                            "16000",  # Audio sample rate
-                            "-ac",
-                            "1",  # Mono audio
-                            audio_path,
-                        ],
-                        check=True,  # Raise exception on non-zero exit code
-                        capture_output=True,  # Capture stderr/stdout
-                        text=True,  # Decode stderr/stdout as text
-                    )
-                    logging.info("Audio extraction complete.")
-                except subprocess.CalledProcessError as e:
-                    logging.error(f"ffmpeg failed: {e}\nStderr: {e.stderr}")
-                    # Create a dummy WAV file instead of failing
-                    logging.info("Creating dummy WAV file after ffmpeg failure.")
-                    with open(audio_path, "wb") as f:
-                        # Write a minimal WAV header + some data
-                        f.write(
-                            b"RIFF\x24\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00\x80>\x00\x00\x00\x7d\x00\x00\x02\x00\x10\x00data\x00\x00\x00\x00"
-                        )
-                    logging.info("Created dummy WAV file for testing.")
-            except Exception as e:
-                logging.error(f"Error during ffmpeg execution: {e}")
-                # Create a dummy WAV file instead of failing
-                with open(audio_path, "wb") as f:
-                    # Write a minimal WAV header + some data
-                    f.write(
-                        b"RIFF\x24\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00\x80>\x00\x00\x00\x7d\x00\x00\x02\x00\x10\x00data\x00\x00\x00\x00"
-                    )
-                logging.info("Created dummy WAV file after exception.")
-
-        # Call Gemini
-        logging.info(f"Calling Gemini for {audio_path}...")
-        try:
-            from vertexai.preview.generative_models import Part
-
-            # Read the audio file and create a proper Part object
-            with open(audio_path, "rb") as f:
-                audio_bytes = f.read()
-
-            # Create a Part object with the correct MIME type
-            audio_part = Part.from_data(mime_type="audio/wav", data=audio_bytes)
-
-            # Pass the properly formatted audio part to the Gemini functions
-            transcript = generate_transcript(audio_part)
-            subtitles_vtt = generate_vtt(audio_part)
-            shownotes = generate_shownotes(audio_part)
-            chapters_json = generate_chapters(audio_part)
-            title_dict = generate_titles(audio_part)
-            logging.info("Gemini processing complete.")
-        except Exception as e:
-            logging.error(f"Gemini API call failed: {e}")
-            raise
-
-        # Format chapters JSON into a string for the text file
-        chapters_text = "\\n".join(
-            [f"{ch['timecode']} - {ch['chapterSummary']}" for ch in chapters_json]
-        )
-
-        # Extract title and keywords
-        video_title = title_dict.get("Description", "Default Title")
-        # Store keywords for potential future use
-        # video_keywords = title_dict.get("Keywords", "default,keywords")
-
-        # Write blobs
-        logging.info(f"Uploading results to gs://{bucket_name}/{processed_path}...")
-        try:
-            write_blob(bucket_name, processed_path + "transcript.txt", transcript)
-            # Save subtitles as .vtt
-            write_blob(bucket_name, processed_path + "subtitles.vtt", subtitles_vtt)
-            write_blob(bucket_name, processed_path + "shownotes.txt", shownotes)
-            write_blob(
-                bucket_name, processed_path + "chapters.txt", chapters_text
-            )  # Use formatted text
-            write_blob(
-                bucket_name, processed_path + "title.txt", video_title
-            )  # Save only the title
-            # TODO: Decide how to save/use video_keywords
-            logging.info("Result uploads complete.")
-
-            # The YouTube uploader will be triggered automatically by the GCS event
-            # when the files are uploaded to the processed-daily/ or processed-main/ folders
-            logging.info("YouTube uploader will be triggered by GCS event.")
-
-            # --- Move original video file to processed folder ---
-            try:
-                destination_blob_name = processed_path + os.path.basename(file_name)
-                logging.info(
-                    f"Moving original file {file_name} to {destination_blob_name}..."
-                )
-
-                if LOCAL_OUTPUT:
-                    # In local output mode, move the file in the local filesystem
-                    # Determine the local path based on environment
-                    if os.path.exists("/app/test_data"):
-                        # Docker environment
-                        base_path = "/app/test_data"
-                    else:
-                        # Local environment
-                        base_path = "test_data"
-
-                    source_path = os.path.join(base_path, file_name)
-                    dest_path = os.path.join(base_path, destination_blob_name)
-                    # Create the directory if it doesn't exist
-                    os.makedirs(os.path.dirname(dest_path), exist_ok=True)
-                    # Copy the file
-                    if os.path.exists(source_path):
-                        import shutil
-
-                        shutil.copy2(source_path, dest_path)
-                        # Delete the original file if not in real API test mode
-                        if not REAL_API_TEST:
-                            os.remove(source_path)
-                        logging.info(
-                            f"Successfully moved local file from {source_path} to {dest_path}"
-                        )
-                    else:
-                        logging.warning(
-                            f"Source file {source_path} does not exist for local move"
-                        )
-
-                # If not in testing mode or in real API test mode, also move in GCS
-                if not TESTING_MODE or REAL_API_TEST:
-                    # In production mode, move the file in GCS
-                    # blob refers to the original blob object fetched earlier for download
-                    bucket.copy_blob(blob, bucket, destination_blob_name)
-                    blob.delete()  # Delete the original blob after successful copy
-
-                logging.info(
-                    f"Successfully moved original file to {destination_blob_name}"
-                )
-            except Exception as move_error:
-                # Log error but don't fail the entire process if move fails
-                logging.error(
-                    f"Failed to move original file {file_name} to {destination_blob_name}: {move_error}"
-                )
-            # --- End move original video file ---
-
-        except Exception as e:
-            logging.error(f"Failed to upload results: {e}")
-            raise
-
-    logging.info(f"Successfully processed gs://{bucket_name}/{file_name}")
+    logging.info(f"Completed processing for {file_name}")
+    return True

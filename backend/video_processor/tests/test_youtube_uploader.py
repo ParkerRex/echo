@@ -2,12 +2,10 @@
 Tests for the youtube_uploader.py module.
 """
 
-import sys
 import os
-import json
-import pytest
+import sys
 import tempfile
-from unittest.mock import patch, MagicMock, mock_open
+from unittest.mock import MagicMock, patch
 
 # Add the root directory to the path so we can import the module
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
@@ -45,7 +43,7 @@ def test_get_youtube_credentials(mock_secretmanager_client, mock_youtube_credent
             "video_processor.youtube_uploader.Credentials",
             return_value=mock_youtube_credentials,
         ):
-            with patch("video_processor.youtube_uploader.Request") as mock_request:
+            with patch("video_processor.youtube_uploader.Request"):
                 # Call the function
                 result = youtube_uploader.get_youtube_credentials(
                     {
@@ -185,9 +183,7 @@ def test_upload_to_youtube_daily(
                 "video_processor.youtube_uploader.build",
                 return_value=mock_youtube_service,
             ):
-                with patch(
-                    "video_processor.youtube_uploader.download_blob"
-                ) as mock_download:
+                with patch("video_processor.youtube_uploader.download_blob"):
                     with patch(
                         "video_processor.youtube_uploader.upload_video",
                         return_value={"id": "test_video_id"},
@@ -250,9 +246,7 @@ def test_upload_to_youtube_main(
                 "video_processor.youtube_uploader.build",
                 return_value=mock_youtube_service,
             ):
-                with patch(
-                    "video_processor.youtube_uploader.download_blob"
-                ) as mock_download:
+                with patch("video_processor.youtube_uploader.download_blob"):
                     with patch(
                         "video_processor.youtube_uploader.upload_video",
                         return_value={"id": "test_video_id"},

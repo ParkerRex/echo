@@ -1,7 +1,0 @@
-WEBVTT
-
-00:00:00.000 --> 00:00:05.000
-This is a mock subtitle for testing purposes.
-
-00:00:05.000 --> 00:00:10.000
-It simulates what would be returned by the Gemini API in production.

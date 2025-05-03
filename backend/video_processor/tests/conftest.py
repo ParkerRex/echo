@@ -9,11 +9,11 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 """
 
 import os
-import tempfile
-import pytest
 import subprocess
-import json
-from unittest.mock import MagicMock, patch
+import tempfile
+from unittest.mock import MagicMock
+
+import pytest
 from flask import Flask
 
 

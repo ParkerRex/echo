@@ -1,8 +1,9 @@
-import os
 import json
 import logging
+import os
+from typing import Callable, Optional
+
 from flask import Flask, request
-from typing import Callable, Optional, Tuple, Any
 
 # Import the process_video_event function
 from .process_uploaded_video import process_video_event
@@ -42,7 +43,9 @@ def create_app(process_func: Optional[Callable] = None) -> Flask:
         event_subject = request.headers.get("Ce-Subject")
 
         logging.info(
-            f"Received CloudEvent: ID={event_id}, Type={event_type}, Source={event_source}, Subject={event_subject}"
+            f"Received CloudEvent: ID={event_id}, "
+            f"Type={event_type}, Source={event_source}, "
+            f"Subject={event_subject}"
         )
 
         try:

@@ -1,19 +1,22 @@
 """
 Pytest configuration file with common fixtures for testing.
 """
+
 import os
-import tempfile
-import json
 import subprocess
-from unittest.mock import MagicMock, patch
+import tempfile
+from unittest.mock import MagicMock
 
 import pytest
 from flask import Flask
 from google.cloud.storage import Client as StorageClient
 
 from video_processor.config import Settings
-from video_processor.services.storage import StorageService, GCSStorageService, LocalStorageService
 from video_processor.core.processors.audio import AudioProcessor
+from video_processor.services.storage import (
+    LocalStorageService,
+    StorageService,
+)
 
 
 @pytest.fixture
@@ -29,7 +32,7 @@ def test_settings():
         ai_model="test-model",
         default_privacy_status="unlisted",
         port=8080,
-        debug=True
+        debug=True,
     )
 
 
@@ -54,11 +57,13 @@ def mock_storage_service(mock_storage_client):
     """Mock for the StorageService interface."""
     mock_client, _, _ = mock_storage_client
     mock_service = MagicMock(spec=StorageService)
-    
+
     # Configure methods to return appropriate values
     mock_service.download_file.return_value = "/tmp/test_video.mp4"
     mock_service.upload_file.return_value = "processed-daily/test_video/test_video.mp4"
-    mock_service.upload_from_string.return_value = "processed-daily/test_video/test_file.txt"
+    mock_service.upload_from_string.return_value = (
+        "processed-daily/test_video/test_file.txt"
+    )
     mock_service.read_file.return_value = b"test content"
     mock_service.read_text.return_value = "test content"
     mock_service.list_files.return_value = ["file1.txt", "file2.txt"]
@@ -67,7 +72,7 @@ def mock_storage_service(mock_storage_client):
     mock_service.move_file.return_value = True
     mock_service.get_signed_url.return_value = "https://test-signed-url.com"
     mock_service.get_metadata.return_value = {"name": "test_file", "size": 1000}
-    
+
     return mock_service
 
 

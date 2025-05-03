@@ -1,9 +1,8 @@
 """
 Main application entry point.
 """
-import os
+
 import logging
-from typing import Optional
 
 from .api import create_app
 from .config import get_settings
@@ -22,6 +21,6 @@ if __name__ == "__main__":
         settings = get_settings()
         app.run(host="0.0.0.0", port=settings.port, debug=settings.debug)
         logger.info(f"Flask server should be running on port {settings.port}")
-    except Exception as e:
+    except Exception:
         logger.exception("❌ Failed to start Flask development server:")
         raise

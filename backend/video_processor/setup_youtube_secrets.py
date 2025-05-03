@@ -4,9 +4,9 @@ Script to set up YouTube API secrets in Google Cloud Secret Manager.
 This script helps create or update the necessary secrets for the YouTube uploader.
 """
 
-import os
 import argparse
 import json
+
 from google.cloud import secretmanager
 
 # Project ID
@@ -177,7 +177,8 @@ def main():
     if not any([client_id, client_secret, args.refresh_token]):
         print("Error: No values provided to store in Secret Manager.")
         print(
-            "Please provide at least one of: --client-id, --client-secret, --refresh-token, or --client-secrets-file"
+            "Please provide at least one of: --client-id, --client-secret, "
+            "--refresh-token, or --client-secrets-file"
         )
         return 1
 

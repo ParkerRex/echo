@@ -2,18 +2,20 @@
 Tests for the main.py module.
 """
 
-import sys
 import os
+import sys
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 # Add the root directory to the path so we can import the main module
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-# Import the main module - authentication is handled by environment variables or mocked in conftest.py
+# Import the main module - authentication is handled by environment variables
+# or mocked in conftest.py
 try:
     from video_processor import main
-except Exception as e:
+except Exception:
     # If there's an authentication error, we'll mock the authentication
     import os
     import sys

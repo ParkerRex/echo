@@ -3,10 +3,11 @@
 Test script to verify the audio processing with Gemini API.
 """
 
-import os
 import logging
-import tempfile
+import os
 import subprocess
+import tempfile
+
 import vertexai
 from vertexai.preview.generative_models import GenerativeModel, Part
 
@@ -71,7 +72,10 @@ def test_audio_processing():
             def generate_test_transcript(audio_part):
                 """Test function to generate a transcript from audio data."""
                 transcription_model = GenerativeModel("gemini-2.0-flash-001")
-                prompt = "Generate a transcription of the audio, only extract speech and ignore background audio."
+                prompt = (
+                    "Generate a transcription of the audio, only extract speech "
+                    "and ignore background audio."
+                )
                 response = transcription_model.generate_content(
                     [prompt, audio_part],
                     generation_config={"temperature": 0.2},
