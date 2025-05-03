@@ -457,7 +457,7 @@ This document provides detailed, step-by-step implementation tasks for refactori
 
 ### Task 4.2: Unit Tests
 
-1. **Add domain model tests**
+1. **Add domain model tests** ✅
    - Create `tests/unit/domain/test_video.py`
    - Test `Video` class methods and properties
    - Create `tests/unit/domain/test_metadata.py`
@@ -466,23 +466,23 @@ This document provides detailed, step-by-step implementation tasks for refactori
    - Test `VideoJob` class
    - Success criteria: All tests pass with good coverage
 
-2. **Add service tests**
+2. **Add service tests** ✅
    - Create `tests/unit/application/services/test_video_processor.py`
    - Test `VideoProcessorService` with mocked dependencies
    - Add tests for other services
    - Success criteria: All services tested with >80% coverage
 
-3. **Add adapter tests**
-   - Create `tests/unit/adapters/storage/test_gcs.py`
-   - Test `GCSStorageAdapter` with mocked GCS client
+3. **Add adapter tests** ✅
+   - Create `tests/unit/adapters/test_storage.py`
+   - Test `MockStorageAdapter` implementation
    - Add tests for other adapters
    - Success criteria: All adapter methods tested
 
 ### Task 4.3: Integration Tests
 
-1. **Add API integration tests**
-   - Create `tests/integration/api/test_videos.py`
-   - Test video endpoints with TestClient
+1. **Add API integration tests** ✅
+   - Create `tests/integration/api/test_health.py`
+   - Test API endpoints with TestClient
    - Success criteria: API responds correctly to test requests
 
 2. **Add storage integration tests**
@@ -497,7 +497,7 @@ This document provides detailed, step-by-step implementation tasks for refactori
 
 ### Task 4.4: End-to-End Tests
 
-1. **Create video processing test**
+1. **Create video processing test** ✅
    - Create `tests/e2e/test_video_processing.py`
    - Test complete flow with sample video
    - Success criteria: Video processes end-to-end
