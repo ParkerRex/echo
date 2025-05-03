@@ -200,50 +200,101 @@ flowchart TD
       OutputGen --> Storage[10. Store Results]
     end
     
-    Storage --> YTEventarc[11. YouTube Upload Trigger]
-    YTEventarc --> YouTube[12. YouTube API]
+    Storage --> Firestore[11. Firestore DB]
+    Storage --> OutputBucket[12. Processed Output Bucket]
+    OutputBucket --> YTUpload[13. YouTube Uploader]
+    YTUpload --> YouTube[14. YouTube]
+    Firestore --> Frontend[15. Frontend App]
   end
   
-  YouTube --> Published[13. Published Video]
+  Frontend --> User[16. User Interface]
 ```
 
-### Data Flow
+## 🏗️ Architecture Refactoring
+
+We are currently implementing a major architectural refactoring to improve maintainability, testability, and scalability. The refactoring follows clean architecture principles and modern Python design patterns.
+
+### Current vs. Proposed Architecture
+
+#### Current Architecture Challenges
+
+The current implementation is functional but has several limitations:
+
+1. **Monolithic Components**: Large files like `process_uploaded_video.py` (711 lines) handle multiple responsibilities
+2. **Limited Separation of Concerns**: Business logic mixed with infrastructure concerns
+3. **Testing Difficulties**: Heavy reliance on mocking for unit tests
+4. **Coupling to External Services**: Direct dependencies on GCS, Vertex AI, etc.
+
+#### Proposed Clean Architecture
+
+The proposed architecture follows a hexagonal/clean architecture approach:
 
 ```mermaid
-flowchart LR
-  UI[Frontend UI] --> |Dropzone| Upload([Upload MP4])
-  Upload --> |Signed URL| GCS[(GCS Bucket)]
-  UI --> |Create Document| Firestore[(Firestore)]
-  
-  GCS --> Process[Video Processor]
-  Firestore --> |Trigger| Process
-  
-  Process --> Audio[Audio Extraction]
-  Audio --> Gemini[Gemini AI]
-  
-  Gemini --> |Generate| Transcript[Transcript]
-  Gemini --> |Generate| Chapters[Chapters]
-  Gemini --> |Generate| Title[Multiple Titles]
-  Gemini --> |Generate| Description[Description]
-  Gemini --> |Generate| Thumbnails[Thumbnails]
-  
-  Transcript --> VTT[Subtitles VTT]
-  
-  Transcript & Chapters & Title & Description & VTT & Thumbnails --> Storage[(Processed Storage)]
-  
-  Storage --> |Update| Firestore
-  Firestore --> |onSnapshot| Components[UI Components]
-  
-  Components --> |ProcessingDashboard| Status[Processing Status]
-  Components --> |TitleSelector| TitleVote[Title Selection]
-  Components --> |ThumbnailGallery| ThumbSelect[Thumbnail Selection]
-  Components --> |ContentEditor| ContentEdit[Content Editing]
-  
-  TitleVote & ThumbSelect & ContentEdit --> |Update| Firestore
-  
-  Storage --> YTUpload[YouTube Uploader]
-  YTUpload --> YouTube[YouTube Video]
+flowchart TD
+    A[Domain Layer] --> B[Application Layer]
+    B --> C[Adapters Layer]
+    C --> D[Infrastructure Layer]
+    
+    subgraph "Domain Layer"
+        A1[Domain Entities]
+        A2[Value Objects]
+        A3[Domain Events]
+    end
+    
+    subgraph "Application Layer"
+        B1[Service Interfaces]
+        B2[Application Services]
+        B3[Use Cases]
+    end
+    
+    subgraph "Adapters Layer"
+        C1[AI Service Adapters]
+        C2[Storage Adapters]
+        C3[Publishing Adapters]
+    end
+    
+    subgraph "Infrastructure Layer"
+        D1[FastAPI Server]
+        D2[Repositories]
+        D3[Dependency Injection]
+        D4[External Services]
+    end
 ```
+
+### Key Improvements
+
+1. **Domain-Driven Design**: Clear domain models and business logic separated from infrastructure
+2. **Dependency Inversion**: Core business logic has no dependencies on external frameworks or services
+3. **Modular Structure**: Components with well-defined responsibilities and interfaces
+4. **Enhanced Testability**: Easier unit testing with proper abstractions
+5. **Framework Independence**: Business logic not tied to specific web frameworks or cloud providers
+6. **Scalability**: Ability to add new features or change implementations without affecting core logic
+
+### Implementation Plan
+
+We've created a detailed implementation plan in `backend/docs/implementation-tasks.md` with prioritized tasks. The key phases are:
+
+1. **Core Architecture & Domain Model**: Establish new project structure and domain entities
+2. **Service Implementation**: Refactor processing logic into clean services
+3. **Infrastructure Setup**: Add dependency injection, repositories, and API framework
+4. **Testing**: Comprehensive unit, integration, and end-to-end tests
+5. **Deployment & Utilities**: Configure deployment and add utility functions
+6. **Refinement & Optimization**: Performance tuning and error handling improvements
+
+### Migration Strategy
+
+We'll use a gradual migration approach to minimize disruption:
+
+1. Create the new structure alongside the existing code
+2. Implement and test new components without disrupting current functionality
+3. Gradually migrate processing logic to the new architecture
+4. Switch over to new implementation once fully tested
+5. Remove legacy code after successful transition
+
+For full details on the architecture, including file structures and comprehensive requirements, see:
+- `backend/docs/be-prd.txt` - Product Requirements Document
+- `backend/docs/file-structure-comparison.md` - Current vs. Proposed File Structure
+- `backend/docs/implementation-tasks.md` - Detailed Implementation Tasks
 
 ## 🧪 Testing
 
