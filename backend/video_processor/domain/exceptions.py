@@ -43,3 +43,9 @@ class JobNotFoundError(VideoProcessingError):
     """Raised when a job with the specified ID cannot be found."""
 
     pass
+
+
+class MessagingError(VideoProcessingError):
+    """Raised when messaging operations fail."""
+
+    pass
