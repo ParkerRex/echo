@@ -1,194 +1,126 @@
 """
-Mock AI service adapter for testing.
+Mock implementation of the AI service interface for testing.
 """
 
 from typing import Dict
 
 from video_processor.application.interfaces.ai import AIServiceInterface
-from video_processor.domain.exceptions import MetadataGenerationError
 
 
 class MockAIAdapter(AIServiceInterface):
     """
     Mock implementation of AIServiceInterface for testing.
-    Provides predefined responses for AI operations.
+
+    Provides predetermined responses for AI operations without actually
+    calling any AI services.
     """
 
-    def __init__(self, model_name: str = "test-model"):
-        """
-        Initialize the mock AI adapter.
-
-        Args:
-            model_name: Name of the AI model to simulate
-        """
+    def __init__(self, model_name: str = "mock-model"):
+        """Initialize the mock AI adapter."""
         self.model_name = model_name
+        # Store call counts for verification in tests
+        self.call_counts = {
+            "generate_transcript": 0,
+            "generate_metadata": 0,
+            "generate_thumbnail_description": 0,
+            "summarize_content": 0,
+            "set_model": 0,
+        }
+        # Predefined responses
         self.responses = {
-            "transcripts": {},
-            "metadata": {},
-            "thumbnails": {},
-            "summaries": {},
+            "transcript": "This is a mock transcript of the video content. "
+            "The speaker discusses video processing techniques.",
+            "metadata": {
+                "title": "How to Process Videos Effectively",
+                "description": "A comprehensive guide to video processing using modern techniques.",
+                "tags": ["video", "processing", "tutorial", "AI"],
+                "show_notes": "00:00 Introduction\n00:30 Basic concepts\n01:45 Advanced techniques",
+            },
+            "thumbnail": "A person explaining video processing concepts with a whiteboard",
+            "summary": "This video covers the fundamentals of video processing including "
+            "transcoding, metadata extraction, and AI-assisted content generation.",
         }
-
-        # Set some default mock responses
-        self._set_default_responses()
-
-    def _set_default_responses(self):
-        """Set up default mock responses."""
-        # Default transcript
-        default_transcript = (
-            "This is a mock transcript generated for testing purposes. "
-            "It contains some sample text that would typically be generated "
-            "from audio content. The quick brown fox jumps over the lazy dog. "
-            "Welcome to our video about automated processing."
-        )
-
-        # Default metadata
-        default_metadata = {
-            "title": "Sample Test Video",
-            "description": "This is an automatically generated description for a test video.",
-            "tags": ["test", "sample", "automation", "video processing"],
-            "chapters": [
-                {"time": 0, "title": "Introduction"},
-                {"time": 60, "title": "Main Content"},
-                {"time": 120, "title": "Conclusion"},
-            ],
-        }
-
-        # Default thumbnail description
-        default_thumbnail = (
-            "A person explaining a concept with diagrams on a whiteboard."
-        )
-
-        # Default summary
-        default_summary = "This video covers automated video processing and metadata generation techniques."
-
-        # Set as default responses
-        self.responses["transcripts"]["default"] = default_transcript
-        self.responses["metadata"]["default"] = default_metadata
-        self.responses["thumbnails"]["default"] = default_thumbnail
-        self.responses["summaries"]["default"] = default_summary
-
-    def generate_transcript(self, audio_file: str) -> str:
-        """
-        Generate a transcript from an audio file.
-
-        Args:
-            audio_file: Path to audio file
-
-        Returns:
-            Generated transcript text
-
-        Raises:
-            MetadataGenerationError: If generation fails
-        """
-        try:
-            # Return a specific mock transcript if one is set for this file
-            file_key = audio_file.split("/")[-1]
-            if file_key in self.responses["transcripts"]:
-                return self.responses["transcripts"][file_key]
-
-            # Otherwise return the default
-            return self.responses["transcripts"]["default"]
-        except Exception as e:
-            raise MetadataGenerationError(f"Failed to generate transcript: {str(e)}")
-
-    def generate_metadata(self, transcript: str) -> Dict:
-        """
-        Generate metadata from a transcript.
-
-        Args:
-            transcript: Transcript text
-
-        Returns:
-            Dictionary of generated metadata
-
-        Raises:
-            MetadataGenerationError: If generation fails
-        """
-        try:
-            # Check if we have a specific response for this transcript
-            # Using a hash of the first 50 chars as a simple lookup key
-            key = hash(transcript[:50]) % 10000
-            if str(key) in self.responses["metadata"]:
-                return self.responses["metadata"][str(key)]
-
-            # Otherwise return the default
-            return self.responses["metadata"]["default"]
-        except Exception as e:
-            raise MetadataGenerationError(f"Failed to generate metadata: {str(e)}")
-
-    def generate_thumbnail_description(self, transcript: str, timestamp: float) -> str:
-        """
-        Generate a description for a thumbnail at a specific timestamp.
-
-        Args:
-            transcript: Transcript text
-            timestamp: Time in seconds
-
-        Returns:
-            Thumbnail description
-
-        Raises:
-            MetadataGenerationError: If generation fails
-        """
-        try:
-            # Create a key based on timestamp
-            key = f"time_{int(timestamp)}"
-            if key in self.responses["thumbnails"]:
-                return self.responses["thumbnails"][key]
-
-            # Otherwise return the default
-            return self.responses["thumbnails"]["default"]
-        except Exception as e:
-            raise MetadataGenerationError(
-                f"Failed to generate thumbnail description: {str(e)}"
-            )
-
-    def summarize_content(self, transcript: str, max_length: int = 500) -> str:
-        """
-        Summarize content from a transcript.
-
-        Args:
-            transcript: Transcript text
-            max_length: Maximum length of summary
-
-        Returns:
-            Summary text
-
-        Raises:
-            MetadataGenerationError: If generation fails
-        """
-        try:
-            # Check if we have a specific response for this transcript
-            # Using a hash of the first 50 chars as a simple lookup key
-            key = hash(transcript[:50]) % 10000
-            if str(key) in self.responses["summaries"]:
-                summary = self.responses["summaries"][str(key)]
-            else:
-                summary = self.responses["summaries"]["default"]
-
-            # Respect max_length
-            return summary[:max_length]
-        except Exception as e:
-            raise MetadataGenerationError(f"Failed to summarize content: {str(e)}")
 
     def set_model(self, model_name: str) -> None:
         """
         Set the AI model to use.
 
         Args:
-            model_name: Name of the model
+            model_name: Name of the model to use
         """
+        self.call_counts["set_model"] += 1
         self.model_name = model_name
 
-    def set_custom_response(self, response_type: str, key: str, value: any) -> None:
+    def generate_transcript(self, audio_file: str) -> str:
         """
-        Set a custom response for a specific input.
+        Generate a transcript from an audio file.
 
         Args:
-            response_type: Type of response ("transcripts", "metadata", "thumbnails", "summaries")
-            key: Key for the response
-            value: Response value
+            audio_file: Path to the audio file
+
+        Returns:
+            Generated transcript text
+        """
+        self.call_counts["generate_transcript"] += 1
+        return self.responses["transcript"]
+
+    def generate_metadata(self, transcript: str) -> Dict:
+        """
+        Generate metadata from a transcript.
+
+        Args:
+            transcript: Video transcript text
+
+        Returns:
+            Dictionary containing generated metadata
+        """
+        self.call_counts["generate_metadata"] += 1
+        return self.responses["metadata"]
+
+    def generate_thumbnail_description(self, transcript: str, timestamp: float) -> str:
+        """
+        Generate a description for a thumbnail at a specific timestamp.
+
+        Args:
+            transcript: Video transcript text
+            timestamp: Timestamp in seconds
+
+        Returns:
+            Description for the thumbnail
+        """
+        self.call_counts["generate_thumbnail_description"] += 1
+        return f"At {timestamp:.2f}s: {self.responses['thumbnail']}"
+
+    def summarize_content(self, transcript: str, max_length: int = 500) -> str:
+        """
+        Generate a summary of the transcript content.
+
+        Args:
+            transcript: Video transcript text
+            max_length: Maximum summary length
+
+        Returns:
+            Summarized content
+        """
+        self.call_counts["summarize_content"] += 1
+        # Adjust summary length if needed
+        if max_length < len(self.responses["summary"]):
+            return self.responses["summary"][:max_length] + "..."
+        return self.responses["summary"]
+
+    def set_custom_response(self, response_type: str, response_data: any) -> None:
+        """
+        Set a custom response for a specific operation.
+        Useful for testing specific scenarios.
+
+        Args:
+            response_type: Type of response to set (transcript, metadata, etc.)
+            response_data: The response data to use
         """
         if response_type in self.responses:
-            self.responses[response_type][key] = value
+            self.responses[response_type] = response_data
+
+    def reset_call_counts(self) -> None:
+        """Reset all call counters to zero."""
+        for key in self.call_counts:
+            self.call_counts[key] = 0

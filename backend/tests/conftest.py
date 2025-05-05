@@ -5,34 +5,43 @@ Pytest configuration file with common fixtures for testing.
 import os
 import subprocess
 import tempfile
-from unittest.mock import MagicMock
+from datetime import datetime
+from unittest.mock import MagicMock, patch
 
 import pytest
-from flask import Flask
 from google.cloud.storage import Client as StorageClient
+from video_processor.application.interfaces.ai import AIServiceInterface
+from video_processor.application.interfaces.publishing import PublishingInterface
+from video_processor.application.interfaces.storage import StorageInterface
+from video_processor.domain.models.enums import ProcessingStage, ProcessingStatus
+from video_processor.domain.models.job import VideoJob
+from video_processor.domain.models.metadata import VideoMetadata
+from video_processor.domain.models.video import Video
 
-from video_processor.config import Settings
-from video_processor.core.processors.audio import AudioProcessor
-from video_processor.services.storage import (
-    LocalStorageService,
-    StorageService,
-)
+# Set environment variables for testing
+os.environ["GOOGLE_CLOUD_PROJECT"] = "test-project"
+
+
+# Mock Google auth for all tests
+@pytest.fixture(autouse=True, scope="session")
+def mock_google_auth():
+    """Mock Google Cloud authentication for all tests."""
+    with patch("google.auth.default", return_value=(None, "test-project")):
+        yield
 
 
 @pytest.fixture
 def test_settings():
     """Create test settings with testing mode enabled."""
+    from video_processor.infrastructure.config.settings import Settings
+
     return Settings(
         project_id="test-project",
         region="test-region",
         testing_mode=True,
-        real_api_test=False,
-        local_output=True,
         gcs_upload_bucket="test-bucket",
         ai_model="test-model",
         default_privacy_status="unlisted",
-        port=8080,
-        debug=True,
     )
 
 
@@ -53,47 +62,62 @@ def mock_storage_client():
 
 
 @pytest.fixture
-def mock_storage_service(mock_storage_client):
-    """Mock for the StorageService interface."""
-    mock_client, _, _ = mock_storage_client
-    mock_service = MagicMock(spec=StorageService)
+def storage_adapter():
+    """Mock for the StorageAdapter interface."""
+    from video_processor.application.interfaces.storage import StorageInterface
+
+    mock_adapter = MagicMock(spec=StorageInterface)
 
     # Configure methods to return appropriate values
-    mock_service.download_file.return_value = "/tmp/test_video.mp4"
-    mock_service.upload_file.return_value = "processed-daily/test_video/test_video.mp4"
-    mock_service.upload_from_string.return_value = (
-        "processed-daily/test_video/test_file.txt"
+    mock_adapter.upload_file.return_value = "processed/test_video.mp4"
+    mock_adapter.download_file.return_value = "/tmp/test_video.mp4"
+    mock_adapter.delete_file.return_value = True
+    mock_adapter.get_public_url.return_value = (
+        "https://storage.googleapis.com/test-bucket/test_video.mp4"
     )
-    mock_service.read_file.return_value = b"test content"
-    mock_service.read_text.return_value = "test content"
-    mock_service.list_files.return_value = ["file1.txt", "file2.txt"]
-    mock_service.file_exists.return_value = True
-    mock_service.delete_file.return_value = True
-    mock_service.move_file.return_value = True
-    mock_service.get_signed_url.return_value = "https://test-signed-url.com"
-    mock_service.get_metadata.return_value = {"name": "test_file", "size": 1000}
+    mock_adapter.get_signed_url.return_value = (
+        "https://storage.googleapis.com/test-bucket/test_video.mp4?token=abc123"
+    )
 
-    return mock_service
+    return mock_adapter
 
 
 @pytest.fixture
-def mock_local_storage_service():
-    """Create a local storage service for testing."""
-    # Create a temporary directory for testing
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        service = LocalStorageService(base_path=tmp_dir)
-        yield service
+def ai_adapter():
+    """Mock for AIServiceInterface."""
+    from video_processor.application.interfaces.ai import AIServiceInterface
+
+    mock_ai = MagicMock(spec=AIServiceInterface)
+
+    # Configure methods to return appropriate values
+    mock_ai.generate_transcript.return_value = "This is a test transcript."
+    mock_ai.generate_metadata.return_value = {
+        "title": "Test Video Title",
+        "description": "This is a test video description.",
+        "tags": ["test", "video", "example"],
+    }
+    mock_ai.generate_thumbnail_description.return_value = (
+        "A person explaining a concept with a whiteboard"
+    )
+    mock_ai.summarize_content.return_value = "This is a summary of the video content."
+
+    return mock_ai
 
 
 @pytest.fixture
-def mock_generative_model():
-    """Mock for Vertex AI GenerativeModel."""
-    mock_model = MagicMock()
-    mock_response = MagicMock()
-    mock_response.text = "This is a mock response from Gemini API"
-    mock_model.generate_content.return_value = mock_response
+def publishing_adapter():
+    """Mock for PublishingInterface."""
+    from video_processor.application.interfaces.publishing import PublishingInterface
 
-    return mock_model
+    mock_publishing = MagicMock(spec=PublishingInterface)
+
+    # Configure methods to return appropriate values
+    mock_publishing.upload_video.return_value = "test_video_id"
+    mock_publishing.update_metadata.return_value = True
+    mock_publishing.get_upload_status.return_value = "complete"
+    mock_publishing.delete_video.return_value = True
+
+    return mock_publishing
 
 
 @pytest.fixture
@@ -169,25 +193,82 @@ def sample_video_file():
 
 
 @pytest.fixture
-def audio_processor():
-    """Create an AudioProcessor instance for testing."""
-    return AudioProcessor(testing_mode=True)
+def test_video():
+    """Create a sample video for testing."""
+    return Video(
+        id="test123",
+        file_path="/path/to/sample.mp4",
+        file_name="sample.mp4",
+        file_size=1024000,
+        file_format="mp4",
+        duration=60.0,
+        width=1920,
+        height=1080,
+        bucket_name="test-bucket",
+    )
 
 
 @pytest.fixture
-def mock_part():
-    """Mock for Vertex AI Part object."""
-    mock = MagicMock()
-    mock.from_data.return_value = MagicMock()
-    return mock
+def test_metadata():
+    """Create sample metadata for testing."""
+    return VideoMetadata(
+        title="Test Video Title",
+        description="This is a test video description.",
+        keywords="test, video, sample",
+        category_id="22",  # People & Blogs
+        duration_seconds=60,
+        width=1920,
+        height=1080,
+        channel="daily",
+        tags=["test", "video", "sample"],
+        show_notes="These are test show notes.",
+        thumbnail_url="https://example.com/thumbnail.jpg",
+        transcript="This is a test transcript.",
+        chapters=[
+            {"time": "00:00", "title": "Introduction"},
+            {"time": "00:30", "title": "Main Content"},
+        ],
+    )
 
 
 @pytest.fixture
-def mock_flask_app():
-    """Create a test Flask app."""
-    app = Flask(__name__)
-    app.testing = True
-    return app
+def test_job(test_video, test_metadata):
+    """Create a sample job for testing."""
+    return VideoJob(
+        job_id="job123",
+        video=test_video,
+        created_at=datetime.now(),
+        updated_at=datetime.now(),
+        metadata=test_metadata,
+        status=ProcessingStatus.IN_PROGRESS,
+        current_stage=ProcessingStage.GENERATE_TRANSCRIPT,
+        completed_stages=[ProcessingStage.DOWNLOAD, ProcessingStage.EXTRACT_AUDIO],
+        error_message=None,
+        processed_path="/processed/sample.mp4",
+        output_files={
+            "transcript": "/path/to/transcript.txt",
+            "subtitles": "/path/to/subtitles.vtt",
+        },
+        youtube_video_id=None,
+    )
+
+
+@pytest.fixture
+def mock_job_repository():
+    """Mock for JobRepositoryInterface."""
+    from video_processor.application.interfaces.repositories import (
+        JobRepositoryInterface,
+    )
+
+    mock_repo = MagicMock(spec=JobRepositoryInterface)
+
+    # Configure methods to return appropriate values
+    mock_repo.get_by_id.return_value = test_job()
+    mock_repo.save.return_value = "job_123"
+    mock_repo.update.return_value = True
+    mock_repo.delete.return_value = True
+
+    return mock_repo
 
 
 @pytest.fixture
@@ -204,41 +285,54 @@ def mock_cloud_event():
 
 
 @pytest.fixture
-def mock_youtube_credentials():
-    """Mock for YouTube API credentials."""
-    mock_creds = MagicMock()
-    mock_creds.refresh.return_value = None
-    return mock_creds
+def mock_storage_adapter():
+    """Create a mock storage adapter for testing."""
+    mock_storage = MagicMock(spec=StorageInterface)
+
+    # Configure default return values
+    mock_storage.upload_file.return_value = "gs://test-bucket/uploaded/file.mp4"
+    mock_storage.download_file.return_value = "/tmp/downloaded/file.mp4"
+    mock_storage.delete_file.return_value = True
+    mock_storage.get_public_url.return_value = (
+        "https://storage.googleapis.com/test-bucket/file.mp4"
+    )
+    mock_storage.get_signed_url.return_value = (
+        "https://storage.googleapis.com/test-bucket/file.mp4?token=abc123"
+    )
+
+    return mock_storage
 
 
 @pytest.fixture
-def mock_youtube_service():
-    """Mock for YouTube API service."""
-    mock_service = MagicMock()
-    mock_videos = MagicMock()
-    mock_captions = MagicMock()
+def mock_ai_adapter():
+    """Create a mock AI adapter for testing."""
+    mock_ai = MagicMock(spec=AIServiceInterface)
 
-    # Set up the chain of mocks
-    mock_service.videos.return_value = mock_videos
-    mock_service.captions.return_value = mock_captions
+    # Configure default return values
+    mock_ai.generate_transcript.return_value = "This is a test transcript."
+    mock_ai.generate_metadata.return_value = {
+        "title": "Generated Title",
+        "description": "Generated description",
+        "tags": ["ai", "generated", "tags"],
+        "show_notes": "Generated show notes",
+    }
+    mock_ai.generate_thumbnail_description.return_value = (
+        "A person explaining video processing"
+    )
+    mock_ai.summarize_content.return_value = "This is a summary of the video content."
 
-    # Mock the insert methods
-    mock_insert_request = MagicMock()
-    mock_insert_request.next_chunk.return_value = (None, {"id": "test_video_id"})
-    mock_videos.insert.return_value = mock_insert_request
-
-    mock_caption_request = MagicMock()
-    mock_caption_request.execute.return_value = {"id": "test_caption_id"}
-    mock_captions.insert.return_value = mock_caption_request
-
-    return mock_service
+    return mock_ai
 
 
 @pytest.fixture
-def mock_secretmanager_client():
-    """Mock for Secret Manager client."""
-    mock_client = MagicMock()
-    mock_response = MagicMock()
-    mock_response.payload.data.decode.return_value = "test_secret_value"
-    mock_client.access_secret_version.return_value = mock_response
-    return mock_client
+def mock_publishing_adapter():
+    """Create a mock publishing adapter for testing."""
+    mock_pub = MagicMock(spec=PublishingInterface)
+
+    # Configure default return values
+    mock_pub.upload_video.return_value = "yt12345"
+    mock_pub.update_metadata.return_value = True
+    mock_pub.get_upload_status.return_value = "published"
+    mock_pub.delete_video.return_value = True
+
+    return mock_pub

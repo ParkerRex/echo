@@ -1,75 +1,76 @@
-# Testing Guide for Video Processor
+# Video Processor Testing Guide
 
-This directory contains tests for the video processor service, organized in a modular structure to match the application architecture.
+This directory contains the test suite for the Video Processing Pipeline. The tests follow a clean architecture approach, mirroring the structure of the main application.
 
 ## Test Structure
 
 ```
 tests/
-├── conftest.py                # Common pytest fixtures
-├── unit/                      # Unit tests for individual components
-│   ├── test_audio_processor.py     # Tests for audio processing
-│   ├── test_storage_service.py     # Tests for storage services
-│   ├── test_video_processor.py     # Tests for video processing
-│   └── test_api.py                 # Tests for API endpoints
-├── integration/              # Integration tests between components
-├── e2e/                      # End-to-end workflow tests
-└── outdated/                 # Legacy tests that need to be migrated
+├── conftest.py            # Shared test fixtures and configurations
+├── mocks/                 # Mock implementations of external dependencies
+│   ├── ai.py              # Mock AI service adapter
+│   ├── publishing.py      # Mock publishing adapter
+│   └── storage.py         # Mock storage adapter
+├── unit/                  # Unit tests for isolated components
+│   ├── domain/            # Tests for domain models
+│   ├── application/       # Tests for application services
+│   └── adapters/          # Tests for adapter implementations
+├── integration/           # Integration tests for component combinations
+│   ├── api/               # API integration tests
+│   ├── storage/           # Storage integration tests
+│   └── ai/                # AI service integration tests
+└── e2e/                   # End-to-end tests for complete workflows
 ```
 
 ## Running Tests
 
-Run all tests:
+### Running All Tests
+
 ```bash
-cd backend
 pytest
 ```
 
-Run specific test categories:
+### Running Specific Test Types
+
 ```bash
-# Unit tests only
-pytest tests/unit
+# Run unit tests only
+pytest tests/unit/
 
-# Integration tests only
-pytest tests/integration
+# Run integration tests only
+pytest tests/integration/
 
-# End-to-end tests only
-pytest tests/e2e
+# Run end-to-end tests only
+pytest tests/e2e/
 ```
 
-## Test Coverage
+### Running Tests with Coverage
 
-To run tests with coverage report:
 ```bash
+# Run tests with coverage report
 pytest --cov=video_processor
+
+# Generate HTML coverage report
+pytest --cov=video_processor --cov-report=html
 ```
 
-## Key Testing Features
+## Test Categories
 
-1. **Dependency Injection Testing**
-   - Mock service implementations are injected for testing
-   - Isolated component testing with clear boundaries
+### Unit Tests
 
-2. **Interface-Based Testing**
-   - Tests verify that components follow their interface contracts
-   - Ensures implementation changes don't break behavior
+Unit tests focus on testing individual components in isolation, using mock objects for dependencies. These tests ensure that each component behaves as expected on its own.
 
-3. **Consistent Fixture Usage**
-   - Common test fixtures in conftest.py
-   - Standardized mock objects and setup
+### Integration Tests
 
-## Adding New Tests
+Integration tests verify that combinations of components work together correctly. These tests may use real external services in test environments.
 
-When adding new functionality:
+### End-to-End Tests
 
-1. Add unit tests for the new component in the appropriate subdirectory
-2. Update integration tests if the component interacts with other components
-3. Ensure all code paths are covered, including error handling
-4. Follow the existing test naming and organization patterns
+End-to-end tests validate complete system workflows from start to finish. These tests ensure that the entire video processing pipeline functions correctly as a whole.
 
-## Legacy Tests
+## Mock Objects
 
-The `outdated/` directory contains tests from the previous architecture that:
-1. Need to be migrated to the new structure
-2. May be obsolete due to architectural changes
-3. Should be referenced when adding test coverage for components
+The `mocks/` directory contains mock implementations of external dependencies, such as storage, AI services, and publishing services. These mocks allow for reliable testing without requiring access to real external services.
+
+## Test Fixtures
+
+Common test fixtures are defined in `conftest.py`. These fixtures provide test data and mock objects that can be reused across multiple tests. 

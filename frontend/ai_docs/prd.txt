@@ -1,0 +1,244 @@
+# FRONTEND - PRODUCT REQUIREMENTS DOCUMENT (PRD) - V2
+
+## 1. Overview
+
+This Product Requirements Document (PRD) outlines the specifications for the frontend application of the Video Processing Pipeline system. The frontend provides users (primarily Content Creators) with an interface to authenticate using Google via Supabase, upload videos directly to Google Cloud Storage (GCS), monitor processing progress in real-time via FastAPI WebSockets, review and edit AI-generated metadata (including selecting a final thumbnail from multiple generated options), and manage the video publishing workflow. This document focuses on the core requirements for migrating the frontend to integrate seamlessly with the backend FastAPI API and Supabase (for authentication and non-file metadata persistence), removing legacy Firebase dependencies (e.g., `frontend/firebase.ts`) and unused example code (e.g., various files under `frontend/src/routes/posts*`, `frontend/src/routes/users*`).
+
+## 2. Project goals
+
+### 2.1 Primary goals
+
+-   Provide an intuitive user interface, evolving from existing components (e.g., `frontend/src/components/video/*`, `frontend/src/components/shared/*`) for interacting with the video processing pipeline, authenticated via Supabase Google OAuth.
+-   Integrate seamlessly with Supabase for user authentication and session management, utilizing the client setup in `db/supabase/clients/client.ts`.
+-   Implement video uploads directly to GCS using signed URLs from the backend, potentially adapting existing upload UI components like `frontend/src/components/ui/dropzone.tsx`.
+-   Display real-time updates on video processing status and generated metadata using FastAPI WebSockets, updating components like `frontend/src/components/video/processing-dashboard.tsx` and `frontend/src/components/video/video-detail.tsx`.
+-   Allow users to review and edit generated video metadata (fetching/saving via backend API), including selecting a final thumbnail from a gallery (e.g., a new or adapted `frontend/src/components/video/thumbnail-gallery.tsx`), using editor components like `frontend/src/components/video/content-editor.tsx`.
+-   Ensure secure communication between the frontend, Supabase (auth), GCS (uploads), and the backend FastAPI API (metadata, job control, signed URLs, WebSocket).
+-   Completely remove all Firebase dependencies and listeners (from `frontend/package.json`, `frontend/firebase.ts`, etc.).
+-   Remove unused example routes and components related to 'posts' and 'users' (e.g., `frontend/src/routes/posts.*`, `frontend/src/routes/_authed/*`, `frontend/src/utils/posts.tsx`, etc.).
+-   Maintain a responsive and modern user experience using React (via `frontend/src/client.tsx`), TanStack Router (configured in `frontend/src/router.tsx`), and shadcn/ui components (from `frontend/src/components/ui/*`).
+
+### 2.2 Success metrics
+
+-   Successful user authentication via Supabase Google OAuth flow.
+-   Successful video uploads to GCS via signed URLs.
+-   Real-time status updates appear within 1 second of backend events via WebSockets.
+-   API interactions (metadata fetch/update, signed URL request) complete within 500ms (p95) after authentication, measured using API client (`frontend/src/api.ts` or replacement).
+-   User satisfaction score of 4.5/5 or higher for interface usability, authentication, upload, and real-time feedback.
+-   Successful implementation and stability of FastAPI WebSocket connection and message handling.
+-   Backend API endpoints are correctly protected and accessible using the Supabase JWT passed from the frontend.
+-   Zero data inconsistencies reported related to real-time updates vs. API fetches.
+-   Complete removal of Firebase SDK and example routes/components confirmed via code review and dependency analysis.
+
+## 3. Frontend architecture
+
+The frontend is built using:
+
+-   **Framework:** React (with Vite, entry point `frontend/src/client.tsx`)
+-   **Routing:** TanStack Router (setup in `frontend/src/router.tsx`, routes defined under `frontend/src/routes/`)
+-   **UI Components:** shadcn/ui (`frontend/src/components/ui/*`) & custom application components (e.g., `frontend/src/components/video/*`, `frontend/src/components/shared/*`)
+-   **Authentication:** Supabase client library (`@supabase/supabase-js`) via `db/supabase/clients/client.ts` for Google OAuth flow and session management.
+-   **API Communication:** Custom API client wrapper (likely evolving `frontend/src/api.ts`) sending the Supabase JWT to the backend FastAPI API.
+-   **Database Interaction (Client-side):** Minimal. Primarily interacts with the backend API. Direct Supabase client interaction via `db/supabase/clients/client.ts` likely limited to auth state.
+-   **File Storage:** Interaction with GCS via signed URLs obtained from the backend API for uploads.
+-   **Real-time:** Native WebSocket API or lightweight library (e.g., `useWebSocket`) connecting to the backend FastAPI WebSocket endpoint, likely managed via a custom hook (e.g., `frontend/src/hooks/useAppWebSocket.ts` - TBC).
+-   **State Management:** TanStack Query for server state caching/synchronization (backend API data), Zustand or Jotai for local UI state (e.g., holding temporary thumbnail URLs during editing).
+
+## 4. Key features & requirements
+
+### 4.1 Core user interface & functionality
+
+**REQ-FE-001: User Authentication via Supabase**
+-   **Priority:** High - Foundational for application access.
+-   Adapt existing login UI (`frontend/src/routes/login.tsx`, `frontend/src/components/login.tsx`) to provide a "Login with Google" button.
+-   Initiate the Supabase Google OAuth flow using the Supabase client configured in `db/supabase/clients/client.ts`.
+-   Handle the OAuth callback and manage the Supabase session.
+-   Obtain the Supabase JWT upon successful login.
+-   Implement logic (likely within API client `frontend/src/api.ts`) to attach the Supabase JWT to authenticated requests made to the backend FastAPI API.
+-   Implement logout functionality (e.g., in `frontend/src/routes/logout.tsx` or navbar component `frontend/src/components/shared/navbar.tsx`) using `supabase.auth.signOut()`, clearing local session state and redirecting.
+-   Protect routes requiring authentication using TanStack Router features (potentially adapting logic from `frontend/src/routes/_authed.tsx`), checking for an active Supabase session.
+-   Handle Supabase session changes globally (e.g., in `frontend/src/routes/__root.tsx` or a dedicated context) using `supabase.auth.onAuthStateChange`.
+
+**REQ-FE-002: Video Upload Interface (Direct GCS)**
+-   Provide a mechanism (e.g., adapting `frontend/src/components/ui/dropzone.tsx`) within an authenticated view (e.g., `frontend/src/routes/dashboard.tsx` or a dedicated upload route) for users to select video files.
+-   Implement client-side validation.
+-   Request a GCS signed upload URL from the backend API.
+-   Perform a PUT request directly to the GCS signed URL, displaying upload progress (e.g., using `frontend/src/components/ui/progress.tsx`).
+-   Upon successful GCS upload, notify the backend API to initiate processing.
+-   Display success/error messages (e.g., using `frontend/src/components/ui/use-toast.ts`).
+
+**REQ-FE-003: Processing Dashboard**
+-   Refactor the existing dashboard route (`frontend/src/routes/dashboard.tsx`) and potentially the component (`frontend/src/components/video/processing-dashboard.tsx`).
+-   Fetch and display a list/grid of the authenticated user's video processing jobs via the backend API.
+-   Use card components (e.g., `frontend/src/components/video/video-progress-card.tsx`) to show key information: thumbnail, title, status, timestamp.
+-   Establish a WebSocket connection upon dashboard load.
+-   Update job statuses and potentially thumbnails/titles in real-time via WebSocket messages, synchronizing with TanStack Query cache.
+-   Handle loading (`frontend/src/components/ui/skeleton.tsx`?) and empty states.
+-   Allow navigation to detail view (`frontend/src/routes/video.$videoId.tsx`).
+-   Implement pagination (`frontend/src/components/ui/pagination.tsx`?) or infinite scrolling.
+
+**REQ-FE-004: Video Detail View**
+-   Refactor the existing video detail route (`frontend/src/routes/video.$videoId.tsx`) and component (`frontend/src/components/video/video-detail.tsx`).
+-   Fetch detailed job information via the backend API.
+-   Display video details and overall job status.
+-   Display detailed processing stage statuses (potentially using `frontend/src/components/ui/progress-steps.tsx` or similar, data defined in `frontend/src/components/video/processing-steps.ts` needs backend alignment).
+-   Subscribe to WebSocket updates for this `job_id`.
+-   Update processing stage statuses in real-time via WebSocket messages.
+-   Display generated metadata as available.
+-   Display a gallery of *all* generated thumbnail URLs (see REQ-FE-005).
+-   Provide navigation/links to the metadata editor section (within the same component or separate).
+-   Display error messages clearly.
+
+**REQ-FE-005: Metadata Editor & Thumbnail Selection**
+-   Integrate editing capabilities within the detail view or a dedicated component (potentially adapting `frontend/src/components/video/content-editor.tsx`).
+-   Provide UI sections using standard inputs (`frontend/src/components/ui/input.tsx`, `frontend/src/components/ui/textarea.tsx`, etc.) for editing title, description, tags.
+-   Provide sections for viewing/copying transcript, subtitles, chapters.
+-   Implement or adapt a thumbnail gallery component (`frontend/src/components/video/thumbnail-gallery.tsx`?) to display all generated thumbnails (URLs from GCS via backend). Hold these URLs in local component state during editing.
+-   Allow selection of one thumbnail from the gallery.
+-   Implement a "Save" button (`frontend/src/components/ui/button.tsx`).
+-   On save, send edited metadata and the *selected* thumbnail GCS URL to the backend API.
+-   Provide feedback on save success/error (e.g., using toasts).
+-   Ensure editor reflects latest data.
+
+**REQ-FE-006: Publishing Interface** (Optional - Depends on backend readiness)
+-   Add a "Publish" button to the detail view/editor.
+-   Enable button only when processing is complete and required metadata is saved.
+-   Click triggers backend API call.
+-   Display feedback on initiation/status.
+
+### 4.2 Technical requirements
+
+**REQ-FE-TECH-001: Supabase Client Integration**
+-   **Priority:** High.
+-   Integrate `@supabase/supabase-js` client using the setup from `db/supabase/clients/client.ts`.
+-   Implement Google OAuth flow and session management.
+-   Implement retrieval/handling of the Supabase JWT.
+-   Remove client-side Firebase initialization (`frontend/firebase.ts`) and related utilities (`frontend/src/utils/supabase.ts` unless adapted for SSR).
+
+**REQ-FE-TECH-002: WebSocket Client Implementation**
+-   Implement a reusable service or hook (e.g., create `frontend/src/hooks/useAppWebSocket.ts`).
+-   Handle connection lifecycle, message parsing, reconnection.
+-   Integrate with TanStack Query cache.
+-   Ensure `wss://`.
+
+**REQ-FE-TECH-003: Complete Firebase Removal**
+-   Identify and refactor all code using Firebase services.
+-   Replace Firebase Auth with Supabase Auth flow (adapting `frontend/src/components/auth.tsx`, `frontend/src/routes/login.tsx`).
+-   Replace Firestore interactions with backend API calls.
+-   Remove Firebase SDK from `frontend/package.json` and config files.
+-   Verify removal.
+
+**REQ-FE-TECH-004: API Client Configuration**
+-   Refactor `frontend/src/api.ts` or create a new wrapper.
+-   Configure client to automatically include the Supabase JWT.
+-   Implement robust error handling.
+-   Integrate with TanStack Query.
+
+**REQ-FE-TECH-005: State Management Strategy**
+-   Utilize TanStack Query for backend API server state.
+-   Use WebSocket messages to invalidate/update TanStack Query cache.
+-   Employ Zustand or Jotai for local UI state (e.g., thumbnail URL list in `frontend/src/components/video/thumbnail-gallery.tsx`).
+
+**REQ-FE-TECH-006: Responsive Design**
+-   Ensure UI adapts gracefully using existing structure (`frontend/src/styles/app.css`, shadcn components).
+-   Test layout and usability.
+
+**REQ-FE-TECH-007: Comprehensive Testing**
+-   Unit tests (Vitest setup in `frontend/vitest.config.ts`).
+-   Integration tests (mocking backend/Supabase).
+-   End-to-end tests covering core flows.
+
+**REQ-FE-TECH-008: Cleanup Unused Routes/Components**
+-   Identify and remove unused routes (`frontend/src/routes/posts.*`, `frontend/src/routes/users.*`, etc.) and associated components/utils (`frontend/src/utils/posts.tsx`, etc.). Move necessary examples to `docs/docs-frontend/examples`.
+
+## 5. User stories (frontend focus)
+
+*(Mostly unchanged from previous draft, but context implies use of existing/adapted components)*
+
+**US-FE-001: User Authentication with Google via Supabase**
+-   As a user, I want to log in securely using my Google account via Supabase, so that I can access the video processing application.
+-   *Acceptance Criteria:* ... (Uses adapted `login.tsx`) ...
+
+**US-FE-002: Video Upload Initiation (Direct GCS)**
+-   As a content creator, I want a simple interface (like the `dropzone.tsx` component) to select my video file and upload it directly to GCS...
+-   *Acceptance Criteria:* ...
+
+**US-FE-003: Real-time Dashboard Monitoring**
+-   As a content creator, I want my dashboard (`dashboard.tsx`) to show my videos (`video-progress-card.tsx`) and their current processing status, updating automatically via WebSockets.
+-   *Acceptance Criteria:* ...
+
+**US-FE-004: Real-time Detail View Monitoring & Thumbnail Gallery**
+-   As a content creator viewing a specific video's details (`video-detail.tsx`), I want to see individual processing steps update their status in real-time, and view all generated thumbnails in a gallery (`thumbnail-gallery.tsx`).
+-   *Acceptance Criteria:* ...
+
+**US-FE-005: Metadata Review Interface**
+-   As a content creator, I want a clear interface (within `video-detail.tsx` or `content-editor.tsx`) to review all AI-generated metadata...
+-   *Acceptance Criteria:* ...
+
+**US-FE-006: Metadata Editing and Thumbnail Selection/Saving**
+-   As a content creator, I want to edit generated metadata, select my preferred thumbnail from the gallery, and save these choices via the backend API.
+-   *Acceptance Criteria:* ... (Uses `input.tsx`, gallery component, `button.tsx`) ...
+
+**US-FE-007: Publishing Trigger**
+-   As a content creator, I want a button (`button.tsx`) to initiate publishing... via the backend API...
+-   *Acceptance Criteria:* ...
+
+## 6. Backend dependencies / assumptions
+
+*(Unchanged from previous draft)*
+
+-   **Authentication:** Backend API endpoints requiring authentication can verify a Supabase JWT sent by the frontend.
+-   **Signed URLs:** A backend API endpoint (e.g., `POST /api/videos/upload-url`) exists to provide GCS signed URLs for video uploads.
+-   **Job Initiation:** A backend API endpoint (e.g., `POST /api/videos`) exists to notify the backend after a GCS upload is complete, triggering the processing pipeline.
+-   **Data Fetching:** Backend API endpoints (e.g., `GET /api/videos`, `GET /api/videos/{job_id}`) exist to provide job lists and detailed job information, including status, generated metadata, and GCS URLs for *all* generated thumbnails.
+-   **Metadata Update:** A backend API endpoint (e.g., `PUT /api/videos/{job_id}/metadata`) exists to receive and persist edited metadata, including the *selected* thumbnail GCS URL.
+-   **Publishing:** (Optional) A backend API endpoint (e.g., `POST /api/videos/{job_id}/publish`) exists to trigger the publishing workflow.
+-   **WebSockets:** A backend WebSocket endpoint exists, capable of broadcasting or sending targeted updates regarding job status, stage progress, and newly generated metadata/thumbnail URLs.
+-   **Database Schema:** The Supabase database schema (managed by backend/DB team) supports storing user information, job details (including status, stages), GCS URL references for the original video and the *selected* thumbnail, and potentially other generated metadata.
+-   **GCS Storage:** A GCS bucket is configured for video uploads and thumbnail storage. Generated thumbnails (selected and unselected) persist in GCS for retrieval during the editing phase.
+
+## 7. Migration plan (frontend focus)
+
+**Priority:** Focus initially on setting up Supabase client and authentication (REQ-FE-001, REQ-FE-TECH-001) before tackling other features.
+
+1.  **Setup Supabase Client & Auth:** Implement client using `db/supabase/clients/client.ts`. Setup Google OAuth, session management (`onAuthStateChange` in `__root.tsx`?), route protection (`_authed.tsx` adaptation?), logout. Adapt `frontend/src/api.ts` to send JWT.
+2.  **Refactor Auth Screens:** Adapt `frontend/src/routes/login.tsx` / `frontend/src/components/login.tsx`.
+3.  **Implement Upload Flow:** Adapt `frontend/src/components/ui/dropzone.tsx` for GCS Signed URL flow (REQ-FE-002).
+4.  **Implement WebSocket Client:** Create `frontend/src/hooks/useAppWebSocket.ts` (REQ-FE-TECH-002).
+5.  **Refactor Core Data Fetching:** Replace Firestore reads in `frontend/src/routes/dashboard.tsx`, `frontend/src/routes/video.$videoId.tsx` with TanStack Query hooks hitting backend API endpoints.
+6.  **Integrate Real-time Updates:** Connect WebSocket updates to TanStack Query cache in dashboard/detail components.
+7.  **Implement Detail View & Editor:** Refactor `frontend/src/components/video/video-detail.tsx`, `frontend/src/components/video/content-editor.tsx`. Implement/Adapt `frontend/src/components/video/thumbnail-gallery.tsx` (REQ-FE-004 & REQ-FE-005).
+8.  **Update Data Mutations:** Implement metadata saving via backend API (REQ-FE-005).
+9.  **Testing:** Implement comprehensive tests (REQ-FE-TECH-007).
+10. **Cleanup:** Remove Firebase (`frontend/firebase.ts`, deps), unused examples (`frontend/src/routes/posts.*`, `users.*`, utils, etc.) (REQ-FE-TECH-003, REQ-FE-TECH-008).
+
+## 8. Risks and mitigations (frontend)
+
+*(Unchanged from previous draft)*
+
+**Risk: Backend API Authentication Strategy Implementation**
+-   *Impact:* Frontend unable to securely call backend API.
+-   *Mitigation:* Close collaboration with backend team to ensure Supabase JWT verification is correctly implemented on the backend. Thorough integration testing.
+
+**Risk: GCS Signed URL Generation/Handling**
+-   *Impact:* Uploads fail due to incorrect URL generation, permissions, or expiry.
+-   *Mitigation:* Backend provides correctly configured URLs. Frontend handles potential errors during the PUT request to GCS.
+
+**Risk: WebSocket Connection Instability**
+-   *Mitigation:* Robust client reconnection logic; monitor backend WebSocket stability.
+
+**Risk: State Synchronization Complexity (API/WebSockets/Local)**
+-   *Impact:* Inconsistent UI state, especially with temporary thumbnail URLs.
+-   *Mitigation:* Clear separation of server state (TanStack Query) and local UI state (Zustand/Jotai). Careful management of thumbnail URL list during editing session. Thorough testing.
+
+**Risk: Backend API / WebSocket Contract Changes**
+-   *Impact:* Frontend breaks.
+-   *Mitigation:* Clear contracts; OpenAPI/Swagger; define WebSocket message schema; integration tests.
+
+**Risk: Supabase Rate Limiting/Quotas**
+-   *Impact:* Authentication failures.
+-   *Mitigation:* Monitor Supabase usage; handle potential rate limit errors.
+
+**Risk: Google OAuth Configuration Issues**
+-   *Impact:* Users cannot log in.
+-   *Mitigation:* Double-check configurations; test thoroughly.

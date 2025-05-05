@@ -1,201 +1,143 @@
 """
-Mock publishing service adapter for testing.
+Mock implementation of the publishing interface for testing.
 """
 
-import time
-import uuid
-from typing import Dict, Optional
+from typing import Dict
 
 from video_processor.application.interfaces.publishing import PublishingInterface
-from video_processor.domain.exceptions import PublishingError
 
 
 class MockPublishingAdapter(PublishingInterface):
     """
     Mock implementation of PublishingInterface for testing.
-    Simulates publishing operations for video platforms like YouTube.
+
+    Simulates video publishing operations without making actual API calls.
     """
 
     def __init__(self):
         """Initialize the mock publishing adapter."""
-        # Store videos as dictionary with video_id as key
-        self.videos: Dict[str, Dict] = {}
-
-        # Store upload statuses
-        self.upload_statuses: Dict[str, str] = {}
-
-        # Mock rate limits and errors
-        self.fail_next_upload = False
-        self.fail_next_update = False
-        self.should_delay = False
-        self.delay_seconds = 0
+        self.uploaded_videos = {}  # Dictionary to track "uploaded" videos
+        self.deleted_videos = set()  # Set to track "deleted" videos
+        self.call_counts = {
+            "upload_video": 0,
+            "update_metadata": 0,
+            "get_upload_status": 0,
+            "delete_video": 0,
+        }
+        self.next_video_id = 1000  # Starting ID for mock uploads
 
     def upload_video(self, video_file: str, metadata: Dict) -> str:
         """
-        Simulate uploading a video to a publishing platform.
+        Mock uploading a video with metadata.
 
         Args:
-            video_file: Path to video file
-            metadata: Video metadata
+            video_file: Path to the video file
+            metadata: Video metadata dictionary
 
         Returns:
             Platform-specific video ID
-
-        Raises:
-            PublishingError: If upload fails
         """
-        if self.fail_next_upload:
-            self.fail_next_upload = False
-            raise PublishingError("Simulated upload failure")
+        self.call_counts["upload_video"] += 1
+        video_id = f"mock-video-{self.next_video_id}"
+        self.next_video_id += 1
 
-        if self.should_delay:
-            time.sleep(self.delay_seconds)
-
-        # Generate a mock video ID
-        video_id = f"video_{str(uuid.uuid4())[:8]}"
-
-        # Store video metadata
-        self.videos[video_id] = {
-            "file": video_file,
+        # Store the video information
+        self.uploaded_videos[video_id] = {
+            "file_path": video_file,
             "metadata": metadata.copy(),
-            "upload_time": time.time(),
-            "status": "uploaded",
+            "status": "published",
         }
-
-        # Set initial upload status
-        self.upload_statuses[video_id] = "processing"
-
-        # Simulate async processing by setting status to complete after a short delay
-        # In a real test, you would use a mock timer or manually update this
-        self.upload_statuses[video_id] = "complete"
 
         return video_id
 
     def update_metadata(self, video_id: str, metadata: Dict) -> bool:
         """
-        Simulate updating video metadata.
+        Mock updating video metadata.
 
         Args:
-            video_id: Platform-specific video ID
-            metadata: Updated metadata
+            video_id: ID of the video to update
+            metadata: Updated metadata dictionary
 
         Returns:
-            True if update succeeded, False otherwise
-
-        Raises:
-            PublishingError: If update fails
+            Success status (boolean)
         """
-        if self.fail_next_update:
-            self.fail_next_update = False
-            raise PublishingError("Simulated metadata update failure")
+        self.call_counts["update_metadata"] += 1
 
-        if self.should_delay:
-            time.sleep(self.delay_seconds)
-
-        if video_id not in self.videos:
-            raise PublishingError(f"Video not found: {video_id}")
-
-        # Update metadata
-        self.videos[video_id]["metadata"].update(metadata)
-
-        return True
+        if video_id in self.uploaded_videos:
+            # Update the stored metadata
+            self.uploaded_videos[video_id]["metadata"].update(metadata)
+            return True
+        return False
 
     def get_upload_status(self, video_id: str) -> str:
         """
-        Get the current upload status of a video.
+        Mock checking video upload status.
 
         Args:
-            video_id: Platform-specific video ID
+            video_id: ID of the video to check
 
         Returns:
-            Status string (e.g., "processing", "complete", "failed")
-
-        Raises:
-            PublishingError: If status check fails
+            Status string (published, processing, failed, etc.)
         """
-        if video_id not in self.upload_statuses:
-            raise PublishingError(f"Video not found: {video_id}")
+        self.call_counts["get_upload_status"] += 1
 
-        return self.upload_statuses[video_id]
+        if video_id in self.uploaded_videos:
+            return self.uploaded_videos[video_id]["status"]
+        return "not_found"
 
     def delete_video(self, video_id: str) -> bool:
         """
-        Simulate deleting a video from the platform.
+        Mock deleting a video.
 
         Args:
-            video_id: Platform-specific video ID
+            video_id: ID of the video to delete
 
         Returns:
-            True if deletion succeeded, False otherwise
-
-        Raises:
-            PublishingError: If deletion fails
+            Success status (boolean)
         """
-        if video_id not in self.videos:
-            return False
+        self.call_counts["delete_video"] += 1
 
-        # Delete video and status
-        del self.videos[video_id]
-        if video_id in self.upload_statuses:
-            del self.upload_statuses[video_id]
-
-        return True
-
-    # Additional test helper methods
+        if video_id in self.uploaded_videos:
+            # Mark as deleted but keep the record for test verification
+            self.deleted_videos.add(video_id)
+            self.uploaded_videos[video_id]["status"] = "deleted"
+            return True
+        return False
 
     def set_upload_status(self, video_id: str, status: str) -> None:
         """
-        Set the upload status of a video for testing.
+        Set a specific upload status for a video.
+        Useful for testing different scenarios.
 
         Args:
-            video_id: Platform-specific video ID
-            status: Status to set
+            video_id: ID of the video to update
+            status: New status string
         """
-        self.upload_statuses[video_id] = status
+        if video_id in self.uploaded_videos:
+            self.uploaded_videos[video_id]["status"] = status
 
-    def get_video_metadata(self, video_id: str) -> Optional[Dict]:
+    def get_video_count(self) -> int:
         """
-        Get the metadata for a video.
-
-        Args:
-            video_id: Platform-specific video ID
+        Get the number of uploaded videos.
 
         Returns:
-            Video metadata or None if not found
+            Count of uploaded videos
         """
-        if video_id in self.videos:
-            return self.videos[video_id]["metadata"]
-        return None
+        return len(self.uploaded_videos)
 
-    def simulate_error(self, error_type: str) -> None:
+    def get_deleted_count(self) -> int:
         """
-        Configure the adapter to simulate an error on the next operation.
+        Get the number of deleted videos.
 
-        Args:
-            error_type: Type of error to simulate ("upload", "update")
+        Returns:
+            Count of deleted videos
         """
-        if error_type == "upload":
-            self.fail_next_upload = True
-        elif error_type == "update":
-            self.fail_next_update = True
-
-    def simulate_delay(self, seconds: int) -> None:
-        """
-        Configure the adapter to add a delay to operations.
-
-        Args:
-            seconds: Delay in seconds
-        """
-        self.should_delay = True
-        self.delay_seconds = seconds
+        return len(self.deleted_videos)
 
     def reset(self) -> None:
-        """
-        Reset the mock adapter to its initial state.
-        """
-        self.videos.clear()
-        self.upload_statuses.clear()
-        self.fail_next_upload = False
-        self.fail_next_update = False
-        self.should_delay = False
-        self.delay_seconds = 0
+        """Reset all mock state."""
+        self.uploaded_videos.clear()
+        self.deleted_videos.clear()
+        for key in self.call_counts:
+            self.call_counts[key] = 0
+        self.next_video_id = 1000

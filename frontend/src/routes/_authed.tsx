@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { Login } from "../components/Login";
+import { Login } from "../components/login";
 import { getSupabaseServerClient } from "../utils/supabase";
 
 export const loginFn = createServerFn({ method: "POST" })

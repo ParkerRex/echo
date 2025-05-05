@@ -1,166 +1,132 @@
 """
-Mock storage adapter for testing.
+Mock implementation of the storage interface for testing.
 """
 
+import os
 import shutil
-from pathlib import Path
 from typing import Dict
 
 from video_processor.application.interfaces.storage import StorageInterface
-from video_processor.domain.exceptions import StorageError
 
 
 class MockStorageAdapter(StorageInterface):
     """
     Mock implementation of StorageInterface for testing.
-    Simulates storage operations using a local temporary directory.
+
+    This adapter simulates storage operations in memory without accessing
+    any real storage system.
     """
 
-    def __init__(self, base_path: str = "/tmp/mock_storage"):
-        """
-        Initialize the mock storage adapter.
-
-        Args:
-            base_path: Base directory for mock storage
-        """
-        self.base_path = Path(base_path)
-        self.base_path.mkdir(exist_ok=True, parents=True)
-
-        # In-memory storage to simulate file contents
-        self._files: Dict[str, bytes] = {}
-        self._urls: Dict[str, str] = {}
+    def __init__(self, base_url: str = "https://mock-storage.example.com"):
+        """Initialize the mock storage adapter."""
+        self.base_url = base_url
+        self.files: Dict[str, bytes] = {}  # In-memory storage
+        self.temp_dir = "/tmp/mock_storage"
+        os.makedirs(self.temp_dir, exist_ok=True)
 
     def upload_file(self, file_path: str, destination_path: str) -> str:
         """
-        Simulate uploading a file to storage.
+        Mock uploading a file to storage.
 
         Args:
-            file_path: Local path to file
+            file_path: Local path to the file
             destination_path: Destination path in storage
 
         Returns:
-            Storage path of uploaded file
-
-        Raises:
-            StorageError: If file doesn't exist or upload fails
+            Full path of the uploaded file in storage
         """
-        try:
-            source_path = Path(file_path)
+        if os.path.exists(file_path):
+            with open(file_path, "rb") as f:
+                content = f.read()
+                self.files[destination_path] = content
+        else:
+            # For testing, create some mock content if file doesn't exist
+            self.files[destination_path] = b"Mock file content"
 
-            if not source_path.exists():
-                raise StorageError(f"File not found: {file_path}")
-
-            # Store file content in memory
-            with open(source_path, "rb") as f:
-                self._files[destination_path] = f.read()
-
-            # Generate a mock URL
-            self._urls[destination_path] = (
-                f"https://storage.example.com/{destination_path}"
-            )
-
-            return destination_path
-        except Exception as e:
-            if not isinstance(e, StorageError):
-                raise StorageError(f"Failed to upload file: {str(e)}")
-            raise
+        return f"gs://mock-bucket/{destination_path}"
 
     def download_file(self, source_path: str, destination_path: str) -> str:
         """
-        Simulate downloading a file from storage.
+        Mock downloading a file from storage.
 
         Args:
-            source_path: Path in storage
+            source_path: Storage path of the file
             destination_path: Local destination path
 
         Returns:
-            Local path of downloaded file
-
-        Raises:
-            StorageError: If download fails
+            Local path of the downloaded file
         """
-        try:
-            if source_path not in self._files:
-                raise StorageError(f"File not found in storage: {source_path}")
+        # Create the directory structure if it doesn't exist
+        os.makedirs(os.path.dirname(destination_path), exist_ok=True)
 
-            dest_path = Path(destination_path)
-            dest_path.parent.mkdir(exist_ok=True, parents=True)
+        # Write mock content to the destination file
+        if source_path in self.files:
+            content = self.files[source_path]
+        else:
+            content = b"Mock downloaded content"
 
-            # Write from in-memory storage to destination
-            with open(dest_path, "wb") as f:
-                f.write(self._files[source_path])
+        with open(destination_path, "wb") as f:
+            f.write(content)
 
-            return destination_path
-        except Exception as e:
-            if not isinstance(e, StorageError):
-                raise StorageError(f"Failed to download file: {str(e)}")
-            raise
+        return destination_path
 
     def delete_file(self, path: str) -> bool:
         """
-        Simulate deleting a file from storage.
+        Mock deleting a file from storage.
 
         Args:
-            path: Path in storage
+            path: Storage path of the file to delete
 
         Returns:
-            True if deletion succeeded, False otherwise
-
-        Raises:
-            StorageError: If deletion fails
+            True if successful, False otherwise
         """
-        try:
-            if path in self._files:
-                del self._files[path]
-                if path in self._urls:
-                    del self._urls[path]
-                return True
-            return False
-        except Exception as e:
-            raise StorageError(f"Failed to delete file: {str(e)}")
+        if path in self.files:
+            del self.files[path]
+            return True
+        return False
 
     def get_public_url(self, path: str) -> str:
         """
-        Generate a public URL for a file.
+        Get a public URL for a file.
 
         Args:
-            path: Path in storage
+            path: Storage path of the file
 
         Returns:
-            Public URL
-
-        Raises:
-            StorageError: If file doesn't exist
+            Public URL for the file
         """
-        if path not in self._files:
-            raise StorageError(f"File not found in storage: {path}")
-
-        return f"https://storage.example.com/public/{path}"
+        return f"{self.base_url}/{path}"
 
     def get_signed_url(self, path: str, expiration_seconds: int = 3600) -> str:
         """
-        Generate a signed URL for a file.
+        Get a signed URL for a file with expiration.
 
         Args:
-            path: Path in storage
-            expiration_seconds: URL expiration time in seconds
+            path: Storage path of the file
+            expiration_seconds: Seconds until the URL expires
 
         Returns:
-            Signed URL
-
-        Raises:
-            StorageError: If file doesn't exist
+            Signed URL for the file
         """
-        if path not in self._files:
-            raise StorageError(f"File not found in storage: {path}")
+        return (
+            f"{self.base_url}/{path}?token=mock-signature&expires={expiration_seconds}"
+        )
 
-        return f"https://storage.example.com/signed/{path}?exp={expiration_seconds}"
+    def list_files(self, prefix: str) -> list:
+        """
+        List files with a given prefix.
 
-    def cleanup(self):
+        Args:
+            prefix: Prefix to filter files by
+
+        Returns:
+            List of file paths matching the prefix
         """
-        Clean up the mock storage.
-        """
-        self._files.clear()
-        self._urls.clear()
-        if self.base_path.exists():
-            shutil.rmtree(self.base_path)
+        return [path for path in self.files.keys() if path.startswith(prefix)]
+
+    def clear(self) -> None:
+        """Clear all mock storage data."""
+        self.files.clear()
+        if os.path.exists(self.temp_dir):
+            shutil.rmtree(self.temp_dir)
+            os.makedirs(self.temp_dir, exist_ok=True)
