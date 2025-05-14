@@ -1,0 +1,35 @@
+{
+    // ... (keep all existing non-Python settings)
+
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.fixAll.ruff": "explicit",
+            "source.organizeImports.ruff": "explicit"
+        }
+    },
+    "python.linting.enabled": true,
+    "python.linting.ruffEnabled": true,
+    "python.linting.pylintEnabled": false,
+    "python.linting.flake8Enabled": false,
+    "python.formatting.provider": "none",
+    
+    // Additional Python settings
+    "files.associations": {
+        "*.py": "python",
+        "pyproject.toml": "toml",
+        "requirements.txt": "pip-requirements"
+    },
+    
+    // Match Black/Ruff configuration
+    "black-formatter.args": ["--line-length", "88"],
+    "ruff.lint.args": ["--line-length", "88"],
+    
+    // Python-specific exclusions (already in files.watcherExclude)
+    "python.analysis.exclude": [
+        "**/venv/**",
+        "**/.venv/**",
+        "**/node_modules/**"
+    ]
+}
