@@ -1,119 +1,41 @@
 import { Button } from "@/components/ui/button";
-import { DropZone } from "@/components/ui/dropzone";
+import { VideoUploadDropzone } from "@/components/video/VideoUploadDropzone";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProcessingDashboard } from "@/components/video/processing-dashboard";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { ProtectedLayout } from "@/components/ProtectedLayout";
-import {
-	addDoc,
-	collection,
-	onSnapshot,
-	query,
-	where,
-} from "firebase/firestore";
-import type { DocumentData, QuerySnapshot } from "firebase/firestore";
+import { fetchMyVideos, type VideoSummary } from "@/lib/api";
+import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, UploadIcon } from "lucide-react";
 import { useEffect, useState } from "react";
-import { db } from "../../firebase/index";
 import {
 	Dialog,
 	DialogContent,
 	DialogHeader,
 	DialogTitle,
 	DialogTrigger,
-} from "./components/ui/dialog";
+} from "@/components/ui/dialog";
 
-interface VideoData extends DocumentData {
-	id: string;
-	title?: string;
-	current_stage?: string;
-	filename?: string;
-	channel?: string;
-}
+type VideoData = VideoSummary;
 
 function DashboardComponent() {
-	const [processingVideos, setProcessingVideos] = useState<VideoData[]>([]);
-	const [completedVideos, setCompletedVideos] = useState<VideoData[]>([]);
-	const [loading, setLoading] = useState(true);
 	const [activeTab, setActiveTab] = useState("processing");
 	const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
 	const [uploading, setUploading] = useState(false);
 
-	useEffect(() => {
-		// Fetch videos that are still processing (not completed)
-		const processingQuery = query(
-			collection(db, "videos"),
-			where("current_stage", "!=", "completed"),
-		);
+	const {
+		data: videos = [],
+		isLoading: loading,
+		error,
+	} = useQuery({
+		queryKey: ["my-videos"],
+		queryFn: fetchMyVideos,
+		refetchInterval: 10000, // Poll every 10 seconds
+	});
 
-		const unsubscribeProcessing = onSnapshot(
-			processingQuery,
-			(snapshot: QuerySnapshot<DocumentData>) => {
-				const vids = snapshot.docs.map((doc) => ({
-					id: doc.id,
-					...doc.data(),
-				})) as VideoData[];
-				setProcessingVideos(vids);
-				setLoading(false);
-			},
-			(error) => {
-				console.error("Error fetching processing videos:", error);
-				setLoading(false);
-			},
-		);
-
-		// Fetch completed videos separately
-		const completedQuery = query(
-			collection(db, "videos"),
-			where("current_stage", "==", "completed"),
-		);
-
-		const unsubscribeCompleted = onSnapshot(
-			completedQuery,
-			(snapshot: QuerySnapshot<DocumentData>) => {
-				const vids = snapshot.docs.map((doc) => ({
-					id: doc.id,
-					...doc.data(),
-				})) as VideoData[];
-				setCompletedVideos(vids);
-			},
-			(error) => {
-				console.error("Error fetching completed videos:", error);
-			},
-		);
-
-		return () => {
-			unsubscribeProcessing();
-			unsubscribeCompleted();
-		};
-	}, []);
-
+	// TODO: Implement handleFilesAccepted to use Supabase upload flow
 	const handleFilesAccepted = async (files: FileList | File[]) => {
-		if (files.length === 0) return;
-
-		setUploading(true);
-		try {
-			// TODO: Implement actual file upload to storage
-			const file = files[0];
-
-			// Create a document in Firestore to track the video processing
-			await addDoc(collection(db, "videos"), {
-				filename: file.name,
-				title: file.name.replace(/\.[^/.]+$/, ""), // Remove extension
-				current_stage: "uploaded", // Initial stage
-				uploadedAt: new Date(),
-				fileSize: file.size,
-				// Add other metadata as needed
-			});
-
-			// TODO: Submit the video for processing via backend API
-
-			setUploadDialogOpen(false);
-		} catch (error) {
-			console.error("Error uploading video:", error);
-		} finally {
-			setUploading(false);
-		}
+		// Placeholder for future upload logic
 	};
 
 	return (
@@ -137,15 +59,9 @@ function DashboardComponent() {
 							<DialogTitle>Upload Video</DialogTitle>
 						</DialogHeader>
 						<div className="py-4">
-							<DropZone
-								onFilesAccepted={handleFilesAccepted}
-								disabled={uploading}
+							<VideoUploadDropzone
+								onUploadComplete={() => setUploadDialogOpen(false)}
 							/>
-							{uploading && (
-								<div className="mt-4 text-center text-sm text-muted-foreground">
-									<div className="animate-pulse">Processing upload...</div>
-								</div>
-							)}
 						</div>
 					</DialogContent>
 				</Dialog>
@@ -170,10 +86,10 @@ function DashboardComponent() {
 						<div className="flex justify-center py-20">
 							<div className="animate-pulse">Loading videos...</div>
 						</div>
-					) : completedVideos.length === 0 ? (
+					) : videos.length === 0 ? (
 						<div className="flex flex-col items-center justify-center py-20 text-center">
 							<p className="text-muted-foreground mb-4">
-								No completed videos found in your library
+								No videos found in your library
 							</p>
 							<Dialog
 								open={uploadDialogOpen}
@@ -186,7 +102,7 @@ function DashboardComponent() {
 						</div>
 					) : (
 						<div className="grid gap-6 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
-							{completedVideos.map((video) => (
+							{videos.map((video) => (
 								<div
 									key={video.id}
 									className="group relative rounded-lg border border-border p-4 hover:border-primary transition-colors"
@@ -195,43 +111,29 @@ function DashboardComponent() {
 										<h3 className="font-semibold line-clamp-1 group-hover:text-primary transition-colors">
 											{video.title || "Untitled Video"}
 										</h3>
-										{video.youtube_video_id && (
-											<a
-												href={`https://studio.youtube.com/video/${video.youtube_video_id}/edit`}
-												target="_blank"
-												rel="noopener noreferrer"
-												className="text-muted-foreground hover:text-primary transition-colors"
-											>
-												<ExternalLink className="h-4 w-4" />
-											</a>
-										)}
+										{/* Add more video fields as needed */}
 									</div>
 									<div className="mt-2 space-y-1 text-sm text-muted-foreground">
-										<p className="line-clamp-1">
-											Filename: {video.filename || "N/A"}
+										<p>
+											Status: {video.status || "N/A"}
 										</p>
-										<p>Channel: {video.channel || "N/A"}</p>
-										{video.youtube_video_id && (
-											<div className="mt-3 flex space-x-2">
-												<Button variant="outline" size="sm" asChild>
-													<Link
-														to="/video/$videoId"
-														params={{ videoId: video.id }}
-													>
-														View Details
-													</Link>
-												</Button>
-												<Button variant="outline" size="sm" asChild>
-													<a
-														href={`https://youtube.com/watch?v=${video.youtube_video_id}`}
-														target="_blank"
-														rel="noopener noreferrer"
-													>
-														Watch on YouTube
-													</a>
-												</Button>
-											</div>
+										{video.thumbnail_url && (
+											<img
+												src={video.thumbnail_url}
+												alt="Thumbnail"
+												className="mt-2 rounded w-full max-h-40 object-cover"
+											/>
 										)}
+										<div className="mt-3 flex space-x-2">
+											<Button variant="outline" size="sm" asChild>
+												<Link
+													to="/video/$videoId"
+													params={{ videoId: video.id }}
+												>
+													View Details
+												</Link>
+											</Button>
+										</div>
 									</div>
 								</div>
 							))}

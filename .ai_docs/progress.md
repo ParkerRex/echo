@@ -18,7 +18,7 @@ Step	Goal	Owner	Key Deliverables
 1 Supabase Bootstrap	Core tables + RLS	DB	videos table, RLS, first migration, local reset verified
 2 Backend ⇄ Supabase Wiring	Auth path proven	API	supabase_client.py, get_current_user, GET /auth/me
 3 Frontend Auth Flow	Login + token passthrough	Web	GoogleLoginButton, callback, protected layout, /auth/me call
-4 Signed-URL Upload P.O.C.	Smallest video workflow	API + Web	POST /videos/upload-url, drop-zone PUT, upload-complete, dashboard list
+4 Signed-URL Upload P.O.C.	Smallest video workflow	API + Web	POST /videos/upload-url ✅, drop-zone PUT, upload-complete, dashboard list
 5 Local E2E Smoke Test	End-to-end validation	All	Script / Vitest or Cypress runs login→upload→dashboard
 6 Incremental Expansions	Scale slice	All	Task queue, WebSockets, metadata editor, publisher adapter
 
@@ -47,8 +47,9 @@ Infra, domain layers, adapters, DTOs, endpoints, video services (see previous li
 1.2 In Progress
 	•	Supabase client DI (Roadmap 2.2)
 	•	JWT dependency + /auth/me (2.3 – 2.4)
-	•	Signed-URL endpoints (upload-url, upload-complete) (4.1 – 4.3)
+	•	Signed-URL endpoints (upload-url ✅, upload-complete) (4.1 – 4.3)
 	•	Observability & security review
+	•	GET /videos/my endpoint for dashboard list (Supabase, no Firebase)
 
 1.3 Blocked / Not Started
 
@@ -69,6 +70,22 @@ Project scaffold, Memory-Bank docs, Google OAuth button, OAuth callback handler,
 	•	API wrapper with Supabase JWT
 	•	Drop-zone → fetch signed URL → PUT upload (4.2)
 	•	Dashboard list (/videos/my-videos) (4.4)
+
+	─────────────────────────────
+	Remove Firebase & Switch Dashboard to Supabase
+
+	| Sub-Step | Goal | Owner | Deliverable |
+	|---|---|---|---|
+	| 4.1 | Backend: `GET /videos/my` list endpoint | API | `routes/videos.py` + Pydantic `VideoSummary` |
+	| 4.2 | Frontend: useQuery hook via TanStack Query | Web | `fetchMyVideos` in `lib/api.ts`, dashboard uses `useQuery` |
+	| 4.3 | Replace Firestore code in `dashboard.tsx` | Web | Dashboard lists from API, no Firebase imports |
+	| 4.4 | Polling for progress (10s) | Web | TanStack Query polling in dashboard |
+	| 4.5 | Delete Firebase deps & `firebase.ts` | Web | package.json cleanup, dead-code removed |
+	| 4.6 | Install & configure TanStack Query provider | Web | `@tanstack/react-query` installed, provider in `__root.tsx` |
+	| 4.7 | Docs: update diagrams + README | Docs | Updated architecture docs |
+
+	Milestone: **Dashboard lists videos from Supabase using TanStack Query, real-time refresh (polling), Firebase fully removed, TanStack Query provider installed**
+	─────────────────────────────
 
 2.3 Next
 
@@ -94,11 +111,12 @@ user_profiles, payment tables, backups.
 
 4. Cross-Cutting Tasks
 
-Area	Status
-Local E2E test (login→upload→dashboard)	scheduled after Step 4
-Security audit	queued
-CI/CD pipeline	not started
-Docs & diagrams	updating with each merge
+Area	Owner	Status
+Local E2E test (login→upload→dashboard)	—	scheduled after Step 4
+Security audit	Backend	queued
+CI/CD pipeline	DevOps	not started
+Docs & diagrams	All	updating with each merge
+Firebase removal	Web	✅ complete (all code, deps, and config removed)
 
 
 ⸻
@@ -134,6 +152,7 @@ Advanced video algorithms · real-time analysis · custom AI training · extra p
 	2.	Clean-architecture layers finished
 	3.	FastAPI endpoints validated
 	4.	External adapters shipped
+	5.	POST /videos/upload-url endpoint implemented and tested
 
 1.5 Known Issues
 	•	Docs lag codebase

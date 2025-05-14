@@ -250,6 +250,47 @@ class GCSStorageAdapter(StorageInterface):
         except Exception as e:
             raise StorageError(f"Failed to generate signed URL: {str(e)}")
 
+    def get_upload_signed_url(
+        self,
+        path: str,
+        expiration_seconds: int = 3600,
+        content_type: Optional[str] = None,
+    ) -> str:
+        """
+        Get a signed URL for uploading a file to GCS storage (method=PUT).
+
+        Args:
+            path: Path in storage where the file will be uploaded
+            expiration_seconds: Number of seconds until the URL expires
+            content_type: Optional MIME type to restrict uploads
+
+        Returns:
+            A signed URL for uploading the file
+
+        Raises:
+            StorageError: If the URL generation fails
+        """
+        try:
+            bucket_name, blob_name = self._parse_gcs_path(path)
+            bucket = self._client.bucket(bucket_name)
+            blob = bucket.blob(blob_name)
+
+            response_headers = {}
+            if content_type:
+                response_headers["content-type"] = content_type
+
+            url = blob.generate_signed_url(
+                version="v4",
+                expiration=expiration_seconds,
+                method="PUT",
+                content_type=content_type,
+                response_headers=response_headers if response_headers else None,
+            )
+            return url
+
+        except Exception as e:
+            raise StorageError(f"Failed to generate upload signed URL: {str(e)}")
+
     def list_files(
         self, directory_path: str, filter_prefix: Optional[str] = None
     ) -> List[str]:

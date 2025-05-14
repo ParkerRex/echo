@@ -13,16 +13,24 @@
 import { Route as rootRoute } from './routes/__root'
 import { Route as SignupImport } from './routes/signup'
 import { Route as SettingsImport } from './routes/settings'
+import { Route as RedirectImport } from './routes/redirect'
 import { Route as LogoutImport } from './routes/logout'
 import { Route as LoginImport } from './routes/login'
 import { Route as DeferredImport } from './routes/deferred'
 import { Route as DashboardImport } from './routes/dashboard'
 import { Route as PathlessLayoutImport } from './routes/_pathlessLayout'
 import { Route as AuthedImport } from './routes/_authed'
+import { Route as UsersRouteImport } from './routes/users.route'
 import { Route as IndexImport } from './routes/index'
 import { Route as VideoVideoIdImport } from './routes/video.$videoId'
+import { Route as AuthCallbackImport } from './routes/auth/callback'
+import { Route as ApiUsersImport } from './routes/api/users'
+import { Route as PathlessLayoutNestedLayoutImport } from './routes/_pathlessLayout/_nested-layout'
 import { Route as AuthedPostsImport } from './routes/_authed/posts'
 import { Route as AuthedPostsIndexImport } from './routes/_authed/posts.index'
+import { Route as ApiUsersIdImport } from './routes/api/users.$id'
+import { Route as PathlessLayoutNestedLayoutRouteBImport } from './routes/_pathlessLayout/_nested-layout/route-b'
+import { Route as PathlessLayoutNestedLayoutRouteAImport } from './routes/_pathlessLayout/_nested-layout/route-a'
 import { Route as AuthedPostsPostIdImport } from './routes/_authed/posts.$postId'
 
 // Create/Update Routes
@@ -36,6 +44,12 @@ const SignupRoute = SignupImport.update({
 const SettingsRoute = SettingsImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const RedirectRoute = RedirectImport.update({
+  id: '/redirect',
+  path: '/redirect',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -73,6 +87,12 @@ const AuthedRoute = AuthedImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
+const UsersRouteRoute = UsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => rootRoute,
+} as any)
+
 const IndexRoute = IndexImport.update({
   id: '/',
   path: '/',
@@ -85,6 +105,25 @@ const VideoVideoIdRoute = VideoVideoIdImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
+const AuthCallbackRoute = AuthCallbackImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const ApiUsersRoute = ApiUsersImport.update({
+  id: '/api/users',
+  path: '/api/users',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const PathlessLayoutNestedLayoutRoute = PathlessLayoutNestedLayoutImport.update(
+  {
+    id: '/_nested-layout',
+    getParentRoute: () => PathlessLayoutRoute,
+  } as any,
+)
+
 const AuthedPostsRoute = AuthedPostsImport.update({
   id: '/posts',
   path: '/posts',
@@ -96,6 +135,26 @@ const AuthedPostsIndexRoute = AuthedPostsIndexImport.update({
   path: '/',
   getParentRoute: () => AuthedPostsRoute,
 } as any)
+
+const ApiUsersIdRoute = ApiUsersIdImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiUsersRoute,
+} as any)
+
+const PathlessLayoutNestedLayoutRouteBRoute =
+  PathlessLayoutNestedLayoutRouteBImport.update({
+    id: '/route-b',
+    path: '/route-b',
+    getParentRoute: () => PathlessLayoutNestedLayoutRoute,
+  } as any)
+
+const PathlessLayoutNestedLayoutRouteARoute =
+  PathlessLayoutNestedLayoutRouteAImport.update({
+    id: '/route-a',
+    path: '/route-a',
+    getParentRoute: () => PathlessLayoutNestedLayoutRoute,
+  } as any)
 
 const AuthedPostsPostIdRoute = AuthedPostsPostIdImport.update({
   id: '/$postId',
@@ -112,6 +171,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexImport
+      parentRoute: typeof rootRoute
+    }
+    '/users': {
+      id: '/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof UsersRouteImport
       parentRoute: typeof rootRoute
     }
     '/_authed': {
@@ -156,6 +222,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LogoutImport
       parentRoute: typeof rootRoute
     }
+    '/redirect': {
+      id: '/redirect'
+      path: '/redirect'
+      fullPath: '/redirect'
+      preLoaderRoute: typeof RedirectImport
+      parentRoute: typeof rootRoute
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
@@ -177,6 +250,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedPostsImport
       parentRoute: typeof AuthedImport
     }
+    '/_pathlessLayout/_nested-layout': {
+      id: '/_pathlessLayout/_nested-layout'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof PathlessLayoutNestedLayoutImport
+      parentRoute: typeof PathlessLayoutImport
+    }
+    '/api/users': {
+      id: '/api/users'
+      path: '/api/users'
+      fullPath: '/api/users'
+      preLoaderRoute: typeof ApiUsersImport
+      parentRoute: typeof rootRoute
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackImport
+      parentRoute: typeof rootRoute
+    }
     '/video/$videoId': {
       id: '/video/$videoId'
       path: '/video/$videoId'
@@ -190,6 +284,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/posts/$postId'
       preLoaderRoute: typeof AuthedPostsPostIdImport
       parentRoute: typeof AuthedPostsImport
+    }
+    '/_pathlessLayout/_nested-layout/route-a': {
+      id: '/_pathlessLayout/_nested-layout/route-a'
+      path: '/route-a'
+      fullPath: '/route-a'
+      preLoaderRoute: typeof PathlessLayoutNestedLayoutRouteAImport
+      parentRoute: typeof PathlessLayoutNestedLayoutImport
+    }
+    '/_pathlessLayout/_nested-layout/route-b': {
+      id: '/_pathlessLayout/_nested-layout/route-b'
+      path: '/route-b'
+      fullPath: '/route-b'
+      preLoaderRoute: typeof PathlessLayoutNestedLayoutRouteBImport
+      parentRoute: typeof PathlessLayoutNestedLayoutImport
+    }
+    '/api/users/$id': {
+      id: '/api/users/$id'
+      path: '/$id'
+      fullPath: '/api/users/$id'
+      preLoaderRoute: typeof ApiUsersIdImport
+      parentRoute: typeof ApiUsersImport
     }
     '/_authed/posts/': {
       id: '/_authed/posts/'
@@ -228,49 +343,113 @@ const AuthedRouteChildren: AuthedRouteChildren = {
 const AuthedRouteWithChildren =
   AuthedRoute._addFileChildren(AuthedRouteChildren)
 
+interface PathlessLayoutNestedLayoutRouteChildren {
+  PathlessLayoutNestedLayoutRouteARoute: typeof PathlessLayoutNestedLayoutRouteARoute
+  PathlessLayoutNestedLayoutRouteBRoute: typeof PathlessLayoutNestedLayoutRouteBRoute
+}
+
+const PathlessLayoutNestedLayoutRouteChildren: PathlessLayoutNestedLayoutRouteChildren =
+  {
+    PathlessLayoutNestedLayoutRouteARoute:
+      PathlessLayoutNestedLayoutRouteARoute,
+    PathlessLayoutNestedLayoutRouteBRoute:
+      PathlessLayoutNestedLayoutRouteBRoute,
+  }
+
+const PathlessLayoutNestedLayoutRouteWithChildren =
+  PathlessLayoutNestedLayoutRoute._addFileChildren(
+    PathlessLayoutNestedLayoutRouteChildren,
+  )
+
+interface PathlessLayoutRouteChildren {
+  PathlessLayoutNestedLayoutRoute: typeof PathlessLayoutNestedLayoutRouteWithChildren
+}
+
+const PathlessLayoutRouteChildren: PathlessLayoutRouteChildren = {
+  PathlessLayoutNestedLayoutRoute: PathlessLayoutNestedLayoutRouteWithChildren,
+}
+
+const PathlessLayoutRouteWithChildren = PathlessLayoutRoute._addFileChildren(
+  PathlessLayoutRouteChildren,
+)
+
+interface ApiUsersRouteChildren {
+  ApiUsersIdRoute: typeof ApiUsersIdRoute
+}
+
+const ApiUsersRouteChildren: ApiUsersRouteChildren = {
+  ApiUsersIdRoute: ApiUsersIdRoute,
+}
+
+const ApiUsersRouteWithChildren = ApiUsersRoute._addFileChildren(
+  ApiUsersRouteChildren,
+)
+
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '': typeof PathlessLayoutRoute
+  '/users': typeof UsersRouteRoute
+  '': typeof PathlessLayoutNestedLayoutRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/deferred': typeof DeferredRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
+  '/redirect': typeof RedirectRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/posts': typeof AuthedPostsRouteWithChildren
+  '/api/users': typeof ApiUsersRouteWithChildren
+  '/auth/callback': typeof AuthCallbackRoute
   '/video/$videoId': typeof VideoVideoIdRoute
   '/posts/$postId': typeof AuthedPostsPostIdRoute
+  '/route-a': typeof PathlessLayoutNestedLayoutRouteARoute
+  '/route-b': typeof PathlessLayoutNestedLayoutRouteBRoute
+  '/api/users/$id': typeof ApiUsersIdRoute
   '/posts/': typeof AuthedPostsIndexRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '': typeof PathlessLayoutRoute
+  '/users': typeof UsersRouteRoute
+  '': typeof PathlessLayoutNestedLayoutRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/deferred': typeof DeferredRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
+  '/redirect': typeof RedirectRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/api/users': typeof ApiUsersRouteWithChildren
+  '/auth/callback': typeof AuthCallbackRoute
   '/video/$videoId': typeof VideoVideoIdRoute
   '/posts/$postId': typeof AuthedPostsPostIdRoute
+  '/route-a': typeof PathlessLayoutNestedLayoutRouteARoute
+  '/route-b': typeof PathlessLayoutNestedLayoutRouteBRoute
+  '/api/users/$id': typeof ApiUsersIdRoute
   '/posts': typeof AuthedPostsIndexRoute
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexRoute
+  '/users': typeof UsersRouteRoute
   '/_authed': typeof AuthedRouteWithChildren
-  '/_pathlessLayout': typeof PathlessLayoutRoute
+  '/_pathlessLayout': typeof PathlessLayoutRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/deferred': typeof DeferredRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
+  '/redirect': typeof RedirectRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/_authed/posts': typeof AuthedPostsRouteWithChildren
+  '/_pathlessLayout/_nested-layout': typeof PathlessLayoutNestedLayoutRouteWithChildren
+  '/api/users': typeof ApiUsersRouteWithChildren
+  '/auth/callback': typeof AuthCallbackRoute
   '/video/$videoId': typeof VideoVideoIdRoute
   '/_authed/posts/$postId': typeof AuthedPostsPostIdRoute
+  '/_pathlessLayout/_nested-layout/route-a': typeof PathlessLayoutNestedLayoutRouteARoute
+  '/_pathlessLayout/_nested-layout/route-b': typeof PathlessLayoutNestedLayoutRouteBRoute
+  '/api/users/$id': typeof ApiUsersIdRoute
   '/_authed/posts/': typeof AuthedPostsIndexRoute
 }
 
@@ -278,71 +457,101 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/users'
     | ''
     | '/dashboard'
     | '/deferred'
     | '/login'
     | '/logout'
+    | '/redirect'
     | '/settings'
     | '/signup'
     | '/posts'
+    | '/api/users'
+    | '/auth/callback'
     | '/video/$videoId'
     | '/posts/$postId'
+    | '/route-a'
+    | '/route-b'
+    | '/api/users/$id'
     | '/posts/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/users'
     | ''
     | '/dashboard'
     | '/deferred'
     | '/login'
     | '/logout'
+    | '/redirect'
     | '/settings'
     | '/signup'
+    | '/api/users'
+    | '/auth/callback'
     | '/video/$videoId'
     | '/posts/$postId'
+    | '/route-a'
+    | '/route-b'
+    | '/api/users/$id'
     | '/posts'
   id:
     | '__root__'
     | '/'
+    | '/users'
     | '/_authed'
     | '/_pathlessLayout'
     | '/dashboard'
     | '/deferred'
     | '/login'
     | '/logout'
+    | '/redirect'
     | '/settings'
     | '/signup'
     | '/_authed/posts'
+    | '/_pathlessLayout/_nested-layout'
+    | '/api/users'
+    | '/auth/callback'
     | '/video/$videoId'
     | '/_authed/posts/$postId'
+    | '/_pathlessLayout/_nested-layout/route-a'
+    | '/_pathlessLayout/_nested-layout/route-b'
+    | '/api/users/$id'
     | '/_authed/posts/'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  UsersRouteRoute: typeof UsersRouteRoute
   AuthedRoute: typeof AuthedRouteWithChildren
-  PathlessLayoutRoute: typeof PathlessLayoutRoute
+  PathlessLayoutRoute: typeof PathlessLayoutRouteWithChildren
   DashboardRoute: typeof DashboardRoute
   DeferredRoute: typeof DeferredRoute
   LoginRoute: typeof LoginRoute
   LogoutRoute: typeof LogoutRoute
+  RedirectRoute: typeof RedirectRoute
   SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
+  ApiUsersRoute: typeof ApiUsersRouteWithChildren
+  AuthCallbackRoute: typeof AuthCallbackRoute
   VideoVideoIdRoute: typeof VideoVideoIdRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  UsersRouteRoute: UsersRouteRoute,
   AuthedRoute: AuthedRouteWithChildren,
-  PathlessLayoutRoute: PathlessLayoutRoute,
+  PathlessLayoutRoute: PathlessLayoutRouteWithChildren,
   DashboardRoute: DashboardRoute,
   DeferredRoute: DeferredRoute,
   LoginRoute: LoginRoute,
   LogoutRoute: LogoutRoute,
+  RedirectRoute: RedirectRoute,
   SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,
+  ApiUsersRoute: ApiUsersRouteWithChildren,
+  AuthCallbackRoute: AuthCallbackRoute,
   VideoVideoIdRoute: VideoVideoIdRoute,
 }
 
@@ -357,19 +566,26 @@ export const routeTree = rootRoute
       "filePath": "__root.tsx",
       "children": [
         "/",
+        "/users",
         "/_authed",
         "/_pathlessLayout",
         "/dashboard",
         "/deferred",
         "/login",
         "/logout",
+        "/redirect",
         "/settings",
         "/signup",
+        "/api/users",
+        "/auth/callback",
         "/video/$videoId"
       ]
     },
     "/": {
       "filePath": "index.tsx"
+    },
+    "/users": {
+      "filePath": "users.route.tsx"
     },
     "/_authed": {
       "filePath": "_authed.tsx",
@@ -378,7 +594,10 @@ export const routeTree = rootRoute
       ]
     },
     "/_pathlessLayout": {
-      "filePath": "_pathlessLayout.tsx"
+      "filePath": "_pathlessLayout.tsx",
+      "children": [
+        "/_pathlessLayout/_nested-layout"
+      ]
     },
     "/dashboard": {
       "filePath": "dashboard.tsx"
@@ -391,6 +610,9 @@ export const routeTree = rootRoute
     },
     "/logout": {
       "filePath": "logout.tsx"
+    },
+    "/redirect": {
+      "filePath": "redirect.tsx"
     },
     "/settings": {
       "filePath": "settings.tsx"
@@ -406,12 +628,41 @@ export const routeTree = rootRoute
         "/_authed/posts/"
       ]
     },
+    "/_pathlessLayout/_nested-layout": {
+      "filePath": "_pathlessLayout/_nested-layout.tsx",
+      "parent": "/_pathlessLayout",
+      "children": [
+        "/_pathlessLayout/_nested-layout/route-a",
+        "/_pathlessLayout/_nested-layout/route-b"
+      ]
+    },
+    "/api/users": {
+      "filePath": "api/users.ts",
+      "children": [
+        "/api/users/$id"
+      ]
+    },
+    "/auth/callback": {
+      "filePath": "auth/callback.tsx"
+    },
     "/video/$videoId": {
       "filePath": "video.$videoId.tsx"
     },
     "/_authed/posts/$postId": {
       "filePath": "_authed/posts.$postId.tsx",
       "parent": "/_authed/posts"
+    },
+    "/_pathlessLayout/_nested-layout/route-a": {
+      "filePath": "_pathlessLayout/_nested-layout/route-a.tsx",
+      "parent": "/_pathlessLayout/_nested-layout"
+    },
+    "/_pathlessLayout/_nested-layout/route-b": {
+      "filePath": "_pathlessLayout/_nested-layout/route-b.tsx",
+      "parent": "/_pathlessLayout/_nested-layout"
+    },
+    "/api/users/$id": {
+      "filePath": "api/users.$id.ts",
+      "parent": "/api/users"
     },
     "/_authed/posts/": {
       "filePath": "_authed/posts.index.tsx",

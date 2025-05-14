@@ -27,6 +27,14 @@ class VideoUploadRequest(BaseModel):
     )
 
 
+class VideoUploadUrlRequest(BaseModel):
+    """Request model for generating a signed upload URL."""
+
+    filename: str = Field(..., description="Name of the file to be uploaded")
+    content_type: Optional[str] = Field(None, description="MIME type of the file")
+    file_size: Optional[int] = Field(None, description="Size of the file in bytes")
+
+
 class VideoMetadataRequest(BaseModel):
     """Video metadata request model."""
 
@@ -147,3 +155,13 @@ class PublishResponse(BaseModel):
         """Configuration for the model."""
 
         json_encoders = {datetime: lambda v: v.isoformat() if v else None}
+
+
+class VideoSummary(BaseModel):
+    """Summary information for a video (for listing endpoints)."""
+
+    id: str = Field(..., description="Video ID")
+    title: str = Field(..., description="Video title")
+    status: Optional[str] = Field(None, description="Processing status")
+    created_at: Optional[datetime] = Field(None, description="Creation timestamp")
+    thumbnail_url: Optional[str] = Field(None, description="URL of thumbnail image")

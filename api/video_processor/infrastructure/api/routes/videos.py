@@ -27,7 +27,9 @@ from video_processor.infrastructure.api.schemas.video import (
     JobStatusResponse,
     PublishResponse,
     VideoPublishRequest,
+    VideoSummary,
     VideoUploadRequest,
+    VideoUploadUrlRequest,
 )
 
 # Configure logger
@@ -35,6 +37,123 @@ logger = logging.getLogger(__name__)
 
 # Create router
 router = APIRouter(prefix="/videos", tags=["videos"])
+
+
+from supabase import Client, create_client
+
+from video_processor.config.settings import settings
+from video_processor.infrastructure.api.auth import get_current_active_user
+from video_processor.infrastructure.api.dependencies import get_storage_adapter
+
+
+@router.get(
+    "/my",
+    response_model=List[VideoSummary],
+    summary="List videos for the current user",
+    description="List all videos belonging to the authenticated user from Supabase.",
+)
+async def list_my_videos(
+    user: dict = Depends(get_current_active_user),
+) -> List[VideoSummary]:
+    """
+    List videos for the current user from Supabase.
+
+    Args:
+        user: Authenticated user (from JWT)
+
+    Returns:
+        List of VideoSummary objects
+    """
+    try:
+        user_id = user.get("id")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="User ID missing from token")
+
+        supabase_url = settings.supabase_url
+        supabase_key = settings.supabase_service_role_key
+        supabase: Client = create_client(supabase_url, supabase_key)
+
+        # Query videos for the current user
+        response = (
+            supabase.table("videos")
+            .select("id, title, processing_status, created_at, thumbnail_gcs_path")
+            .eq("user_id", user_id)
+            .order("created_at", desc=True)
+            .execute()
+        )
+
+        if response.error:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Supabase error: {response.error.message}",
+            )
+
+        videos = response.data or []
+        # Map to VideoSummary
+        return [
+            VideoSummary(
+                id=video["id"],
+                title=video.get("title") or "",
+                status=video.get("processing_status"),
+                created_at=video.get("created_at"),
+                thumbnail_url=video.get("thumbnail_gcs_path"),
+            )
+            for video in videos
+        ]
+    except Exception as e:
+        logger.exception(f"Failed to list user videos: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to list user videos: {str(e)}",
+        )
+
+
+@router.post(
+    "/upload-url",
+    summary="Get a signed upload URL for direct video upload",
+    description="Generate a signed URL for uploading a video file directly to storage.",
+)
+async def get_upload_url(
+    request: VideoUploadUrlRequest,
+    user: dict = Depends(get_current_active_user),
+    storage=Depends(get_storage_adapter),
+):
+    """
+    Generate a signed upload URL for a video file.
+
+    Args:
+        request: VideoUploadUrlRequest with filename, content_type, file_size
+        user: Authenticated user (from JWT)
+        storage: Storage adapter (GCS)
+
+    Returns:
+        JSON with signed_url and storage_path
+    """
+    try:
+        user_id = user.get("id")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="User ID missing from token")
+
+        # Use a bucket or prefix from config if needed; here we use a standard path
+        # Example: videos/{user_id}/{filename}
+        storage_path = f"videos/{user_id}/{request.filename}"
+
+        signed_url = storage.get_upload_signed_url(
+            storage_path,
+            content_type=request.content_type,
+        )
+
+        return {
+            "signed_url": signed_url,
+            "storage_path": storage_path,
+            "expires_in": 3600,
+        }
+    except Exception as e:
+        logger.exception(f"Failed to generate upload signed URL: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate upload signed URL: {str(e)}",
+        )
 
 
 @router.post(
