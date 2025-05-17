@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { supabase } from "@/supabase/clients/client";
+import { supabase } from "@echo/db/clients/client";
 
 export default function AuthCallback() {
   const navigate = useNavigate();

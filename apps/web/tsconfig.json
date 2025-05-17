@@ -2,7 +2,7 @@
 	"include": [
 		"**/*.ts",
 		"**/*.tsx",
-		"../../packages/supabase/**/*.ts"
+		"../../supabase/**/*.ts"
 	],
 	"compilerOptions": {
 		"strict": true,
@@ -26,8 +26,8 @@
 			"@/*": [
 				"./*"
 			],
-			"@/supabase/*": [
-				"../../packages/supabase/*"
+			"@echo/db/*": [
+				"../../supabase/*"
 			]
 		},
 		"noEmit": true

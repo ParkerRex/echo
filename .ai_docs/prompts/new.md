@@ -4,7 +4,7 @@
 - ask more questions on why to take that direction
 - compare model outputs
 - Take another **pass** at it, including relative paths, of existing functionality. include as many referneces to code as possible so it's not liek we're starting from scratch. print the existing file tree before and he after version of the file tree. Expected outputs: 
-  - be-prd.txt: Full requirements document
+  - prd.md: Full requirements document
   - [file-structure-comparison.md](http://file-structure-comparison.md): Current vs. proposed structure
   - [implementation-tasks.md](http://implementation-tasks.md): Prioritized implementation tasks
   - examples/: Sample implementations of key components
@@ -23,8 +23,8 @@
 I need help continuing the refactoring of our video processing pipeline from a monolithic architecture to a clean/hexagonal architecture. We're following a detailed implementation plan and have completed several initial tasks.
 
 Please review these key documents:
-- backend/docs/implementation-tasks.md - Contains the step-by-step refactoring plan with completed tasks marked with ✅
-- backend/docs/examples/ - Contains code examples for reference
-- backend/docs/overview.md - Provides architectural overview and design principles
-- backend/docs/file-structure-comparison.md - Shows the before/after structure
-- backend/docs/be-prd.txt - Original requirements document
+- ai_docs/implementation-tasks.md - Contains the step-by-step refactoring plan with completed tasks marked with ✅
+- ai_docs/examples/ - Contains code examples for reference
+- ai_docs/overview.md - Provides architectural overview and design principles
+- ai_docs/file-structure-comparison.md - Shows the before/after structure
+- ai_docs/prd.md - Original requirements document
