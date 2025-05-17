@@ -104,7 +104,7 @@ The `main.py` file shows how all components come together in the application ent
 5. **Clarity**: Clear dependencies and service boundaries
 
 ### Implementation Strategy
-
+****
 To migrate the existing monolithic code to this architecture:
 
 1. Start by defining domain models and interfaces

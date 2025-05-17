@@ -1,3 +1,7 @@
+---
+> The purpose of this file is to show an example of the PRD we want to generate for a given pitch.
+---
+
 # VIDEO PROCESSING PIPELINE - PRODUCT REQUIREMENTS DOCUMENT
 
 ## 1. Overview

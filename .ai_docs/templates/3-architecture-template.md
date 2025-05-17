@@ -1,3 +1,30 @@
+--- 
+> This is a template of the expected output when generating an architecture document
+
+Be sure to read the following files to understand the context of the project:
+
+`pitch.md`
+`prd.md`
+`architecture.md`
+`system-patterns.md`
+
+## Run the following command
+
+eza . --tree --git-ignore
+
+# Pass in the files you want included in the tree.
+> Read the files below and nothing else.
+
+{apps/web/}
+{supabase/}
+
+
+
+---
+
+
+
+
 # File Structure Comparison: Current vs. Proposed
 
 ## Current Backend Structure

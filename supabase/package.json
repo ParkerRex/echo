@@ -3,6 +3,12 @@
   "version": "1.0.0",
   "type": "module",
   "main": "./index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./clients/client": "./clients/client.ts",
+    "./clients/server": "./clients/server.ts",
+    "./types/db": "./types/db.ts"
+  },
   "scripts": {
     "lint": "eslint ."
   },
