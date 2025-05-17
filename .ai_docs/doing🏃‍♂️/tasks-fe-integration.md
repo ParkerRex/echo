@@ -183,12 +183,65 @@
         *   **Acceptance Criteria:** `useJobStatusManager.ts` hook correctly processes WebSocket messages and updates TanStack Query cache for relevant job and video list data. (Met for WS part; polling and specific job page UI are separate concerns). Job details page displays information correctly. (Partially Met: Page created, but route definition linter error needs resolution).
 
 *   **NEW Backend Dependency for Processing Dashboard:**
-    *   [~] Task 3.X: Implement API endpoint for `getProcessingJobs()`
-        *   **Description:** Create a backend API endpoint (e.g., `GET /api/v1/users/me/jobs?status=processing,pending` or similar) that returns a list of video jobs currently in a non-terminal state (e.g., PENDING, PROCESSING) for the authenticated user.
-        *   The response should be an array of objects conforming to `VideoJobSchema` (defined in `apps/core/api/schemas/video_processing_schemas.py`).
+    *   [X] Task 3.X: Implement API endpoint for `getProcessingJobs()`
+        *   **Description:** Create a backend API endpoint (e.g., `GET /api/v1/jobs/?status=processing&status=pending`) that returns a list of video jobs currently in a non-terminal state (e.g., PENDING, PROCESSING) for the authenticated user.
+        *   The response should be an array of objects conforming to `VideoJobSchema`.
         *   [X] Ensure the corresponding client-side function `getProcessingJobs()` is added to `apps/web/src/lib/api.ts`. (Done)
-        *   **Reason:** Required by the refactored `ProcessingDashboard.tsx` to display in-progress video jobs after removing Firebase.
-        *   **Note:** Backend implementation for the API endpoint is still pending.
+        *   **Reason:** Required by the refactored `ProcessingDashboard.tsx` to display in-progress video jobs.
+        *   **Note:** Backend implementation uses synchronous database calls. A follow-up task (3.Y) addresses upgrading to asynchronous operations.
+        *   **Sub-Tasks:**
+            *   [X] **Task 3.X.1: Define API Route and Request/Response Schemas**
+                *   **File(s) Modified:**
+                    *   `apps/core/api/endpoints/jobs_endpoints.py` (Created).
+                    *   `apps/core/api/schemas/video_processing_schemas.py` (Verified `VideoJobSchema` and `ProcessingStatus` enum).
+                    *   `apps/core/main.py` (Included `jobs_api_router`).
+                *   **Actions:**
+                    *   Defined GET route `/api/v1/jobs/` in `jobs_endpoints.py`.
+                    *   Accepts `status: Optional[List[ProcessingStatus]]` query parameter.
+                    *   Response model `List[VideoJobSchema]`.
+                    *   Protected with `Depends(get_current_user)` returning `AuthenticatedUser`.
+                    *   Uses synchronous `db: Session = Depends(get_db_session)` for now.
+            *   [X] **Task 3.X.2: Implement Service Layer Logic**
+                *   **File(s) to Modify/Create:**
+                    *   `apps/core/services/job_service.py` (Created).
+                *   **Actions:**
+                    *   Created `async def get_user_jobs_by_statuses(user_id: str, db: Session, statuses: Optional[List[ProcessingStatus]]) -> List[VideoJobModel]:`.
+                    *   Defaults to `[ProcessingStatus.PENDING, ProcessingStatus.PROCESSING]` if `statuses` is not provided.
+                    *   Calls `VideoJobRepository.get_by_user_id_and_statuses`.
+            *   [X] **Task 3.X.3: Implement Database Query for Jobs**
+                *   **File(s) to Modify/Create:**
+                    *   `apps/core/operations/video_job_repository.py` (Modified).
+                *   **Actions:**
+                    *   Added `get_by_user_id_and_statuses` static method to `VideoJobRepository`.
+                    *   Query joins `VideoJobModel` with `VideoModel`.
+                    *   Filters by `VideoModel.uploader_user_id` and `VideoJobModel.status.in_(statuses)`.
+                    *   Orders by `VideoJobModel.created_at.desc()`.
+                    *   Uses `joinedload` for `video` and `video_metadata`.
+                    *   Uses synchronous `Session` and `query.all()`.
+            *   [X] **Task 3.X.4: Integrate Service with API Endpoint**
+                *   **File(s) to Modify:** `apps/core/api/endpoints/jobs_endpoints.py` (Modified).
+                *   **Actions:**
+                    *   Endpoint `get_my_processing_jobs` now calls `await get_user_jobs_by_statuses(...)`.
+            *   [X] **Task 3.X.5: Add Unit/Integration Tests**
+                *   **File(s) to Create/Modify:**
+                    *   `apps/core/tests/operations/test_video_job_repository.py` (Created & populated).
+                    *   `apps/core/tests/services/test_job_service.py` (Created & populated).
+                    *   `apps/core/tests/api/test_jobs_api.py` (Created & populated).
+                    *   Associated `__init__.py` files for test packages.
+                *   **Actions:**
+                    *   **Repository Tests:** Added tests for filtering by user, status, `None` status, ordering, pagination, and eager loading for `get_by_user_id_and_statuses`.
+                    *   **Service Tests:** Added tests for `get_user_jobs_by_statuses` covering logic for default statuses and interaction with mocked repository.
+                    *   **API Tests:** Added tests for `GET /api/v1/jobs/` covering successful calls (default and specific statuses), unauthenticated access, and invalid status parameters, using `TestClient` and mocking service/auth dependencies.
+
+    *   [ ] Task 3.Y: **Upgrade Backend Database Operations to Asynchronous**
+        *   **Description:** Refactor database interactions in `apps/core` to be fully asynchronous to improve performance and scalability under load. This involves using an async database driver, `AsyncSession`, and updating repository methods to use `await` for database calls.
+        *   **Key Areas:**
+            *   `apps/core/lib/database/connection.py`: Introduce `create_async_engine`, `AsyncSessionLocal`, and `get_async_db_session` dependency.
+            *   `apps/core/operations/`: Update repository methods (e.g., in `VideoJobRepository`, `VideoRepository`, etc.) to be `async def`, use `AsyncSession`, and use `await session.execute(...)` / `await session.scalars(...)`.
+            *   `apps/core/services/`: Ensure service layer functions correctly `await` async repository calls and use `AsyncSession`.
+            *   `apps/core/api/endpoints/`: Update API endpoints to depend on `AsyncSession` via `get_async_db_session`.
+            *   `apps/core/tests/`: Update tests to work with an async database setup if necessary (e.g., async test fixtures for `AsyncSession`).
+        *   **Reason:** To fully leverage FastAPI's async capabilities, prevent blocking I/O operations, and enhance overall application performance and concurrency.
 
 ## Phase 4: Video Management & Viewing
 
@@ -228,29 +281,29 @@
 ## Phase 5: UI/UX Polish & Finalization
 
 14. **Consistent Loading Skeletons and Empty States**
-    *   [~+] Task 5.1: **Implement UI Placeholders** (Partially Met, major components improved: Skeletons and error/empty states implemented for Video Details, Job Details, Dashboard Video List. `VideoDetailSkeleton` reviewed and enhanced. `ProcessingDashboard.tsx` was significantly refactored to remove Firebase; its loading skeleton and error/empty states were rebuilt using `useQuery` and `Alerts`. `JobDetailsPage` loading/error/skeleton states reviewed and confirmed to be good. A full audit for consistency across any other minor/existing pages can be a follow-up.)
-        *   **File(s) to Check/Modify:** All pages and components that involve asynchronous data fetching (e.g., `dashboard.tsx`, `jobs/[jobId].tsx`, `video/[videoId].tsx`, `ProcessingDashboard.tsx`).
+    *   [~+] Task 5.1: **Implement UI Placeholders** (Partially Met, major components improved: Skeletons and error/empty states implemented for Video Details, Job Details, Dashboard Video List, `users.route.tsx`. `ProcessingDashboard.tsx` was significantly refactored with these states. `settings.tsx` and `index.tsx` are currently static and don't require them. Audit of straightforward pages complete. A full audit for consistency across any other minor/existing pages can be a follow-up if more dynamic sections are added.)
+        *   **File(s) to Check/Modify:** All pages and components that involve asynchronous data fetching (e.g., `dashboard.tsx`, `jobs/[jobId].tsx`, `video/[videoId].tsx`, `ProcessingDashboard.tsx`, `users.route.tsx`).
         *   **Key Actions:**
             *   Utilize the `shadcn/ui Skeleton` component (from `apps/web/src/components/ui/skeleton.tsx`) to create loading placeholders for content areas while `useQuery` is in its `isLoading` state. (Implemented in new pages)
             *   Design and implement clear and user-friendly "empty state" messages for situations where no data is available (e.g., "You haven't uploaded any videos yet." on the dashboard, or "Video data is not yet available." if metadata is still being processed). (Implemented in new pages and dashboard video list)
-        *   **Acceptance Criteria:** The application provides smooth visual feedback during data loading phases using skeleton screens, and presents informative messages when content areas are empty. (Partially Met for new features; broader audit pending if needed)
+        *   **Acceptance Criteria:** The application provides smooth visual feedback during data loading phases using skeleton screens, and presents informative messages when content areas are empty. (Largely Met for key dynamic areas; `settings.tsx` and `index.tsx` are static. `users.route.tsx` updated.)
 
 15. **Standardized Error Handling and Notifications**
-    *   [~] Task 5.2: **Unify Error Display** (Largely Met: `sonner` toasts are used for non-modal API errors and form submission feedback. `Alert` components are used for page-level data loading errors. `useAuth` and `lib/api` provide error details. Consistency should be maintained in new and reviewed components. `VideoDetailPage` and `JobDetailsPage` reviewed and align with strategy.)
+    *   [~] Task 5.2: **Unify Error Display** (Largely Met: `sonner` toasts are used for non-modal API errors and form submission feedback. `Alert` components are used for page-level data loading errors. `useAuth` and `lib/api` provide error details. Consistency checked in `login.tsx`, `signup.tsx`, `VideoDetailPage`, `JobDetailsPage`, `users.route.tsx`. Form validation messages are inline. Broader audit for any remaining minor components can be a follow-up.)
         *   **File(s) to Check/Modify:** All components that handle API calls or user input leading to potential errors. Revisit `useAuth.ts`, `lib/api.ts`, and form components.
             *   `apps/web/src/components/ui/sonner.tsx` (or `toaster.tsx` / `use-toast.tsx` if that's the active toast system).
         *   **Key Actions:**
             *   Consistently use `sonner` (or the project's chosen toast component) for non-modal error notifications arising from API interactions (e.g., "Failed to upload video: Server error"). (Implemented in key flows)
             *   Employ `shadcn/ui Alert` with `variant="destructive"` for more prominent, inline error messages within forms or specific content sections (e.g., "Invalid email address" below an input field). (Implemented for page load errors; form errors are typically handled by FormMessage)
             *   Ensure error messages are user-friendly and, where appropriate, suggest corrective actions. (Generally implemented)
-        *   **Acceptance Criteria:** Errors are communicated to the user in a consistent, clear, and non-disruptive manner across the application. (Largely Met for new/reviewed features)
+        *   **Acceptance Criteria:** Errors are communicated to the user in a consistent, clear, and non-disruptive manner across the application. (Largely Met for reviewed features and forms.)
 
 16. **Responsive Design Review and Adjustments**
-    *   [ ] Task 5.3: **Ensure Mobile and Tablet Usability** (Pending Manual Review: Components built with `shadcn/ui` and Tailwind CSS are inherently responsive, but a full manual review across devices and flows is needed to confirm and fine-tune.)
+    *   [~] Task 5.3: **Ensure Mobile and Tablet Usability** (Partially Met: Code review and responsive improvements applied to `__root.tsx` navigation, `dashboard.tsx` header/tabs. Key components like `VideoList`, `VideoListItem`, `VideoDetail`, `JobDetail`, `Login`, `Signup` reviewed and appear structurally responsive. Further manual testing across devices/flows recommended to catch nuanced issues and complete this task.)
         *   **File(s) to Check/Modify:** Key layout files (`__root.tsx`, `_authed.tsx`) and primary view components (`dashboard.tsx`, `login.tsx`, `video/[videoId].tsx`, `jobs/[jobId].tsx`). Also, `apps/web/src/styles/app.css` or any global style sheets.
         *   **Key Actions:**
             *   Thoroughly test all primary application flows and pages on various screen sizes (desktop, tablet, mobile).
             *   Use browser developer tools to emulate different devices.
             *   Adjust layouts, font sizes, component visibility, and interaction patterns as needed using Tailwind CSS's responsive utility classes (e.g., `sm:`, `md:`, `lg:`).
             *   Pay special attention to navigation, forms, and data tables/lists on smaller screens.
-        *   **Acceptance Criteria:** The core application is fully responsive, providing a good user experience across common device types and screen resolutions. (Pending Manual Review) 
+        *   **Acceptance Criteria:** The core application is fully responsive, providing a good user experience across common device types and screen resolutions. (Code structure supports responsiveness; pending final manual review.) 

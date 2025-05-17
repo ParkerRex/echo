@@ -55,9 +55,9 @@ function DashboardComponent() {
 
 	return (
 		<div className="container py-10">
-			<div className="flex items-center justify-between mb-8">
+			<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
 				<div>
-					<h1 className="text-2xl font-bold tracking-tight">Video Dashboard</h1>
+					<h1 className="text-xl sm:text-2xl font-bold tracking-tight">Video Dashboard</h1>
 					<p className="text-muted-foreground text-sm mt-1">
 						Manage and monitor your video processing status
 					</p>
@@ -65,8 +65,9 @@ function DashboardComponent() {
 				<Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
 					<DialogTrigger asChild>
 						<Button>
-							<UploadIcon className="h-4 w-4 mr-2" />
-							Upload New Video
+							<UploadIcon className="h-4 w-4 md:mr-2" /> 
+							<span className="hidden md:inline">Upload New Video</span>
+							<span className="sr-only md:hidden">Upload New Video</span>
 						</Button>
 					</DialogTrigger>
 					<DialogContent className="sm:max-w-md">
@@ -83,7 +84,7 @@ function DashboardComponent() {
 			</div>
 
 			<Tabs value={activeTab} onValueChange={setActiveTab}>
-				<TabsList className="w-full max-w-md mb-6">
+				<TabsList className="w-full grid grid-cols-2 max-w-md mb-6">
 					<TabsTrigger value="processing" className="flex-1">
 						Processing Status
 					</TabsTrigger>

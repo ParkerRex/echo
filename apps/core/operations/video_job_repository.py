@@ -37,10 +37,11 @@ Usage:
 
 from typing import Any, List, Optional
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from apps.core.models.enums import ProcessingStatus
 from apps.core.models.video_job_model import VideoJobModel
+from apps.core.models.video_model import VideoModel
 
 
 class VideoJobRepository:
@@ -151,3 +152,47 @@ class VideoJobRepository:
             job.processing_stages = stages  # type: ignore
             db.flush()
         return job
+
+    @staticmethod
+    def get_by_user_id_and_statuses(
+        db: Session,
+        user_id: str,
+        statuses: Optional[List[ProcessingStatus]] = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> List[VideoJobModel]:
+        """
+        Retrieve VideoJobModels for a specific user, filtered by statuses, with pagination.
+
+        Args:
+            db (Session): SQLAlchemy session.
+            user_id (str): The uploader_user_id (Supabase string UUID) from VideoModel.
+            statuses (Optional[List[ProcessingStatus]]): List of statuses to filter by.
+                                                      If None or empty, default statuses might be applied
+                                                      (e.g., PENDING, PROCESSING) or no status filter.
+            limit (int): Maximum number of jobs to return.
+            offset (int): Number of jobs to skip for pagination.
+
+        Returns:
+            List[VideoJobModel]: A list of job models.
+        """
+        query = (
+            db.query(VideoJobModel)
+            .join(VideoModel, VideoJobModel.video_id == VideoModel.id)
+            .filter(VideoModel.uploader_user_id == user_id)
+        )
+
+        if statuses:
+            query = query.filter(VideoJobModel.status.in_(statuses))
+
+        # Eager load related video and metadata to prevent N+1 queries if accessed later
+        # This is useful if the VideoJobSchema nests VideoSchema and VideoMetadataSchema
+        query = query.options(
+            joinedload(VideoJobModel.video), joinedload(VideoJobModel.video_metadata)
+        )
+
+        query = (
+            query.order_by(VideoJobModel.created_at.desc()).offset(offset).limit(limit)
+        )
+
+        return query.all()

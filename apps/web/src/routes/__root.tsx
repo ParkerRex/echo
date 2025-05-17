@@ -82,7 +82,7 @@ import {
 		</head>
 		<body>
 		  <QueryClientProvider client={queryClient}>
-			<div className="p-2 flex gap-2 text-lg">
+			<div className="p-2 flex flex-wrap sm:flex-nowrap gap-2 text-base sm:text-lg">
 			  <Link
 				to="/"
 				activeProps={{
