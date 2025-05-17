@@ -168,4 +168,35 @@ sequenceDiagram
 
 ---
 
+## 💻 Development Setup
+
+### Generating API Types
+
+To ensure type consistency between the Python backend (`apps/core`) Pydantic models and the TypeScript frontend (`apps/web`), we use `pydantic-to-typescript`.
+
+-   **Pydantic Models Location**: `apps/core/api/schemas/video_processing_schemas.py`
+-   **Generated TypeScript Types Location**: `apps/web/src/types/api.ts`
+
+To regenerate the TypeScript types after making changes to the Pydantic models, run the following command from the `apps/web` directory:
+
+```bash
+pnpm run generate:api-types
+```
+
+This script executes `pydantic2ts` using the `uv` environment from `apps/core`.
+
+Make sure you have installed the necessary dependencies:
+-   In `apps/core` (Python environment, managed by `uv`):
+    ```bash
+    # If not already installed (should be via pyproject.toml or uv.lock)
+    # cd apps/core && uv add "pydantic-to-typescript>=2"
+    ```
+-   In `apps/web` (Node.js environment, managed by `pnpm`):
+    ```bash
+    # If not already installed (should be via package.json)
+    # pnpm --filter @echo/web add -D json-schema-to-typescript 
+    ```
+
+---
+
 This structure lets you move fast, use Supabase where it shines, and lean into Python where AI or Google SDKs are best. Let me know if you want to split this PRD into feature cards or set up tracking in Linear/Notion.

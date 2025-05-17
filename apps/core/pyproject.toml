@@ -45,6 +45,7 @@ dependencies = [
     # Cloud Functions dependencies
     "functions-framework",
     "google-auth>=2.40.1",
+    "pydantic-to-typescript>=2",
 ]
 
 [project.optional-dependencies]

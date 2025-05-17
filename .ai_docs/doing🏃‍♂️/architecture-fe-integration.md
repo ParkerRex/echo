@@ -219,5 +219,6 @@ supabase/
 ## 6. Cross-Cutting Concerns
 (Managed as described in `system-patterns.md` and apply platform-wide)
 *   Error Handling, Logging, Validation, Security, Configuration, Package Management.
+*   **Configuration:** Standardized `.env.[mode]` files (e.g., `.env.development`, `.env.production`) are used in both `apps/core` and `apps/web` to manage environment-specific settings. Vite handles these for the frontend, while the backend (`apps/core`) loads them via its configuration setup (e.g., `config.py` using `python-dotenv`).
 
 This revised architecture incorporates WebSockets for real-time updates and a direct-to-cloud upload strategy, providing a more scalable and responsive system. 
