@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter, redirect } from "@tanstack/react-router";
 import { useAuth } from "../hooks/useAuth";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { supabase } from "@echo/db/clients/client"; // Import supabase client
 
 // Define the schema for signup form validation
 const signupSchema = z.object({
@@ -28,6 +29,18 @@ const signupSchema = z.object({
 type SignupFormValues = z.infer<typeof signupSchema>;
 
 export const Route = createFileRoute("/signup")({
+	beforeLoad: async ({ cause }) => {
+		// Redirect to dashboard if user is already logged in and tries to enter the signup page.
+		if (cause === 'enter') { 
+			const { data: { session } } = await supabase.auth.getSession();
+			if (session) {
+				throw redirect({
+					to: "/dashboard",
+					replace: true,
+				});
+			}
+		}
+	},
 	component: SignupComponent,
 });
 

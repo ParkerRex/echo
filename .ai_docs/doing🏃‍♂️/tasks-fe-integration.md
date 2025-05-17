@@ -41,20 +41,20 @@
         *   **Acceptance Criteria:** Environment variables are correctly structured for different environments (development, production) for both frontend and backend. Frontend variables are accessible via `import.meta.env.*`. `.gitignore` handles these files appropriately.
 
 2.  **Supabase Client & Authentication Hooks (`apps/web/src` & `supabase/`)**
-    *   [ ] Task 1.2: **Standardize Supabase Client and Authentication Logic**
+    *   [X] Task 1.2: **Standardize Supabase Client and Authentication Logic**
         *   **File(s) to Check/Modify:**
-            *   `supabase/clients/client.ts`: Review this shared client. Confirm its configuration is suitable for client-side usage in `apps/web`.
-            *   `apps/web/src/utils/supabase.ts`: Currently contains `getSupabaseServerClient`. Evaluate if a client-side utility/hook here should wrap `supabase/clients/client.ts` or if direct import is preferred.
-            *   `apps/web/src/hooks/useAuth.ts` (Create, or verify and refactor if similar logic exists elsewhere).
-            *   `apps/web/src/router.tsx` or `apps/web/src/client.tsx` or `apps/web/src/routes/__root.tsx`: Ensure any global AuthProvider wraps the application.
+            *   `supabase/clients/client.ts`: Review this shared client. Confirm its configuration is suitable for client-side usage in `apps/web`. (Verified)
+            *   `apps/web/src/utils/supabase.ts`: Currently contains `getSupabaseServerClient`. Evaluate if a client-side utility/hook here should wrap `supabase/clients/client.ts` or if direct import is preferred. (Direct import of `supabase/clients/client.ts` or its alias `@echo/db/clients/client` is preferred for client-side usage; `utils/supabase.ts` remains for SSR client).
+            *   `apps/web/src/hooks/useAuth.ts` (Create, or verify and refactor if similar logic exists elsewhere). (Verified existing hook, meets requirements).
+            *   `apps/web/src/router.tsx` or `apps/web/src/client.tsx` or `apps/web/src/routes/__root.tsx`: Ensure any global AuthProvider wraps the application. (Current design relies on direct `useAuth()` usage; no separate global provider identified as strictly necessary for the hook's function, but can be added if needed for other reasons).
         *   **Key Actions:**
-            *   **Client-Side Supabase Access:** Establish a clear and consistent method for accessing the Supabase client instance throughout the frontend (likely importing from `supabase/clients/client.ts`).
+            *   **Client-Side Supabase Access:** Establish a clear and consistent method for accessing the Supabase client instance throughout the frontend (likely importing from `supabase/clients/client.ts`). (Achieved via `@echo/db/clients/client` alias in `useAuth.ts`).
             *   **Develop `useAuth.ts` Hook:**
-                *   Provide reactive state: `user`, `session`, `isLoading`, `error`.
-                *   Expose authentication methods: `loginWithPassword(email, password)`, `signUpWithEmailPassword(email, password)`, `signOut()`, `signInWithGoogle()`.
-                *   These methods should internally call the Supabase client (e.g., `supabase.auth.signInWithPassword()`).
-                *   Subscribe to `supabase.auth.onAuthStateChange` to update and reflect auth state changes application-wide.
-        *   **Acceptance Criteria:** A `useAuth()` hook is available, providing reactive authentication state (user, session, loading status) and all necessary authentication functions. The Supabase client configuration is verified.
+                *   Provide reactive state: `user`, `session`, `isLoading`, `error`. (Implemented).
+                *   Expose authentication methods: `loginWithPassword(email, password)`, `signUpWithEmailPassword(email, password)`, `signOut()`, `signInWithGoogle()`. (Implemented).
+                *   These methods should internally call the Supabase client (e.g., `supabase.auth.signInWithPassword()`). (Implemented).
+                *   Subscribe to `supabase.auth.onAuthStateChange` to update and reflect auth state changes application-wide. (Implemented).
+        *   **Acceptance Criteria:** A `useAuth()` hook is available, providing reactive authentication state (user, session, loading status) and all necessary authentication functions. The Supabase client configuration is verified. (Met)
 
 3.  **API Client Service for Backend Communication (`apps/web/src/lib`)**
     *   [X] Task 1.3: **Develop a Typed API Client Service for REST Endpoints**
@@ -74,53 +74,53 @@
         *   **Acceptance Criteria:** The `apps/web/src/lib/api.ts` module provides strongly-typed functions for all backend video processing interactions, with (manual JWT handling for now - to be reviewed in Task 1.3 if auto-injection is needed) and comprehensive error management.
 
 4.  **Type Sharing/Generation Strategy**
-    *   [ ] Task 1.4: **Investigate and Implement Type Sharing/Generation**
+    *   [X] Task 1.4: **Investigate and Implement Type Sharing/Generation**
         *   **Key Actions:** Decide on a strategy to keep frontend TypeScript types (`apps/web/src/types/api.ts`) synchronized with backend Pydantic models. Options:
             *   Manual synchronization (prone to error).
-            *   Codegen tool (e.g., `pydantic-to-typescript`).
+            *   Codegen tool (e.g., `pydantic-to-typescript`). (Chosen and Implemented)
             *   Shared monorepo package (if feasible for Pydantic models & TS types).
-        *   Implement the chosen strategy.
-        *   **Acceptance Criteria:** A maintainable process for type consistency between frontend and backend is established.
+        *   Implement the chosen strategy. (Implemented via `pnpm run generate:api-types` script using `pydantic2ts` and `json-schema-to-typescript`).
+        *   **Acceptance Criteria:** A maintainable process for type consistency between frontend and backend is established. (Met: The script `apps/web/package.json#generate:api-types` provides this process. It converts Pydantic models from `apps/core/api/schemas/video_processing_schemas.py` to TypeScript interfaces in `apps/web/src/types/api.ts`.)
 
 ## Phase 2: User Authentication Flow Implementation
 
 5.  **Login Page and Components (`apps/web/src`)**
-    *   [ ] Task 2.1: **Verify and Enhance Login Functionality**
+    *   [X] Task 2.1: **Verify and Enhance Login Functionality**
         *   **File(s) to Check/Modify:**
-            *   `apps/web/src/routes/login.tsx` (Verify route setup).
-            *   `apps/web/src/components/login.tsx` (Verify form component, or `apps/web/src/components/auth.tsx`).
-            *   `apps/web/src/components/GoogleLoginButton.tsx` (Verify Google OAuth integration).
+            *   `apps/web/src/routes/login.tsx` (Verified route setup. Added `beforeLoad` to redirect authenticated users to `/dashboard`.)
+            *   `apps/web/src/components/login.tsx` (Verified form component. Uses `useAuth`, `react-hook-form`, `zod`, `shadcn/ui`. Handles loading/error states, navigation, and link to signup.)
+            *   `apps/web/src/components/GoogleLoginButton.tsx` (Verified. Uses `useAuth`, handles loading state for Google OAuth.)
         *   **Key Actions:**
-            *   Ensure the login form component (e.g., `login.tsx`) correctly calls `useAuth().loginWithPassword()` upon submission.
-            *   Verify `GoogleLoginButton.tsx` correctly calls `useAuth().signInWithGoogle()`.
-            *   Integrate with `shadcn/ui Form` components and a library like `react-hook-form` with `zod` for validation, if consistent with project patterns.
-            *   Clearly display loading states (e.g., button disabled, spinner) and error messages sourced from the `useAuth()` hook.
-            *   Confirm successful login navigates to the `/dashboard` route (TanStack Router's `navigate` function).
-            *   Ensure "Sign up" link navigates to the signup page.
-        *   **Acceptance Criteria:** Users can successfully log in using email/password and Google OAuth. Form validation, loading states, error display, and redirection are correctly implemented.
+            *   Ensure the login form component (e.g., `login.tsx`) correctly calls `useAuth().loginWithPassword()` upon submission. (Met)
+            *   Verify `GoogleLoginButton.tsx` correctly calls `useAuth().signInWithGoogle()`. (Met)
+            *   Integrate with `shadcn/ui Form` components and a library like `react-hook-form` with `zod` for validation, if consistent with project patterns. (Met)
+            *   Clearly display loading states (e.g., button disabled, spinner) and error messages sourced from the `useAuth()` hook. (Met)
+            *   Confirm successful login navigates to the `/dashboard` route (TanStack Router's `navigate` function). (Met)
+            *   Ensure "Sign up" link navigates to the signup page. (Met)
+        *   **Acceptance Criteria:** Users can successfully log in using email/password and Google OAuth. Form validation, loading states, error display, and redirection are correctly implemented. (Met)
 
 6.  **Signup Page and Components (`apps/web/src`)**
-    *   [ ] Task 2.2: **Verify and Enhance Signup Functionality**
+    *   [X] Task 2.2: **Verify and Enhance Signup Functionality**
         *   **File(s) to Check/Modify:**
-            *   `apps/web/src/routes/signup.tsx` (Verify route setup).
-            *   A dedicated signup form component e.g., `apps/web/src/components/auth/SignupForm.tsx` (Create if `login.tsx` or `auth.tsx` isn't adaptable, otherwise verify existing).
+            *   `apps/web/src/routes/signup.tsx` (Verified route setup. Signup form component is within this file. Added `beforeLoad` to redirect authenticated users to `/dashboard`.)
+            *   A dedicated signup form component e.g., `apps/web/src/components/auth/SignupForm.tsx` (Not separate, component is in `routes/signup.tsx`. This is acceptable.)
         *   **Key Actions:**
-            *   Ensure the signup form component calls `useAuth().signUpWithEmailPassword()` on submission.
-            *   Utilize `shadcn/ui Form` components for structure and validation (e.g. password confirmation).
-            *   Display loading states and relevant error messages (e.g., "Email already in use", "Passwords do not match").
-            *   Provide clear user feedback upon successful signup (e.g., "Please check your email to confirm your account.").
-            *   Ensure "Login" link navigates to the login page.
-        *   **Acceptance Criteria:** Users can create new accounts. Form validation, loading/error states, and user feedback mechanisms are robust.
+            *   Ensure the signup form component calls `useAuth().signUpWithEmailPassword()` on submission. (Met)
+            *   Utilize `shadcn/ui Form` components for structure and validation (e.g. password confirmation). (Met)
+            *   Display loading states and relevant error messages (e.g., "Email already in use", "Passwords do not match"). (Met)
+            *   Provide clear user feedback upon successful signup (e.g., "Please check your email to confirm your account."). (Met)
+            *   Ensure "Login" link navigates to the login page. (Met)
+        *   **Acceptance Criteria:** Users can create new accounts. Form validation, loading/error states, and user feedback mechanisms are robust. (Met)
 
 7.  **Authentication Callback Handling (`apps/web/src`)**
-    *   [ ] Task 2.3: **Ensure OAuth Callback Route Works Correctly**
-        *   **File(s) to Check/Modify:** `apps/web/src/routes/auth/callback.tsx` (Verify existing functionality).
+    *   [X] Task 2.3: **Ensure OAuth Callback Route Works Correctly**
+        *   **File(s) to Check/Modify:** `apps/web/src/routes/auth/callback.tsx` (Verified existing functionality. The component correctly uses `useAuth` to handle session establishment, displays loading/error states, and redirects appropriately.)
         *   **Key Actions:**
-            *   Confirm that this route correctly handles the session establishment after OAuth providers (like Google) redirect back to the application.
-            *   Verify it redirects users to the appropriate page (e.g., `/dashboard`) post-authentication.
-            *   Implement a user-friendly loading message during processing.
-            *   Ensure any potential errors during the callback (e.g., state mismatch, provider error) are gracefully handled and displayed to the user.
-        *   **Acceptance Criteria:** OAuth callbacks (Google login, email confirmation link) are processed smoothly, sessions are established, and users are redirected correctly. Error scenarios are handled. (Met)
+            *   Confirm that this route correctly handles the session establishment after OAuth providers (like Google) redirect back to the application. (Met: Relies on `useAuth` and Supabase client's `onAuthStateChange`.)
+            *   Verify it redirects users to the appropriate page (e.g., `/dashboard`) post-authentication. (Met)
+            *   Implement a user-friendly loading message during processing. (Met)
+            *   Ensure any potential errors during the callback (e.g., state mismatch, provider error) are gracefully handled and displayed to the user. (Met)
+        *   **Acceptance Criteria:** OAuth callbacks (Google login, email confirmation link) are processed smoothly, sessions are established, and users are redirected correctly. Error scenarios are handled. (Verified as Met)
 
 8.  **Protected Route Implementation (`apps/web/src`)**
     *   [X] Task 2.4: **Verify and Solidify Protected Route Mechanism**
@@ -167,8 +167,10 @@
         *   **Acceptance Criteria:** A reusable hook manages WebSocket connectivity and message flow. (Met)
 
 11. **Job Status Display with WebSockets & Polling Fallback (`apps/web/src`)**
-    *   [X] Task 3.3: **Implement Job Status Management Hook (`useJobStatusManager.ts`) with TanStack Cache Updates** (UI Page for Job Status still pending)
-        *   **File(s) to Check/Modify:** `apps/web/src/hooks/useJobStatusManager.ts` (Created/Refactored from `useJobStatus.ts`).
+    *   [X] Task 3.3: **Implement Job Status Management Hook (`useJobStatusManager.ts`) with TanStack Cache Updates**
+        *   **File(s) to Check/Modify:** 
+            *   `apps/web/src/hooks/useJobStatusManager.ts` (Created/Refactored from `useJobStatus.ts`).
+            *   `apps/web/src/routes/_authed.jobs.$jobId.tsx` (Created for UI display. Fetches job details, displays status, video info, timestamps, errors. Handles loading/error states. Linter error for `createFileRoute` path argument persists and needs further investigation if it doesn't resolve on its own.)
         *   **Backend Prerequisite Notes:** `api.getJobDetails(jobId)` endpoint for initial fetch and polling fallback if WS fails.
         *   **Key Actions:**
             *   In `hooks/useJobStatusManager.ts`:
@@ -177,8 +179,8 @@
                 *   On receiving a WebSocket update (`lastJsonMessage`), attempts to parse it as `WebSocketJobUpdate` (locally defined type `Partial<VideoJobSchema> & { job_id: number; video_id?: number }`).
                 *   Updates `TanStack Query` cache for specific jobs (`['jobDetails', String(job_id)]`) and video lists (`['myVideos']`) using `queryClient.setQueryData`.
             *   (Polling fallback via `refetchInterval` in `useQuery` for individual job pages is not yet implemented as part of this hook, but could be added to the page component that uses `useQuery(['jobDetails', jobId], ...)`).
-            *   (The page `jobs/[jobId].tsx` is not yet implemented, only the hook logic for cache updates based on WebSocket messages.)
-        *   **Acceptance Criteria:** `useJobStatusManager.ts` hook correctly processes WebSocket messages and updates TanStack Query cache for relevant job and video list data. (Met for WS part; polling and specific job page UI are separate concerns).
+            *   Created the page `apps/web/src/routes/_authed.jobs.$jobId.tsx` to display job details. It uses `useQuery` with `getJobDetails` and will benefit from cache updates by `useJobStatusManager.ts`.
+        *   **Acceptance Criteria:** `useJobStatusManager.ts` hook correctly processes WebSocket messages and updates TanStack Query cache for relevant job and video list data. (Met for WS part; polling and specific job page UI are separate concerns). Job details page displays information correctly. (Partially Met: Page created, but route definition linter error needs resolution).
 
 ## Phase 4: Video Management & Viewing
 
@@ -202,44 +204,44 @@
 
 13. **Video Detail and Playback Page (`apps/web/src`)**
     *   [ ] Task 4.2: **Implement Full Video Detail and Playback Functionality**
-        *   **File(s) to Check/Modify:** `apps/web/src/routes/video/[videoId].tsx`, `apps/web/src/components/video/video-detail.tsx`, `apps/web/src/components/video/MediaPlayer.tsx`, `apps/web/src/lib/api.ts`, `apps/web/src/components/video/content-editor.tsx`.
+        *   **File(s) to Check/Modify:** `apps/web/src/routes/_authed/video/$videoId.tsx` (Created), `apps/web/src/components/video/video-detail.tsx` (Incorporated into route file), `apps/web/src/components/video/MediaPlayer.tsx` (Placeholder incorporated into route file), `apps/web/src/lib/api.ts` (Used), `apps/web/src/components/video/content-editor.tsx` (Incorporated as form in route file).
         *   **Backend Prerequisite Notes:** 
-            *   Endpoint `GET /api/v1/videos/{videoId}/details` must be available.
-            *   Strategy for video playback source: Backend provides a `playbackUrl` (e.g., GCS signed URL) via the details endpoint, or a streaming endpoint `GET /api/v1/stream/video/{videoId}` must be available.
-            *   Endpoint `PUT /api/v1/videos/{videoId}/metadata` for editing.
-        *   **Key Actions:** (Largely same as previous, but ensure API calls match new structure)
-            *   Fetch data using `api.getVideoDetails(videoId)`.
-            *   Implement `MediaPlayer.tsx` using the `playbackUrl` or streaming URL.
-            *   Display metadata, transcript, subtitles (`<track>`).
-            *   Implement metadata editing via `content-editor.tsx` and `api.updateVideoMetadata()`.
-        *   **Acceptance Criteria:** Users can view videos with playback, subtitles, all metadata. Editing (if implemented) saves changes.
+            *   Endpoint `GET /api/v1/videos/{videoId}/details` must be available. (Used)
+            *   Strategy for video playback source: Backend provides a `playbackUrl` (e.g., GCS signed URL) via the details endpoint, or a streaming endpoint `GET /api/v1/stream/video/{videoId}` must be available. (Placeholder `storage_path` used; dedicated `playbackUrl` from backend needed).
+            *   Endpoint `PUT /api/v1/videos/{videoId}/metadata` for editing. (Used)
+        *   **Key Actions:** 
+            *   Fetched data using `api.getVideoDetails(videoId)`. (Implemented)
+            *   Implemented `MediaPlayer.tsx` (placeholder version) using a temporary `playbackUrl`. (Implemented)
+            *   Displayed metadata, transcript. Subtitles (`<track>`) are a TODO. (Implemented for metadata/transcript)
+            *   Implemented metadata editing form (title, description, tags) using `api.updateVideoMetadata()`. (Implemented)
+        *   **Acceptance Criteria:** Users can view videos with playback, subtitles, all metadata. Editing (if implemented) saves changes. (Partially Met: Core page structure, data display, and metadata editing form are implemented. Playback requires a proper `playbackUrl` from backend. Subtitles are a TODO. A persistent linter error for `createFileRoute` needs resolution.)
 
 ## Phase 5: UI/UX Polish & Finalization
 
 14. **Consistent Loading Skeletons and Empty States**
-    *   [ ] Task 5.1: **Implement UI Placeholders**
+    *   [ ] Task 5.1: **Implement UI Placeholders** (Partially Met: Skeletons and error/empty states implemented for new pages like Job Details and Video Details. Dashboard video list also handles these. A full audit for consistency across all existing/older pages can be a follow-up.)
         *   **File(s) to Check/Modify:** All pages and components that involve asynchronous data fetching (e.g., `dashboard.tsx`, `jobs/[jobId].tsx`, `video/[videoId].tsx`).
         *   **Key Actions:**
-            *   Utilize the `shadcn/ui Skeleton` component (from `apps/web/src/components/ui/skeleton.tsx`) to create loading placeholders for content areas while `useQuery` is in its `isLoading` state.
-            *   Design and implement clear and user-friendly "empty state" messages for situations where no data is available (e.g., "You haven't uploaded any videos yet." on the dashboard, or "Video data is not yet available." if metadata is still being processed).
-        *   **Acceptance Criteria:** The application provides smooth visual feedback during data loading phases using skeleton screens, and presents informative messages when content areas are empty.
+            *   Utilize the `shadcn/ui Skeleton` component (from `apps/web/src/components/ui/skeleton.tsx`) to create loading placeholders for content areas while `useQuery` is in its `isLoading` state. (Implemented in new pages)
+            *   Design and implement clear and user-friendly "empty state" messages for situations where no data is available (e.g., "You haven't uploaded any videos yet." on the dashboard, or "Video data is not yet available." if metadata is still being processed). (Implemented in new pages and dashboard video list)
+        *   **Acceptance Criteria:** The application provides smooth visual feedback during data loading phases using skeleton screens, and presents informative messages when content areas are empty. (Partially Met for new features; broader audit pending if needed)
 
 15. **Standardized Error Handling and Notifications**
-    *   [ ] Task 5.2: **Unify Error Display** (Emphasize contextual errors for new flows).
+    *   [ ] Task 5.2: **Unify Error Display** (Largely Met: `sonner` toasts are used for non-modal API errors and form submission feedback. `Alert` components are used for page-level data loading errors. `useAuth` and `lib/api` provide error details. Consistency should be maintained in new and reviewed components.)
         *   **File(s) to Check/Modify:** All components that handle API calls or user input leading to potential errors. Revisit `useAuth.ts`, `lib/api.ts`, and form components.
             *   `apps/web/src/components/ui/sonner.tsx` (or `toaster.tsx` / `use-toast.tsx` if that's the active toast system).
         *   **Key Actions:**
-            *   Consistently use `sonner` (or the project's chosen toast component) for non-modal error notifications arising from API interactions (e.g., "Failed to upload video: Server error").
-            *   Employ `shadcn/ui Alert` with `variant="destructive"` for more prominent, inline error messages within forms or specific content sections (e.g., "Invalid email address" below an input field).
-            *   Ensure error messages are user-friendly and, where appropriate, suggest corrective actions.
-        *   **Acceptance Criteria:** Errors are communicated to the user in a consistent, clear, and non-disruptive manner across the application.
+            *   Consistently use `sonner` (or the project's chosen toast component) for non-modal error notifications arising from API interactions (e.g., "Failed to upload video: Server error"). (Implemented in key flows)
+            *   Employ `shadcn/ui Alert` with `variant="destructive"` for more prominent, inline error messages within forms or specific content sections (e.g., "Invalid email address" below an input field). (Implemented for page load errors; form errors are typically handled by FormMessage)
+            *   Ensure error messages are user-friendly and, where appropriate, suggest corrective actions. (Generally implemented)
+        *   **Acceptance Criteria:** Errors are communicated to the user in a consistent, clear, and non-disruptive manner across the application. (Largely Met for new/reviewed features)
 
 16. **Responsive Design Review and Adjustments**
-    *   [ ] Task 5.3: **Ensure Mobile and Tablet Usability**
+    *   [ ] Task 5.3: **Ensure Mobile and Tablet Usability** (Pending Manual Review: Components built with `shadcn/ui` and Tailwind CSS are inherently responsive, but a full manual review across devices and flows is needed to confirm and fine-tune.)
         *   **File(s) to Check/Modify:** Key layout files (`__root.tsx`, `_authed.tsx`) and primary view components (`dashboard.tsx`, `login.tsx`, `video/[videoId].tsx`, `jobs/[jobId].tsx`). Also, `apps/web/src/styles/app.css` or any global style sheets.
         *   **Key Actions:**
             *   Thoroughly test all primary application flows and pages on various screen sizes (desktop, tablet, mobile).
             *   Use browser developer tools to emulate different devices.
             *   Adjust layouts, font sizes, component visibility, and interaction patterns as needed using Tailwind CSS's responsive utility classes (e.g., `sm:`, `md:`, `lg:`).
             *   Pay special attention to navigation, forms, and data tables/lists on smaller screens.
-        *   **Acceptance Criteria:** The core application is fully responsive, providing a good user experience across common device types and screen resolutions. 
+        *   **Acceptance Criteria:** The core application is fully responsive, providing a good user experience across common device types and screen resolutions. (Pending Manual Review) 
