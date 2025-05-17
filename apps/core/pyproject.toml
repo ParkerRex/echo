@@ -1,0 +1,81 @@
+[project]
+name = "echo"
+version = "0.1.0"
+description = "Video processing pipeline for Echo project"
+readme = "README.md"
+requires-python = ">=3.13"
+
+dependencies = [
+    # Core dependencies
+    "autoflake>=2.3.1",
+    "email-validator>=2.2.0",
+    "fastapi>=0.115.12",
+    "flake8>=7.2.0",
+    "httpx>=0.28.1",
+    "isort>=6.0.1",
+    "jinja2>=3.1.6",
+    "mypy>=1.15.0",
+    "openai>=1.75.0",
+    "pillow>=11.2.1",
+    "pydantic>=2.11.3",
+    "pydantic-settings",
+    "pyjwt>=2.10.1",
+    "python-jose[cryptography]",
+    "python-dotenv>=1.1.0",
+    "python-multipart>=0.0.20",
+    "psycopg2-binary",
+    "redis>=5.2.1",
+    "sqlalchemy>=2.0.40",
+    "uvicorn>=0.34.2",
+    "requests>=2.20.0",
+    "ruff>=0.2.1",
+    "google-cloud-secret-manager>=2.16.0",
+    "google-cloud-storage==2.10.0",
+    "google-generativeai",
+    "vertexai",
+    "ffmpeg-python",
+    "google-cloud-aiplatform",
+    "gunicorn",
+    "alembic",
+    "supabase",
+    # YouTube API dependencies
+    "google-api-python-client>=2.80.0",
+    "google-auth-oauthlib>=1.0.0",
+    "google-auth-httplib2>=0.1.0",
+    # Cloud Functions dependencies
+    "functions-framework",
+    "google-auth>=2.40.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    # Testing dependencies
+    "pytest>=8.3.5",
+    "pytest-mock==3.11.1",
+    "pytest-cov==4.1.0",
+    
+    # Development tools
+    "black==24.1.1",
+    "ruff==0.2.1",
+    "mypy>=1.15.0",
+    "pre-commit>=3.0.0",
+]
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+namespace_packages = true
+explicit_package_bases = true
+exclude = ['venv', '.venv', '__pycache__', '.pytest_cache'] 
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["api*", "core*", "lib*", "models*", "operations*", "services*", "config*"]
+exclude = ["tests*", "video_processor*"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
+]
