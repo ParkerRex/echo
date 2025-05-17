@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 // Assuming your job status updates will have a structure.
 // This should align with what the backend sends over WebSocket.
 // Let's use the VideoJob type from our API types for now, or a subset.
-import type { VideoJob, ProcessingStatus } from '../types/api';
+import type { VideoJobSchema as VideoJob, ProcessingStatus } from '../types/api';
+import { useAuth } from './useAuth'; // Assuming useAuth provides user and session
 
 export interface WebSocketJobUpdate extends Partial<VideoJob> {
   job_id: number; // Ensure job_id is always present for identification
@@ -10,113 +11,151 @@ export interface WebSocketJobUpdate extends Partial<VideoJob> {
   // e.g., status, progress_percentage, error_message
 }
 
+const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL || 'ws://localhost:8000'; // Example, ensure this is in your .env
+
+export type WebSocketStatus = 'connecting' | 'open' | 'closing' | 'closed' | 'uninstantiated';
+
 interface UseAppWebSocketOptions {
-  userId: string | null | undefined; // User ID to include in the WebSocket URL
-  onMessage?: (data: WebSocketJobUpdate) => void; // Callback for when a message is received
-  onError?: (event: Event) => void; // Callback for WebSocket errors
-  onOpen?: (event: Event) => void; // Callback for when connection opens
-  onClose?: (event: CloseEvent) => void; // Callback for when connection closes
+  onOpen?: (event: Event) => void;
+  onMessage?: (event: MessageEvent) => void;
+  onError?: (event: Event) => void;
+  onClose?: (event: CloseEvent) => void;
+  reconnectLimit?: number;
+  reconnectIntervalMs?: number;
+  // Path to append after WS_BASE_URL, e.g., /ws/jobs/status/
+  // If it needs dynamic parts like user_id, the hook will append it.
+  path?: string;
 }
 
-const WEBSOCKET_RECONNECT_INTERVAL = 5000; // 5 seconds
+interface UseAppWebSocketReturn {
+  sendJsonMessage: (data: any) => void;
+  lastJsonMessage: any | null;
+  connectionStatus: WebSocketStatus;
+  isConnected: boolean;
+  socketRef: React.MutableRefObject<WebSocket | null>;
+}
 
-export function useAppWebSocket({
-  userId,
-  onMessage,
-  onError,
-  onOpen,
-  onClose,
-}: UseAppWebSocketOptions) {
-  const [isConnected, setIsConnected] = useState(false);
-  const webSocketRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+export function useAppWebSocket(options?: UseAppWebSocketOptions): UseAppWebSocketReturn {
+  const { session, user } = useAuth();
+  const [lastJsonMessage, setLastJsonMessage] = useState<any | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<WebSocketStatus>('uninstantiated');
+  const socketRef = useRef<WebSocket | null>(null);
+  const reconnectAttemptsRef = useRef<number>(0);
 
-  const VITE_WS_BASE_URL = import.meta.env.VITE_WS_URL || "ws://localhost:8000";
+  const {
+    onOpen,
+    onMessage,
+    onError,
+    onClose,
+    reconnectLimit = 5,
+    reconnectIntervalMs = 3000,
+    path = '/ws/jobs/status/' // Default path, user_id will be appended
+  } = options || {};
 
-  const connect = useCallback(() => {
-    if (!userId) {
-      console.log("WebSocket: User ID not provided, not connecting.");
+  const connect = useCallback(async () => {
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      return; // Already connected
+    }
+    if (!session?.access_token || !user?.id) {
+      console.log('WebSocket: No session or user ID, not connecting.');
+      setConnectionStatus('closed'); // Or some other appropriate status
       return;
     }
 
-    if (webSocketRef.current && webSocketRef.current.readyState === WebSocket.OPEN) {
-      console.log("WebSocket: Already connected.");
-      return;
+    setConnectionStatus('connecting');
+
+    const wsUrl = `${WS_BASE_URL.replace(/^http/, 'ws')}${path}${user.id}?token=${session.access_token}`;
+
+    try {
+      const socket = new WebSocket(wsUrl);
+      socketRef.current = socket;
+
+      socket.onopen = (event) => {
+        console.log('WebSocket: Connection opened');
+        setConnectionStatus('open');
+        reconnectAttemptsRef.current = 0; // Reset reconnect attempts on successful open
+        if (onOpen) onOpen(event);
+      };
+
+      socket.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          setLastJsonMessage(message);
+          if (onMessage) onMessage(event); // Pass the raw event too
+        } catch (e) {
+          console.error('WebSocket: Error parsing JSON message', e);
+          // Handle non-JSON messages or pass raw data if needed
+          if (onMessage) onMessage(event);
+        }
+      };
+
+      socket.onerror = (event) => {
+        console.error('WebSocket: Error', event);
+        setConnectionStatus('closed'); // Or a specific error status
+        if (onError) onError(event);
+        // Reconnect logic will be triggered by onclose
+      };
+
+      socket.onclose = (event) => {
+        console.log(`WebSocket: Connection closed (code: ${event.code}, reason: ${event.reason})`);
+        setConnectionStatus('closed');
+        if (onClose) onClose(event);
+
+        // Reconnect logic
+        if (reconnectAttemptsRef.current < reconnectLimit) {
+          reconnectAttemptsRef.current++;
+          console.log(`WebSocket: Attempting to reconnect (${reconnectAttemptsRef.current}/${reconnectLimit})...`);
+          setTimeout(connect, reconnectIntervalMs);
+        } else {
+          console.log('WebSocket: Reconnect limit reached.');
+        }
+      };
+    } catch (err) {
+      console.error('WebSocket: Instantiation failed', err);
+      setConnectionStatus('closed'); // Or a specific error status
     }
-
-    // Clear any existing reconnect timeout
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = null;
-    }
-
-    const wsUrl = `${VITE_WS_BASE_URL}/ws/jobs/status/${userId}`;
-    console.log(`WebSocket: Connecting to ${wsUrl}`);
-    const ws = new WebSocket(wsUrl);
-    webSocketRef.current = ws;
-
-    ws.onopen = (event) => {
-      console.log("WebSocket: Connection opened", event);
-      setIsConnected(true);
-      if (onOpen) onOpen(event);
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data as string) as WebSocketJobUpdate;
-        // console.log("WebSocket: Message received", data);
-        if (onMessage) onMessage(data);
-      } catch (error) {
-        console.error("WebSocket: Error parsing message data", error);
-      }
-    };
-
-    ws.onerror = (event) => {
-      console.error("WebSocket: Error", event);
-      setIsConnected(false);
-      if (onError) onError(event);
-      // Don't attempt to reconnect immediately on error, let onClose handle it or specific error handling
-    };
-
-    ws.onclose = (event) => {
-      console.log("WebSocket: Connection closed", event);
-      setIsConnected(false);
-      webSocketRef.current = null; // Clear the ref
-      if (onClose) onClose(event);
-
-      // Attempt to reconnect if userId is still present (e.g., user hasn't logged out)
-      if (userId && !event.wasClean) { // Don't reconnect if closed cleanly
-        console.log(`WebSocket: Attempting to reconnect in ${WEBSOCKET_RECONNECT_INTERVAL / 1000} seconds...`);
-        if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = setTimeout(connect, WEBSOCKET_RECONNECT_INTERVAL);
-      }
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, onMessage, onError, onOpen, onClose, VITE_WS_BASE_URL]); // VITE_WS_BASE_URL is stable
+  }, [session, user, onOpen, onMessage, onError, onClose, reconnectLimit, reconnectIntervalMs, path]);
 
   useEffect(() => {
-    connect();
+    if (session?.access_token && user?.id) {
+      connect();
+    } else {
+      // If no session, ensure any existing socket is closed
+      if (socketRef.current) {
+        socketRef.current.close(1000, 'User logged out or session expired');
+        socketRef.current = null;
+      }
+      setConnectionStatus('closed');
+    }
 
     return () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-      if (webSocketRef.current) {
-        console.log("WebSocket: Closing connection due to component unmount or userId change.");
-        webSocketRef.current.close(1000); // 1000 is a normal closure
-        webSocketRef.current = null;
+      if (socketRef.current) {
+        console.log('WebSocket: Cleaning up connection.');
+        // Prevent reconnect attempts on component unmount
+        reconnectAttemptsRef.current = reconnectLimit + 1;
+        socketRef.current.close(1000, 'Component unmounted');
+        socketRef.current = null;
       }
     };
-  }, [connect]); // Re-run connect if any of its dependencies change (esp. userId)
+  }, [session, user, connect, reconnectLimit]); // connect is stable due to useCallback with its own deps
 
-  const sendMessage = useCallback((message: string | object) => {
-    if (webSocketRef.current && webSocketRef.current.readyState === WebSocket.OPEN) {
-      const messageToSend = typeof message === 'string' ? message : JSON.stringify(message);
-      webSocketRef.current.send(messageToSend);
+  const sendJsonMessage = useCallback((data: any) => {
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      try {
+        socketRef.current.send(JSON.stringify(data));
+      } catch (e) {
+        console.error("WebSocket: Error sending JSON message", e);
+      }
     } else {
-      console.warn("WebSocket: Not connected. Cannot send message.");
+      console.warn("WebSocket: Connection not open. Message not sent.", data);
     }
   }, []);
 
-  return { isConnected, sendMessage };
+  return {
+    sendJsonMessage,
+    lastJsonMessage,
+    connectionStatus,
+    isConnected: connectionStatus === 'open',
+    socketRef,
+  };
 } 

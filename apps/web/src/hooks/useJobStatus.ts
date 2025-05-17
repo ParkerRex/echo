@@ -1,54 +1,62 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useAppWebSocket, WebSocketJobUpdate } from './useAppWebSocket';
+import { useAppWebSocket } from './useAppWebSocket';
 import { supabase } from '@echo/db';
 import type { Session, AuthChangeEvent } from '@supabase/supabase-js';
-import type { VideoSummary, VideoJob, ProcessingStatus } from '../types/api';
+import type { VideoJobSchema as VideoJob, ProcessingStatus, VideoSummary, WebSocketJobUpdate } from '../types/api';
 
 export function useJobStatusManager() {
   const queryClient = useQueryClient();
-  const [userId, setUserId] = useState<string | null>(null);
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
+  const prevUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }: { data: { session: Session | null } }) => {
       setCurrentSession(data.session);
-      setUserId(data.session?.user?.id ?? null);
-      if (data.session?.user?.id) {
-        console.log("JobStatusManager: Initial session found, user ID:", data.session.user.id);
+      const currentUserId = data.session?.user?.id ?? null;
+      if (currentUserId) {
+        console.log("JobStatusManager: Initial session found, user ID:", currentUserId);
       } else {
         console.log("JobStatusManager: No initial session found.");
       }
+      prevUserIdRef.current = currentUserId;
     });
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(
+    const { data: authListenerData } = supabase.auth.onAuthStateChange(
       (_event: AuthChangeEvent, session: Session | null) => {
         setCurrentSession(session);
-        setUserId(session?.user?.id ?? null);
-        if (session?.user?.id) {
-          console.log("JobStatusManager: Auth state changed, new user ID:", session.user.id);
+        const newUserId = session?.user?.id ?? null;
+        if (newUserId) {
+          console.log("JobStatusManager: Auth state changed, new user ID:", newUserId);
         } else {
           console.log("JobStatusManager: Auth state changed, user logged out or no session.");
         }
+        prevUserIdRef.current = newUserId;
       }
     );
 
     return () => {
-      authListener?.unsubscribe();
+      authListenerData.subscription.unsubscribe();
     };
   }, []);
 
-  const handleWebSocketMessage = (wsUpdateData: WebSocketJobUpdate) => {
-    console.log("JobStatusManager: Received job update via WebSocket", wsUpdateData);
+  const handleTypedWebSocketMessage = (wsUpdateData: WebSocketJobUpdate) => {
+    console.log("JobStatusManager: Received parsed job update via WebSocket", wsUpdateData);
+
+    if (!wsUpdateData.job_id) {
+        console.warn("JobStatusManager: WebSocket update missing job_id, skipping cache update.", wsUpdateData);
+        return;
+    }
 
     const jobDetailsQueryKey = ['jobDetails', String(wsUpdateData.job_id)];
     queryClient.setQueryData<VideoJob | undefined>(
       jobDetailsQueryKey,
       (oldData) => {
         if (oldData) {
-          return { ...oldData, ...wsUpdateData } as VideoJob;
+          const updatedData = { ...oldData, ...wsUpdateData };
+          return updatedData as VideoJob;
         }
-        return wsUpdateData as VideoJob;
+        return oldData;
       }
     );
 
@@ -58,12 +66,12 @@ export function useJobStatusManager() {
       (oldVideoList) => {
         if (!oldVideoList) return undefined;
         return oldVideoList.map(videoSummary => {
-          if (wsUpdateData.video_id && String(wsUpdateData.video_id) === videoSummary.id) {
+          if (wsUpdateData.video_id && videoSummary.id === wsUpdateData.video_id) {
             const newStatus = wsUpdateData.status as ProcessingStatus | undefined;
             return {
               ...videoSummary,
-              status: newStatus ? newStatus.toString() : videoSummary.status,
-              title: (wsUpdateData as any).title ?? videoSummary.title,
+              status: newStatus || videoSummary.status,
+              title: wsUpdateData.title ?? videoSummary.title,
             };
           }
           return videoSummary;
@@ -73,21 +81,31 @@ export function useJobStatusManager() {
     console.log(`JobStatusManager: Updated cache for job ${wsUpdateData.job_id} and potentially related lists.`);
   };
 
-  const { isConnected } = useAppWebSocket({
-    userId: userId,
-    onMessage: handleWebSocketMessage,
+  const { isConnected, lastJsonMessage } = useAppWebSocket({
     onOpen: () => console.log("JobStatusManager: WebSocket connection established."),
     onClose: (event) => console.log("JobStatusManager: WebSocket connection closed.", event),
     onError: (event) => console.error("JobStatusManager: WebSocket error.", event),
   });
 
   useEffect(() => {
-    if (userId) {
-      console.log(`JobStatusManager: Active for user ${userId}. WebSocket connected: ${isConnected}`);
-    } else {
-      console.log("JobStatusManager: Waiting for user ID. WebSocket connected: ${isConnected}");
+    if (lastJsonMessage) {
+        if (typeof lastJsonMessage === 'object' && lastJsonMessage !== null && ('job_id' in lastJsonMessage || 'video_id' in lastJsonMessage)) {
+            const updateData = lastJsonMessage as WebSocketJobUpdate; 
+            handleTypedWebSocketMessage(updateData);
+        } else {
+            console.warn("JobStatusManager: Received WebSocket message of unexpected shape:", lastJsonMessage);
+        }
     }
-  }, [userId, isConnected]);
+  }, [lastJsonMessage]);
 
-  return { isWebSocketConnected: isConnected, currentUserId: userId, session: currentSession };
+  useEffect(() => {
+    const currentUserId = prevUserIdRef.current;
+    if (currentUserId) {
+      console.log(`JobStatusManager: Active for user ${currentUserId}. WebSocket connected: ${isConnected}`);
+    } else {
+      console.log("JobStatusManager: Waiting for user ID to be determined. WebSocket connected: ${isConnected}");
+    }
+  }, [isConnected]);
+
+  return { isWebSocketConnected: isConnected, currentUserId: prevUserIdRef.current, session: currentSession };
 } 

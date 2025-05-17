@@ -8,6 +8,7 @@ import type {
   SignedUploadUrlResponse,
   UploadCompleteRequest,
 } from "../../types/api"; // Import types
+import { toast } from "sonner"; // Import toast
 
 type UploadStatus = "idle" | "requesting" | "uploading" | "finalizing" | "done" | "error";
 
@@ -30,26 +31,28 @@ export function VideoUploadDropzone({
     try {
       const requestData: SignedUploadUrlRequest = {
         filename: file.name,
-        contentType: file.type,
+        content_type: file.type,
       };
       signedUrlResponse = await getSignedUploadUrl(requestData);
-      if (!signedUrlResponse.uploadUrl || !signedUrlResponse.videoId) {
+      if (!signedUrlResponse.upload_url || !signedUrlResponse.video_id) {
         throw new Error("Invalid response from signed URL endpoint");
       }
     } catch (err: any) {
-      setError(err.message || "Failed to get upload URL");
+      const errorMsg = err.message || "Failed to get upload URL";
+      setError(errorMsg);
+      toast.error(errorMsg);
       setStatus("error");
       return;
     }
 
-    const { uploadUrl, videoId } = signedUrlResponse;
+    const { upload_url: uploadUrl, video_id: videoId } = signedUrlResponse;
 
     // 2. Upload file to signed URL
     setStatus("uploading");
     try {
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open("PUT", uploadUrl); // uploadUrl from signedUrlResponse
+        xhr.open("PUT", uploadUrl);
         xhr.setRequestHeader("Content-Type", file.type);
         xhr.upload.onprogress = (e) => {
           if (e.lengthComputable) {
@@ -67,7 +70,9 @@ export function VideoUploadDropzone({
         xhr.send(file);
       });
     } catch (err: any) {
-      setError(err.message || "Upload failed");
+      const errorMsg = err.message || "Upload failed";
+      setError(errorMsg);
+      toast.error(errorMsg);
       setStatus("error");
       return;
     }
@@ -76,16 +81,17 @@ export function VideoUploadDropzone({
     setStatus("finalizing");
     try {
       const completeRequestData: UploadCompleteRequest = {
-        videoId: videoId, // Use videoId from signedUrlResponse
-        originalFilename: file.name,
-        contentType: file.type,
-        sizeBytes: file.size,
-        // storagePath is omitted as frontend doesn't know the canonical GCS path.
-        // Backend should be able to determine this from videoId.
+        video_id: videoId,
+        original_filename: file.name,
+        content_type: file.type,
+        size_bytes: file.size,
+        // storage_path can be omitted if backend infers it
       };
       await notifyUploadComplete(completeRequestData);
     } catch (err: any) {
-      setError(err.message || "Failed to finalize upload");
+      const errorMsg = err.message || "Failed to finalize upload";
+      setError(errorMsg);
+      toast.error(errorMsg);
       setStatus("error");
       return;
     }

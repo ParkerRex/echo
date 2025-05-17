@@ -2,12 +2,12 @@ import { Button } from "@/components/ui/button";
 import { VideoUploadDropzone } from "@/components/video/VideoUploadDropzone";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProcessingDashboard } from "@/components/video/processing-dashboard";
-import { Link, createFileRoute } from "@tanstack/react-router";
-import { ProtectedLayout } from "@/components/ProtectedLayout";
-import { fetchMyVideos, type VideoSummary } from "@/lib/api";
-import { useQuery } from "@tanstack/react-query";
+import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
+import { fetchMyVideos, type PaginationParams } from "@/lib/api";
+import type { VideoSummary } from "@/types/api";
+import { useInfiniteQuery, type InfiniteData, type QueryKey } from "@tanstack/react-query";
 import { ExternalLink, UploadIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Fragment } from "react";
 import {
 	Dialog,
 	DialogContent,
@@ -15,28 +15,43 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-
-type VideoData = VideoSummary;
+import { VideoList } from "@/components/video/VideoList";
 
 function DashboardComponent() {
-	const [activeTab, setActiveTab] = useState("processing");
+	const [activeTab, setActiveTab] = useState("library");
 	const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-	const [uploading, setUploading] = useState(false);
 
-	const {
-		data: videos = [],
-		isLoading: loading,
-		error,
-	} = useQuery({
-		queryKey: ["my-videos"],
-		queryFn: fetchMyVideos,
-		refetchInterval: 10000, // Poll every 10 seconds
-	});
+	const navigate = useNavigate();
 
-	// TODO: Implement handleFilesAccepted to use Supabase upload flow
-	const handleFilesAccepted = async (files: FileList | File[]) => {
-		// Placeholder for future upload logic
-	};
+	const { 
+		data,
+		fetchNextPage,
+		hasNextPage,
+		isFetchingNextPage,
+		isLoading: videosLoading,
+		error: videosError 
+	} = useInfiniteQuery<
+		VideoSummary[],
+		Error,
+		InfiniteData<VideoSummary[], PaginationParams | undefined>,
+		QueryKey,
+		PaginationParams | undefined
+	>(
+		{
+			queryKey: ['myVideos'],
+			queryFn: ({ pageParam = { offset: 0, limit: 10 } }) => fetchMyVideos(pageParam),
+			initialPageParam: { offset: 0, limit: 10 } as PaginationParams | undefined,
+			getNextPageParam: (lastPage: VideoSummary[], allPages: VideoSummary[][], lastPageParam: PaginationParams | undefined) => {
+				if (!lastPageParam || lastPage.length < (lastPageParam.limit ?? 10)) {
+					return undefined;
+				}
+				const currentTotal = allPages.reduce((acc, page) => acc + page.length, 0);
+				return { offset: currentTotal, limit: lastPageParam.limit ?? 10 };
+			},
+		}
+	);
+
+	const videos: VideoSummary[] = data?.pages.flatMap((page: VideoSummary[]) => page) ?? [];
 
 	return (
 		<div className="container py-10">
@@ -82,63 +97,16 @@ function DashboardComponent() {
 				</TabsContent>
 
 				<TabsContent value="library" className="space-y-4 animate-in">
-					{loading ? (
-						<div className="flex justify-center py-20">
-							<div className="animate-pulse">Loading videos...</div>
-						</div>
-					) : videos.length === 0 ? (
-						<div className="flex flex-col items-center justify-center py-20 text-center">
-							<p className="text-muted-foreground mb-4">
-								No videos found in your library
-							</p>
-							<Dialog
-								open={uploadDialogOpen}
-								onOpenChange={setUploadDialogOpen}
-							>
-								<DialogTrigger asChild>
-									<Button variant="outline">Upload your first video</Button>
-								</DialogTrigger>
-							</Dialog>
-						</div>
-					) : (
-						<div className="grid gap-6 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
-							{videos.map((video) => (
-								<div
-									key={video.id}
-									className="group relative rounded-lg border border-border p-4 hover:border-primary transition-colors"
-								>
-									<div className="flex justify-between items-start mb-3">
-										<h3 className="font-semibold line-clamp-1 group-hover:text-primary transition-colors">
-											{video.title || "Untitled Video"}
-										</h3>
-										{/* Add more video fields as needed */}
-									</div>
-									<div className="mt-2 space-y-1 text-sm text-muted-foreground">
-										<p>
-											Status: {video.status || "N/A"}
-										</p>
-										{video.thumbnail_url && (
-											<img
-												src={video.thumbnail_url}
-												alt="Thumbnail"
-												className="mt-2 rounded w-full max-h-40 object-cover"
-											/>
-										)}
-										<div className="mt-3 flex space-x-2">
-											<Button variant="outline" size="sm" asChild>
-												<Link
-													to="/video/$videoId"
-													params={{ videoId: video.id }}
-												>
-													View Details
-												</Link>
-											</Button>
-										</div>
-									</div>
-								</div>
-							))}
-						</div>
-					)}
+					<VideoList
+						videos={videos}
+						isLoading={videosLoading && !data}
+						error={videosError}
+						hasNextPage={hasNextPage}
+						isFetchingNextPage={isFetchingNextPage}
+						fetchNextPage={fetchNextPage}
+						showUploadButton={true}
+						onTriggerUpload={() => setUploadDialogOpen(true)}
+					/>
 				</TabsContent>
 			</Tabs>
 		</div>
@@ -146,9 +114,5 @@ function DashboardComponent() {
 }
 
 export const Route = createFileRoute("/dashboard")({
-	component: () => (
-		<ProtectedLayout>
-			<DashboardComponent />
-		</ProtectedLayout>
-	),
+	component: DashboardComponent,
 });

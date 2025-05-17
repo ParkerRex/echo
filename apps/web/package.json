@@ -11,7 +11,8 @@
 		"start": "vinxi start",
 		"lint": "biome check --write --unsafe",
 		"format": "biome format --write --unsafe",
-		"check": "biome check --write"
+		"check": "biome check --write",
+		"generate:api-types": "cd ../core && uv run pydantic2ts --module api.schemas.video_processing_schemas --output ../web/src/types/api.ts --json2ts-cmd ../web/node_modules/.bin/json2ts && cd ../web"
 	},
 	"keywords": [],
 	"author": "",
@@ -109,6 +110,7 @@
 		"@vitest/ui": "^3.1.2",
 		"autoprefixer": "^10.4.20",
 		"jsdom": "^26.1.0",
+		"json-schema-to-typescript": "^15.0.4",
 		"postcss": "^8.5.3",
 		"tailwindcss": "^4.1.4",
 		"typescript": "^5.7.2",
