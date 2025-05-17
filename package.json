@@ -1,21 +1,49 @@
 {
-    "name": "echo",
-    "version": "0.1.0",
-    "private": true,
-    "scripts": {
-      "reinstall": "rm -rf node_modules && rm -rf pnpm-lock.yaml && rm -rf apps/web/node_modules && pnpm install",
-      "dev": "pnpm --filter ./apps/web dev",
-      "dev-with-fastapi": "concurrently \"pnpm --filter ./apps/web dev\" \"uv sync -p python3.11 && source .venv/bin/activate && python3 -m hypercorn api.index:app --reload -b 0.0.0.0:8000\"",
-      "build": "pnpm --filter ./apps/web build",
-      "start": "pnpm --filter ./apps/web start",
-      "lint": "pnpm --filter ./apps/web lint",
-      "fastapi-dev": "uv sync -p python3.11 && source .venv/bin/activate && python3 -m hypercorn api.index:app --reload -b 0.0.0.0:8000"
-    },
-    "devDependencies": {
-      "@types/node": "^22.15.3",
-      "@types/react": "^19",
-      "@types/react-dom": "^19",
-      "eslint": "^9.25.1",
-      "typescript": "^5.8.3"
-    }
+  "name": "echo",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "install:all": "pnpm install && (cd apps/core && uv pip sync pyproject.toml || echo 'Skipping backend uv sync: pyproject.toml not found or uv error.')",
+    "dev": "concurrently --kill-others-on-fail --names \"WEB,SUPA,API\" -c \"bgBlue.bold,bgGreen.bold,bgMagenta.bold\" \"pnpm dev:web\" \"pnpm dev:supabase\" \"pnpm dev:backend\"",
+    "dev:web": "pnpm --filter @echo/web dev",
+    "dev:supabase": "cd supabase && supabase start",
+    "dev:backend": "cd apps/core && ./bin/start_dev.sh",
+    "build": "npm-run-all --parallel build:web build:backend",
+    "build:web": "pnpm --filter @echo/web build",
+    "build:backend": "cd apps/core && ./bin/build.sh",
+    "clean": "npm-run-all --parallel clean:ws clean:backend clean:supabase",
+    "clean:ws": "pnpm --recursive exec -- rm -rf node_modules dist .turbo .next .svelte-kit .vite && rm -f pnpm-lock.yaml",
+    "clean:backend": "cd apps/core && ./bin/clean_env.sh",
+    "clean:supabase": "cd supabase && supabase stop --no-backup",
+    "lint": "npm-run-all --continue-on-error --parallel lint:*",
+    "lint:web": "pnpm --filter @echo/web lint",
+    "lint:supabase": "pnpm --filter @echo/db lint",
+    "lint:backend": "cd apps/core && ruff check . && black --check .",
+    "format": "npm-run-all --continue-on-error --parallel format:*",
+    "format:web": "pnpm --filter @echo/web format",
+    "format:supabase": "pnpm --filter @echo/db format",
+    "format:backend": "cd apps/core && ruff format . && black .",
+    "reinstall": "pnpm clean:ws && pnpm install:all",
+    "fastapi-dev": "cd apps/core && ./bin/start_dev.sh"
+  },
+  "dependencies": {
+    "@tanstack/react-router": "^1.120.3",
+    "@tanstack/react-router-devtools": "^1.120.3",
+    "@tanstack/router-plugin": "^1.120.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "redaxios": "^0.5.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.2",
+    "eslint": "^9.25.1",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.8.3",
+    "vite": "^6.1.0",
+    "vite-plugin-dts": "^4.5.0"
   }
+}

@@ -1,4 +1,4 @@
-import { supabase } from "@/supabase/clients/client";
+import { supabase } from "@echo/db"
 
 export function GoogleLoginButton() {
   const handleLogin = async () => {

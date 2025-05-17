@@ -1,11 +1,20 @@
 import React, { useRef, useState } from "react";
+import {
+  getSignedUploadUrl,
+  notifyUploadComplete,
+} from "../../lib/api"; // Import new API functions
+import type {
+  SignedUploadUrlRequest,
+  SignedUploadUrlResponse,
+  UploadCompleteRequest,
+} from "../../types/api"; // Import types
 
 type UploadStatus = "idle" | "requesting" | "uploading" | "finalizing" | "done" | "error";
 
 export function VideoUploadDropzone({
-  onUploadComplete,
+  onUploadComplete: onUploadSuccess, // Renamed prop for clarity
 }: {
-  onUploadComplete?: () => void;
+  onUploadComplete?: (videoId: string) => void; // Pass videoId back
 }) {
   const [status, setStatus] = useState<UploadStatus>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -17,38 +26,30 @@ export function VideoUploadDropzone({
     setStatus("requesting");
     setProgress(0);
 
-    // 1. Request signed upload URL from backend
-    let uploadUrl: string | null = null;
-    let uploadCompleteToken: string | null = null;
+    let signedUrlResponse: SignedUploadUrlResponse;
     try {
-      const res = await fetch("/videos/upload-url", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          filename: file.name,
-          content_type: file.type,
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to get upload URL");
-      const data = await res.json();
-      uploadUrl = data.upload_url;
-      uploadCompleteToken = data.upload_complete_token;
-      if (!uploadUrl || !uploadCompleteToken) throw new Error("Invalid upload URL response");
+      const requestData: SignedUploadUrlRequest = {
+        filename: file.name,
+        contentType: file.type,
+      };
+      signedUrlResponse = await getSignedUploadUrl(requestData);
+      if (!signedUrlResponse.uploadUrl || !signedUrlResponse.videoId) {
+        throw new Error("Invalid response from signed URL endpoint");
+      }
     } catch (err: any) {
       setError(err.message || "Failed to get upload URL");
       setStatus("error");
       return;
     }
 
+    const { uploadUrl, videoId } = signedUrlResponse;
+
     // 2. Upload file to signed URL
     setStatus("uploading");
     try {
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open("PUT", uploadUrl!);
+        xhr.open("PUT", uploadUrl); // uploadUrl from signedUrlResponse
         xhr.setRequestHeader("Content-Type", file.type);
         xhr.upload.onprogress = (e) => {
           if (e.lengthComputable) {
@@ -59,10 +60,10 @@ export function VideoUploadDropzone({
           if (xhr.status >= 200 && xhr.status < 300) {
             resolve();
           } else {
-            reject(new Error("Upload failed"));
+            reject(new Error(`Upload failed with status ${xhr.status}: ${xhr.statusText}`));
           }
         };
-        xhr.onerror = () => reject(new Error("Upload failed"));
+        xhr.onerror = () => reject(new Error("Upload failed due to network error"));
         xhr.send(file);
       });
     } catch (err: any) {
@@ -74,17 +75,15 @@ export function VideoUploadDropzone({
     // 3. Notify backend upload is complete
     setStatus("finalizing");
     try {
-      const res = await fetch("/videos/upload-complete", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          upload_complete_token: uploadCompleteToken,
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to finalize upload");
+      const completeRequestData: UploadCompleteRequest = {
+        videoId: videoId, // Use videoId from signedUrlResponse
+        originalFilename: file.name,
+        contentType: file.type,
+        sizeBytes: file.size,
+        // storagePath is omitted as frontend doesn't know the canonical GCS path.
+        // Backend should be able to determine this from videoId.
+      };
+      await notifyUploadComplete(completeRequestData);
     } catch (err: any) {
       setError(err.message || "Failed to finalize upload");
       setStatus("error");
@@ -93,21 +92,29 @@ export function VideoUploadDropzone({
 
     setStatus("done");
     setProgress(100);
-    if (onUploadComplete) onUploadComplete();
+    if (onUploadSuccess) onUploadSuccess(videoId); // Pass videoId on success
   }
 
   function onDrop(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault();
+    if (status === "uploading" || status === "finalizing" || status === "requesting") return;
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       handleFile(e.dataTransfer.files[0]);
     }
   }
 
   function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (status === "uploading" || status === "finalizing" || status === "requesting") return;
     if (e.target.files && e.target.files.length > 0) {
       handleFile(e.target.files[0]);
+      // Reset file input to allow uploading the same file again
+      if (inputRef.current) {
+        inputRef.current.value = "";
+      }
     }
   }
+
+  const isUploading = status === "requesting" || status === "uploading" || status === "finalizing";
 
   return (
     <div
@@ -118,14 +125,16 @@ export function VideoUploadDropzone({
         borderRadius: 8,
         padding: 32,
         textAlign: "center",
-        background: "#fafbfc",
-        cursor: "pointer",
+        background: isUploading ? "#f0f0f0" : "#fafbfc",
+        cursor: isUploading ? "default" : "pointer",
+        opacity: isUploading ? 0.7 : 1,
         margin: "16px 0",
       }}
-      onClick={() => inputRef.current?.click()}
+      onClick={() => !isUploading && inputRef.current?.click()}
       tabIndex={0}
       role="button"
       aria-label="Upload video"
+      aria-disabled={isUploading}
     >
       <input
         ref={inputRef}
@@ -133,19 +142,22 @@ export function VideoUploadDropzone({
         accept="video/*"
         style={{ display: "none" }}
         onChange={onFileChange}
-        disabled={status === "uploading" || status === "finalizing"}
+        disabled={isUploading}
       />
       {status === "idle" && <span>Drag & drop a video file here, or click to select</span>}
-      {status === "requesting" && <span>Requesting upload URL…</span>}
+      {status === "requesting" && <span>Requesting upload permissions…</span>}
       {status === "uploading" && (
-        <span>
-          Uploading… {progress}%
-          <br />
-          <progress value={progress} max={100} />
-        </span>
+        <div>
+          <span>Uploading… {progress}%</span>
+          <progress
+            value={progress}
+            max={100}
+            style={{ width: "100%", marginTop: "8px" }}
+          />
+        </div>
       )}
       {status === "finalizing" && <span>Finalizing upload…</span>}
-      {status === "done" && <span>Upload complete!</span>}
+      {status === "done" && <span style={{ color: "green" }}>Upload complete! Ready for processing.</span>}
       {status === "error" && (
         <span style={{ color: "red" }}>
           Error: {error}

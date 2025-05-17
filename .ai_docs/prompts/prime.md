@@ -7,5 +7,5 @@ eza . --tree --git-ignore
 
 ## Read the following files
 > Read the files below and nothing else.
-api
-
+apps/web/
+supabase/

@@ -1,192 +1,171 @@
-# Developer Setup Guide
+# AI YouTube Video Metadata Generator — PRD
 
-## Setup Python Environment
+## ✨ Overview
 
-This project uses Python 3.11. We recommend using a virtual environment:
+This app helps users automatically generate metadata for YouTube videos (titles, subtitles, chapters, descriptions) using Google Gemini.
 
-```bash
-# Create and activate a virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+It uses a polyglot monorepo architecture with:
 
-# Install dependencies (including development tools)
-pip install -e ".[dev]"
-```
+* Supabase for auth, database, and real-time features
+* FastAPI for AI workflows and video processing
+* GCS for video storage
+* React + TanStack for frontend UI and routing
 
-## Configuration
+---
 
-The application requires Supabase credentials and other environment variables:
+## 🛠️ Stack Architecture
 
-1. Copy the example .env file: `cp ../.env .env` (if not already in the API directory)
-2. Set needed environment variables in the .env file
-
-## Running the Application
-
-```bash
-# Start the FastAPI application
-uvicorn video_processor.infrastructure.api.main:app --reload
-```
-
-
-`uvicorn video_processor.infrastructure.api.server:app --reload --host 0.0.0.0 --port 8000`
-
-
-## Testing
-
-```bash
-# Run tests
-pytest
-```
-
-## Code Quality
-
-This project uses pre-commit hooks to ensure code quality:
-
-```bash
-# Install pre-commit hooks
-pre-commit install
-
-# Run pre-commit hooks manually
-pre-commit run --all-files
+```mermaid
+graph TD
+  A[React + TanStack Router] -->|calls| B(Supabase Auth)
+  A -->|calls| C[FastAPI Backend]
+  A -->|calls| D[Supabase DB]
+  C -->|generates| E[Google Cloud Storage Signed URLs]
+  C -->|processes with| F[Gemini (via Vertex AI)]
+  C -->|writes metadata to| D
+  A -->|fetches metadata from| D
 ```
 
 ---
-# Original README Content Follows:
 
-# Echo Project
+## 📖 Key Use Cases
 
-## Project Structure
+### 1. User Onboarding
 
-This is a monorepo containing different components of the Echo project.
+* Login/signup via Supabase
+* Connect YouTube account (OAuth)
 
-### API (Python Backend)
+### 2. Upload Video
 
-All Python development is consolidated in the `/api` directory. For setup instructions, see [API README](/api/README.md).
+* Get signed GCS upload URL from FastAPI
+* Upload video directly to GCS
+* Trigger FastAPI to process video
 
-### Web Frontend
+### 3. Generate Metadata
 
-Frontend code is in the `/apps/web` directory.
+* FastAPI extracts audio
+* Sends audio to Gemini
+* Saves results (transcript, title, description, chapters) to Supabase
 
-### Packages
+### 4. View Results
 
-Shared libraries and utilities can be found in `/packages`.
+* React frontend fetches metadata via Supabase
+* User sees structured AI-generated content
 
-## Development
+---
 
-Please see individual component READMEs for development setup instructions:
+## 📝 API Endpoints
 
-- [API Development](/api/README.md)
-- [Web Development](/apps/web/README.md) (if available)
+| Endpoint         | Method   | Description                               |
+| ---------------- | -------- | ----------------------------------------- |
+| `/auth/login`    | POST     | Custom auth endpoint if needed            |
+| `/upload-url`    | POST     | Returns signed GCS upload URL             |
+| `/videos`        | POST     | Logs video metadata + triggers processing |
+| `/videos/:id`    | GET      | Returns generated metadata                |
+| `/youtube/oauth` | GET/POST | Handles YouTube OAuth                     |
 
-## Architecture Overview
+---
 
-This project integrates a web frontend, a Python backend API, and a Supabase package to deliver a comprehensive video processing pipeline.
+## 📊 Data Models
 
--   **Web App (`apps/web`)**: A React/Vite application serving as the user interface. It handles user authentication via Supabase (Google OAuth), video uploads (to GCS via signed URLs), and real-time status updates using WebSockets.
--   **API (`api`)**: A Python/FastAPI backend responsible for the core video processing logic. It authenticates requests using Supabase JWTs, interacts with Google Cloud Storage (GCS) for files, utilizes AI services (Gemini/Vertex AI) for content analysis, and communicates with the web app via REST APIs and WebSockets.
--   **Supabase Package (`packages/supabase` or `db`)**: This TypeScript package provides Supabase client abstractions for authentication and database interactions.
-    -   **Supabase migrations and CLI project files are now located in `packages/supabase/`.**  
-        - Run all Supabase CLI commands (e.g., `supabase db reset`, `supabase start`) from the `packages/supabase/` directory.
-        - The canonical location for database migrations is `packages/supabase/migrations/`.
-    -   The `web` app uses the client-side Supabase client from this package (or a similar setup) for its authentication flow.
-    -   The `api` (Python) uses `supabase-py` to verify JWTs and interact with the Supabase database for metadata storage (e.g., job status, user information).
+### `users`
 
-### System Interaction Diagram
+* `id`
+* `email`
+* `youtube_access_token`
+* `created_at`
+
+### `videos`
+
+* `id`
+* `user_id`
+* `gcs_path`
+* `processing_status`
+* `created_at`
+
+### `video_metadata`
+
+* `id`
+* `video_id`
+* `title`
+* `description`
+* `transcript`
+* `chapters`
+* `updated_at`
+
+---
+
+## 👌 Frontend Responsibilities
+
+* Supabase SDK handles auth and session
+* React fetches signed URLs from FastAPI
+* Video uploaded directly to GCS
+* API call to FastAPI to trigger metadata processing
+* Polls FastAPI for metadata or queries Supabase
+
+---
+
+## ⚖️ Backend Responsibilities
+
+* FastAPI routes for file handling, auth, AI logic
+* Generates signed URLs
+* Integrates with Gemini via Vertex AI
+* Persists results in Supabase
+* Background jobs for long-running tasks (via asyncio or Celery)
+
+---
+
+## 🚀 DevOps
+
+* Docker Compose for local dev + prod
+* Traefik reverse proxy for HTTPS
+* GitHub Actions for CI/CD
+
+---
+
+## 🔒 Security
+
+* Supabase handles RLS and auth
+* GCS uploads via signed URLs
+* JWT auth between frontend and FastAPI
+* OAuth token refresh support
+
+---
+
+## 📊 Testing
+
+* Pytest for FastAPI endpoints
+* Playwright for frontend E2E tests
+* Supabase seeding for test environments
+
+---
+
+## 🔄 Workflow Diagram
 
 ```mermaid
-graph LR
-    subgraph "User Space"
-        User[User]
-    end
+sequenceDiagram
+  participant U as User
+  participant W as Web App
+  participant F as FastAPI
+  participant S as Supabase
+  participant G as GCS
+  participant M as Gemini
 
-    subgraph "Frontend Application (apps/web)"
-        WebApp[Web App (React/Vite)]
-    end
-
-    subgraph "Backend Application (api)"
-        API[API (Python/FastAPI - Video Processing)]
-    end
-
-    subgraph "Shared Abstraction (packages/supabase)"
-        SupabaseTSClient["Supabase Client (TypeScript for Web App Auth)"]
-    end
-
-    subgraph "External Services"
-        SupabaseCloud["Supabase Cloud (Auth, Database)"]
-        GCS[GCS (Video Files)]
-        AIServices[AI Services (Gemini/Vertex AI)]
-    end
-
-    User -- "Interacts" --> WebApp
-
-    WebApp -- "1. Auth via Supabase Client" --> SupabaseTSClient
-    SupabaseTSClient -- "2. Supabase Client interacts" --> SupabaseCloud
-    SupabaseCloud -- "3. Returns JWT to Client" --> SupabaseTSClient
-    SupabaseTSClient -- "4. JWT to WebApp" --> WebApp
-
-    WebApp -- "5. API Requests with JWT (e.g., get signed URL, job status)" --> API
-    WebApp -- "6. Direct Upload to GCS (using signed URL from API)" --> GCS
-
-    API -- "7. Validates JWT using `supabase-py`" --> SupabaseCloud
-    API -- "8. Stores/Retrieves Job Metadata using `supabase-py`" --> SupabaseCloud
-    API -- "9. Interacts with Storage" --> GCS
-    API -- "10. Uses AI for Processing" --> AIServices
-    API -- "11. Sends Real-time Updates (WebSockets)" --> WebApp
-
-    %% Styling
-    style WebApp fill:#D1E8FF,stroke:#333,stroke-width:2px
-    style API fill:#E8D1FF,stroke:#333,stroke-width:2px
-    style SupabaseTSClient fill:#D1FFD1,stroke:#333,stroke-width:2px
-    style SupabaseCloud fill:#FFF3D1,stroke:#333,stroke-width:2px
-    style GCS fill:#FFD1D1,stroke:#333,stroke-width:2px
-    style AIServices fill:#D1FFFF,stroke:#333,stroke-width:2px
+  U->>W: Logs in via Supabase
+  W->>S: Validates session
+  W->>F: GET /upload-url
+  F->>G: Generate signed GCS URL
+  F-->>W: Return URL
+  W->>G: Upload .mp4
+  W->>F: POST /videos
+  F->>G: Fetch video
+  F->>M: Send audio to Gemini
+  M-->>F: Metadata
+  F->>S: Store results
+  W->>S: Fetch metadata
+  W->>U: Show content
 ```
 
-### Architectural Setup and Data Flow:
+---
 
-1.  **Monorepo Structure**:
-    *   Your monorepo (likely managed by `pnpm-workspace.yaml` or similar) houses the `web`, `api`, and `supabase` package (`db`). This allows for shared configurations and easier cross-component development.
-
-2.  **Supabase Package (`db`) & Integration**:
-    *   **Role**: This package, as per `db-repomix-output.txt`, primarily offers TypeScript Supabase clients (`clients/client.ts` and `clients/server.ts`).
-    *   **`web` App Usage**: The `web` application will directly use the `clients/client.ts` (or a similar setup using `@supabase/supabase-js`) to handle the Google OAuth flow and manage user sessions. This client is responsible for obtaining JWTs from Supabase.
-    *   **`api` App Usage**: The Python-based `api` will not directly use the TypeScript clients from the `db` package. Instead, it will use `supabase-py` (as noted in `api/api-implementation-tasks.md`). The `api` will:
-        *   Verify JWTs sent by the `web` app in the `Authorization` header.
-        *   Interact with the Supabase Database for operations like storing job metadata, user profiles, etc.
-    *   The *concept* of abstracting Supabase interactions is what's shared. The `db` package demonstrates this for the TypeScript world.
-
-3.  **`web` Application (Frontend)**:
-    *   **Authentication**: Initiates Google OAuth through the Supabase client. Upon successful login, it receives a JWT.
-    *   **API Communication**: All authenticated requests to the `api` backend will include this JWT in the `Authorization: Bearer <token>` header.
-    *   **Video Uploads**:
-        1.  User selects a video file.
-        2.  `web` app requests a signed GCS upload URL from the `api`.
-        3.  `web` app uploads the file directly to GCS using the signed URL.
-        4.  Upon successful GCS upload, `web` app notifies the `api` to start processing.
-    *   **Real-time Updates**: Establishes a WebSocket connection with the `api` to receive live updates on video processing status, new metadata, etc. (as planned in `apps/web/web-memory-bank/tasks.md`).
-
-4.  **`api` Application (Backend)**:
-    *   **Endpoints**: Exposes RESTful API endpoints for actions like requesting signed URLs, initiating processing jobs, retrieving job status/metadata, and updating metadata.
-    *   **Security**: Endpoints are secured using JWT. The `api` verifies the token received from the `web` app using `supabase-py` and the Supabase project's JWT secret.
-    *   **Video Processing**: Orchestrates the video processing pipeline:
-        *   Downloads video from GCS (if necessary, or operates on GCS path).
-        *   Uses AI services for transcription, metadata generation, etc.
-        *   Stores processed files (thumbnails, VTTs) back to GCS.
-    *   **Database Interaction**: Stores and updates job status, generated metadata (text-based), and user-related information in the Supabase database using `supabase-py`.
-    *   **WebSocket Communication**: Pushes real-time updates to connected `web` clients about processing progress.
-
-5.  **Overall Communication Flow Example (Video Upload & Processing)**:
-    1.  User logs into `web` app using Google (via Supabase TS client). `web` app receives JWT.
-    2.  User initiates video upload in `web` app.
-    3.  `web` app requests a signed GCS upload URL from `api` (sending JWT).
-    4.  `api` (Python) validates JWT, generates signed URL, and returns it to `web`.
-    5.  `web` app uploads video file directly to GCS using the signed URL.
-    6.  `web` app notifies `api` that upload is complete (sending JWT and GCS path).
-    7.  `api` creates a processing job (storing initial metadata in Supabase DB via `supabase-py`).
-    8.  `api` starts video processing. As stages complete (e.g., transcription, thumbnail generation):
-        *   `api` updates job status in Supabase DB.
-        *   `api` sends WebSocket messages to `web` app with progress.
-        *   `api` stores generated artifacts (e.g., VTT files, thumbnails) in GCS.
-    9.  `web` app UI updates in real-time based on WebSocket messages and allows users to view/edit metadata (fetching/saving via `api`).
-
-This architecture leverages Supabase for robust authentication and database services while keeping your core application logic (`api` and `web`) focused on their respective responsibilities. The `supabase` package aids the frontend, and the `api` uses its Python equivalent for seamless integration.
+This structure lets you move fast, use Supabase where it shines, and lean into Python where AI or Google SDKs are best. Let me know if you want to split this PRD into feature cards or set up tracking in Linear/Notion.
