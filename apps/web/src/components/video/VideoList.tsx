@@ -2,6 +2,7 @@ import type { VideoSummary } from "@/types/api";
 import { VideoListItem } from "./VideoListItem";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton"; // For loading state
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Added for error display
 
 interface VideoListProps {
   videos: VideoSummary[];
@@ -43,8 +44,11 @@ export function VideoList({
 
   if (error) {
     return (
-      <div className="text-red-500 text-center py-10">
-        Error loading videos: {error.message}
+      <div className="text-center py-10">
+        <Alert variant="destructive" className="max-w-md mx-auto">
+          <AlertTitle>Error Loading Videos</AlertTitle>
+          <AlertDescription>{error.message}</AlertDescription>
+        </Alert>
       </div>
     );
   }

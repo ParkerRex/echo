@@ -1,10 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
-import type { DocumentData, QuerySnapshot } from "firebase/firestore";
 import { PlusIcon } from "lucide-react";
 import { useEffect, useState } from "react";
-import { db } from "../../../firebase/index";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
+import { useQuery } from "@tanstack/react-query";
+import { getProcessingJobs } from "@/lib/api";
+import type { VideoJobSchema } from "@/types/api";
+import type { Step } from "@/components/ui/progress-steps";
 import {
 	ProcessingStepId,
 	createMockProcessingSteps,
@@ -25,31 +29,28 @@ const stageToStepMap: Record<string, number> = {
 };
 
 // Helper to determine the current step index based on backend stage
-function getCurrentStepIndex(stage?: string): number {
-	if (!stage) return 0;
-	return stageToStepMap[stage] || 0;
+function getCurrentStepIndex(jobStatus: VideoJobSchema['status'], stages?: VideoJobSchema['processing_stages']): number {
+	if (jobStatus === "COMPLETED") return 8; // Max steps
+	if (jobStatus === "FAILED") return 0; // Or a specific error step
+	if (typeof stages === 'object' && stages !== null && !Array.isArray(stages)) {
+		return Object.keys(stages).length;
+	}
+	if (Array.isArray(stages)) {
+		return stages.length;
+	}
+	return 0;
 }
 
-function getVideoStatus(
-	stage?: string,
+function getProgressCardStatus(
+	jobStatus: VideoJobSchema['status'],
 ): "processing" | "completed" | "error" | "paused" {
-	if (!stage) return "processing";
-	if (stage === "completed") return "completed";
-	if (stage === "error") return "error";
-	if (stage === "paused") return "paused";
-	return "processing";
-}
-
-interface VideoData extends DocumentData {
-	id: string;
-	title?: string;
-	current_stage?: string;
-	filename?: string;
-	channel?: string;
-	created_at?: any; // Timestamp from Firestore
-	youtube_video_id?: string;
-	thumbnails?: Array<{ url: string; prompt: string; status: string }>;
-	error_message?: string;
+	switch (jobStatus) {
+		case "COMPLETED": return "completed";
+		case "FAILED": return "error";
+		case "PENDING": return "processing"; // Or a specific "pending" visual state if desired
+		case "PROCESSING": return "processing";
+		default: return "processing"; // Fallback
+	}
 }
 
 type ProcessingDashboardProps = {
@@ -57,49 +58,20 @@ type ProcessingDashboardProps = {
 };
 
 export function ProcessingDashboard({ className }: ProcessingDashboardProps) {
-	const [videos, setVideos] = useState<VideoData[]>([]);
-	const [loading, setLoading] = useState(true);
+	const { 
+		data: processingJobs, 
+		isLoading, 
+		error: fetchError,
+	} = useQuery<VideoJobSchema[], Error>({
+		queryKey: ['processingJobs'],
+		queryFn: getProcessingJobs,
+	});
 
-	// Fetch videos in processing status
-	useEffect(() => {
-		const processingVideosQuery = query(
-			collection(db, "videos"),
-			where("current_stage", "!=", "completed"),
-		);
-
-		const unsubscribe = onSnapshot(
-			processingVideosQuery,
-			(snapshot: QuerySnapshot<DocumentData>) => {
-				const vids = snapshot.docs.map((doc) => ({
-					id: doc.id,
-					...doc.data(),
-				})) as VideoData[];
-				setVideos(vids);
-				setLoading(false);
-			},
-			(error) => {
-				console.error("Error fetching processing videos:", error);
-				setLoading(false);
-			},
-		);
-
-		return () => unsubscribe();
-	}, []);
-
-	// Pause/resume functionality would require backend support
 	const handlePauseResume = (videoId: string) => {
 		console.log(
-			"Pause/resume functionality would require backend support",
+			"Pause/resume functionality is not currently supported by the backend.",
 			videoId,
 		);
-		// In a real implementation, this would update the Firestore document
-	};
-
-	// Get the current step ID based on current_stage
-	const getCurrentStepId = (video: VideoData) => {
-		const stepIndex = getCurrentStepIndex(video.current_stage);
-		const steps = Object.keys(ProcessingStepId);
-		return steps[stepIndex];
 	};
 
 	return (
@@ -121,11 +93,40 @@ export function ProcessingDashboard({ className }: ProcessingDashboardProps) {
 				</Button>
 			</div>
 
-			{loading ? (
-				<div className="flex justify-center py-20">
-					<div className="animate-pulse">Loading videos...</div>
+			{fetchError && (
+				<div className="py-10">
+					<Alert variant="destructive" className="max-w-lg mx-auto">
+						<AlertTitle>Error Fetching Processing Videos</AlertTitle>
+						<AlertDescription>{fetchError.message}</AlertDescription>
+					</Alert>
 				</div>
-			) : videos.length === 0 ? (
+			)}
+
+			{isLoading && !fetchError ? (
+				<div className="grid gap-6 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
+					{[...Array(3)].map((_, index) => (
+						<Card key={index} className="animate-pulse">
+							<CardHeader className="pb-2">
+								<div className="flex items-start justify-between">
+									<div className="space-y-1 flex-grow pr-2">
+										<Skeleton className="h-5 w-3/4" />
+										<Skeleton className="h-4 w-1/2" />
+									</div>
+									<Skeleton className="h-14 w-24 shrink-0 rounded-md" />
+								</div>
+							</CardHeader>
+							<CardContent>
+								<Skeleton className="h-6 w-full mb-2" />
+								<Skeleton className="h-4 w-1/2" /> 
+							</CardContent>
+							<CardFooter className="flex justify-between pt-0">
+								<Skeleton className="h-8 w-20" />
+								<Skeleton className="h-8 w-24" />
+							</CardFooter>
+						</Card>
+					))}
+				</div>
+			) : !fetchError && processingJobs && processingJobs.length === 0 ? (
 				<div className="flex flex-col items-center justify-center py-20 text-center">
 					<p className="text-muted-foreground mb-4">
 						No videos currently processing
@@ -134,61 +135,37 @@ export function ProcessingDashboard({ className }: ProcessingDashboardProps) {
 						<Link to="/upload">Upload a new video</Link>
 					</Button>
 				</div>
-			) : (
+			) : !fetchError && processingJobs ? (
 				<div className="grid gap-6 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
-					{videos.map((video) => {
-						// Get current step index and ID
-						const stepIndex = getCurrentStepIndex(video.current_stage);
-						const currentStepId = getCurrentStepId(video);
+					{processingJobs.map((job) => {
+						const cardStatus = getProgressCardStatus(job.status);
+						
+						const simplifiedSteps: Step[] = [];
+						let currentDisplayStepId: string | undefined = undefined;
 
-						// Create processing steps with appropriate status
-						const processingSteps = createMockProcessingSteps(stepIndex);
-
-						// If there's an error, update the error step
-						if (video.error_message) {
-							// Find the step that corresponds to the current stage
-							const currentStep = processingSteps.find(
-								(step) => step.id === currentStepId,
-							);
-							if (currentStep) {
-								currentStep.status = "error";
-								currentStep.errorMessage = video.error_message;
+						if (cardStatus === 'processing' && job.processing_stages) {
+							if (Array.isArray(job.processing_stages)) {
+							} else if (typeof job.processing_stages === 'object' && job.processing_stages !== null) {
 							}
+						} else if (cardStatus === 'completed') {
 						}
-
-						// Create YouTube URL if available
-						const youtubeUrl = video.youtube_video_id
-							? `https://youtube.com/watch?v=${video.youtube_video_id}`
-							: undefined;
-
-						// Get thumbnail if available
-						const thumbnailUrl =
-							video.thumbnails && video.thumbnails.length > 0
-								? video.thumbnails[0].url
-								: undefined;
-
-						// Create upload date from timestamp
-						const uploadedAt = video.created_at
-							? new Date(video.created_at.seconds * 1000)
-							: new Date();
 
 						return (
 							<VideoProgressCard
-								key={video.id}
-								videoId={video.id}
-								videoTitle={video.title || "Untitled Video"}
-								thumbnailUrl={thumbnailUrl}
-								uploadedAt={uploadedAt}
-								status={getVideoStatus(video.current_stage)}
-								processingSteps={processingSteps}
-								currentStepId={currentStepId}
-								youtubeUrl={youtubeUrl}
-								onPauseResume={() => handlePauseResume(video.id)}
+								key={job.id}
+								videoId={String(job.id)}
+								videoTitle={job.metadata?.title || job.video?.original_filename || "Untitled Video"}
+								thumbnailUrl={job.metadata?.thumbnail_file_url || undefined}
+								uploadedAt={job.created_at ? new Date(job.created_at) : new Date()}
+								status={cardStatus}
+								processingSteps={simplifiedSteps}
+								currentStepId={currentDisplayStepId}
+								onPauseResume={() => handlePauseResume(String(job.id))}
 							/>
 						);
 					})}
 				</div>
-			)}
+			) : null}
 		</div>
 	);
 }

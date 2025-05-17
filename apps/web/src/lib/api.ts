@@ -138,3 +138,19 @@ export async function getJobDetails(jobId: string): Promise<VideoJob> {
   });
   return handleApiResponse<VideoJob>(res);
 }
+
+// Fetches processing jobs for the authenticated user, optionally filtered by status.
+export async function getProcessingJobs(statuses?: string[]): Promise<VideoJob[]> {
+  const queryParams = new URLSearchParams();
+  if (statuses && statuses.length > 0) {
+    statuses.forEach(status => queryParams.append('status', status));
+  }
+  
+  const endpoint = `${API_BASE_URL}${API_V1_PREFIX}/users/me/jobs${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+  const headers = await getAuthHeaders();
+  const res = await fetch(endpoint, {
+    method: "GET",
+    headers: headers,
+  });
+  return handleApiResponse<VideoJob[]>(res);
+}

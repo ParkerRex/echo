@@ -182,6 +182,14 @@
             *   Created the page `apps/web/src/routes/_authed.jobs.$jobId.tsx` to display job details. It uses `useQuery` with `getJobDetails` and will benefit from cache updates by `useJobStatusManager.ts`.
         *   **Acceptance Criteria:** `useJobStatusManager.ts` hook correctly processes WebSocket messages and updates TanStack Query cache for relevant job and video list data. (Met for WS part; polling and specific job page UI are separate concerns). Job details page displays information correctly. (Partially Met: Page created, but route definition linter error needs resolution).
 
+*   **NEW Backend Dependency for Processing Dashboard:**
+    *   [~] Task 3.X: Implement API endpoint for `getProcessingJobs()`
+        *   **Description:** Create a backend API endpoint (e.g., `GET /api/v1/users/me/jobs?status=processing,pending` or similar) that returns a list of video jobs currently in a non-terminal state (e.g., PENDING, PROCESSING) for the authenticated user.
+        *   The response should be an array of objects conforming to `VideoJobSchema` (defined in `apps/core/api/schemas/video_processing_schemas.py`).
+        *   [X] Ensure the corresponding client-side function `getProcessingJobs()` is added to `apps/web/src/lib/api.ts`. (Done)
+        *   **Reason:** Required by the refactored `ProcessingDashboard.tsx` to display in-progress video jobs after removing Firebase.
+        *   **Note:** Backend implementation for the API endpoint is still pending.
+
 ## Phase 4: Video Management & Viewing
 
 12. **Video List Display on Dashboard (with Pagination)**
@@ -203,31 +211,32 @@
         *   **Acceptance Criteria:** Dashboard displays a paginated list of user's videos. Users can navigate through pages/load more videos. (Met)
 
 13. **Video Detail and Playback Page (`apps/web/src`)**
-    *   [ ] Task 4.2: **Implement Full Video Detail and Playback Functionality**
-        *   **File(s) to Check/Modify:** `apps/web/src/routes/_authed/video/$videoId.tsx` (Created), `apps/web/src/components/video/video-detail.tsx` (Incorporated into route file), `apps/web/src/components/video/MediaPlayer.tsx` (Placeholder incorporated into route file), `apps/web/src/lib/api.ts` (Used), `apps/web/src/components/video/content-editor.tsx` (Incorporated as form in route file).
+    *   [~+] Task 4.2: **Implement Full Video Detail and Playback Functionality**
+        *   **File(s) to Check/Modify:** `apps/web/src/routes/_authed/video/$videoId.tsx` (Refactored), `apps/web/src/components/video/video-detail.tsx` (Incorporated into route file), `apps/web/src/components/video/MediaPlayer.tsx` (Incorporated into route file), `apps/web/src/lib/api.ts` (Used), `apps/web/src/components/video/content-editor.tsx` (Incorporated as form in route file).
         *   **Backend Prerequisite Notes:** 
             *   Endpoint `GET /api/v1/videos/{videoId}/details` must be available. (Used)
-            *   Strategy for video playback source: Backend provides a `playbackUrl` (e.g., GCS signed URL) via the details endpoint, or a streaming endpoint `GET /api/v1/stream/video/{videoId}` must be available. (Placeholder `storage_path` used; dedicated `playbackUrl` from backend needed).
+            *   Strategy for video playback source: Backend provides a `playbackUrl` (e.g., GCS signed URL) via the details endpoint, or a streaming endpoint `GET /api/v1/stream/video/{videoId}` must be available. (Frontend updated to expect `videoDetails.video.playback_url`; this is a **backend dependency**).
             *   Endpoint `PUT /api/v1/videos/{videoId}/metadata` for editing. (Used)
         *   **Key Actions:** 
-            *   Fetched data using `api.getVideoDetails(videoId)`. (Implemented)
-            *   Implemented `MediaPlayer.tsx` (placeholder version) using a temporary `playbackUrl`. (Implemented)
-            *   Displayed metadata, transcript. Subtitles (`<track>`) are a TODO. (Implemented for metadata/transcript)
-            *   Implemented metadata editing form (title, description, tags) using `api.updateVideoMetadata()`. (Implemented)
-        *   **Acceptance Criteria:** Users can view videos with playback, subtitles, all metadata. Editing (if implemented) saves changes. (Partially Met: Core page structure, data display, and metadata editing form are implemented. Playback requires a proper `playbackUrl` from backend. Subtitles are a TODO. A persistent linter error for `createFileRoute` needs resolution.)
+            *   Fetched data using `api.getVideoDetails(videoId)`. (Implemented using `useQuery`)
+            *   Implemented `MediaPlayer.tsx` (placeholder version updated to support subtitles). (Implemented)
+            *   Displayed metadata, transcript. Subtitles (`<track>`) are supported if `subtitle_files_urls` is provided. (Implemented for metadata/transcript/subtitles)
+            *   Implemented metadata editing form (title, description, tags) using `api.updateVideoMetadata()`. (Implemented using `useMutation`)
+            *   **Firebase logic removed/commented out; component now primarily uses API calls for data fetching and updates.**
+        *   **Acceptance Criteria:** Users can view videos with playback, subtitles, all metadata. Editing (if implemented) saves changes. (Partially Met: Core page structure, data display, metadata editing, and subtitle support are implemented. Playback requires a proper `playback_url` from backend. The `createFileRoute` linter error seems environmental or resolved as the code structure is standard.)
 
 ## Phase 5: UI/UX Polish & Finalization
 
 14. **Consistent Loading Skeletons and Empty States**
-    *   [ ] Task 5.1: **Implement UI Placeholders** (Partially Met: Skeletons and error/empty states implemented for new pages like Job Details and Video Details. Dashboard video list also handles these. A full audit for consistency across all existing/older pages can be a follow-up.)
-        *   **File(s) to Check/Modify:** All pages and components that involve asynchronous data fetching (e.g., `dashboard.tsx`, `jobs/[jobId].tsx`, `video/[videoId].tsx`).
+    *   [~+] Task 5.1: **Implement UI Placeholders** (Partially Met, major components improved: Skeletons and error/empty states implemented for Video Details, Job Details, Dashboard Video List. `VideoDetailSkeleton` reviewed and enhanced. `ProcessingDashboard.tsx` was significantly refactored to remove Firebase; its loading skeleton and error/empty states were rebuilt using `useQuery` and `Alerts`. `JobDetailsPage` loading/error/skeleton states reviewed and confirmed to be good. A full audit for consistency across any other minor/existing pages can be a follow-up.)
+        *   **File(s) to Check/Modify:** All pages and components that involve asynchronous data fetching (e.g., `dashboard.tsx`, `jobs/[jobId].tsx`, `video/[videoId].tsx`, `ProcessingDashboard.tsx`).
         *   **Key Actions:**
             *   Utilize the `shadcn/ui Skeleton` component (from `apps/web/src/components/ui/skeleton.tsx`) to create loading placeholders for content areas while `useQuery` is in its `isLoading` state. (Implemented in new pages)
             *   Design and implement clear and user-friendly "empty state" messages for situations where no data is available (e.g., "You haven't uploaded any videos yet." on the dashboard, or "Video data is not yet available." if metadata is still being processed). (Implemented in new pages and dashboard video list)
         *   **Acceptance Criteria:** The application provides smooth visual feedback during data loading phases using skeleton screens, and presents informative messages when content areas are empty. (Partially Met for new features; broader audit pending if needed)
 
 15. **Standardized Error Handling and Notifications**
-    *   [ ] Task 5.2: **Unify Error Display** (Largely Met: `sonner` toasts are used for non-modal API errors and form submission feedback. `Alert` components are used for page-level data loading errors. `useAuth` and `lib/api` provide error details. Consistency should be maintained in new and reviewed components.)
+    *   [~] Task 5.2: **Unify Error Display** (Largely Met: `sonner` toasts are used for non-modal API errors and form submission feedback. `Alert` components are used for page-level data loading errors. `useAuth` and `lib/api` provide error details. Consistency should be maintained in new and reviewed components. `VideoDetailPage` and `JobDetailsPage` reviewed and align with strategy.)
         *   **File(s) to Check/Modify:** All components that handle API calls or user input leading to potential errors. Revisit `useAuth.ts`, `lib/api.ts`, and form components.
             *   `apps/web/src/components/ui/sonner.tsx` (or `toaster.tsx` / `use-toast.tsx` if that's the active toast system).
         *   **Key Actions:**

@@ -1,15 +1,6 @@
 import { Link, createFileRoute, useParams } from "@tanstack/react-router";
-import {
-	type DocumentSnapshot,
-	doc,
-	getDoc,
-	onSnapshot,
-	updateDoc,
-} from "firebase/firestore";
-import type { DocumentData } from "firebase/firestore";
 import { AlignLeft, FileText, FileVideo, Image, Loader2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { db } from "../../firebase/index";
 import { Button } from "../components/ui/button";
 import {
 	Card,
@@ -119,100 +110,109 @@ function VideoDetailComponent() {
 	useEffect(() => {
 		if (!videoId) return;
 		setLoading(true);
-		const docRef = doc(db, "videos", videoId);
-		const unsubscribe = onSnapshot(
-			docRef,
-			(docSnap: DocumentSnapshot<DocumentData>) => {
-				if (docSnap.exists()) {
-					const data = docSnap.data() as VideoData;
-					setVideoData(data);
-					setForm(data);
-
-					// Generate mock title options if not present
-					if (!data.titleOptions || data.titleOptions.length === 0) {
-						const mockTitles = generateMockTitles(data.title || "Video Title");
-						setTitleOptions(mockTitles);
-					} else {
-						setTitleOptions(data.titleOptions);
-					}
-
-					// Format thumbnails for our component
-					if (data.thumbnails && data.thumbnails.length > 0) {
-						const formattedThumbnails = data.thumbnails.map((thumb, index) => ({
-							id: `thumb-${index}`,
-							url: thumb.url,
-							prompt: thumb.prompt,
-							status: thumb.status as "ready" | "generating" | "failed",
-							isSelected: index === 0, // Default first one selected
-						}));
-
-						// If we don't have at least 4, add placeholders
-						while (formattedThumbnails.length < 4) {
-							formattedThumbnails.push({
-								id: `thumb-placeholder-${formattedThumbnails.length}`,
-								url: `https://picsum.photos/id/${formattedThumbnails.length + 10}/640/360`,
-								prompt: "Example thumbnail prompt with style settings",
-								status: "ready",
-								isSelected: false,
-							});
-						}
-
-						setThumbnails(formattedThumbnails);
-					} else {
-						// Create 4 mock thumbnails
-						const mockThumbnails = [
-							{
-								id: "thumb-1",
-								url: "https://picsum.photos/id/10/640/360",
-								prompt:
-									"Professional headshot with blurred background, high contrast",
-								status: "ready" as const,
-								isSelected: true,
-							},
-							{
-								id: "thumb-2",
-								url: "https://picsum.photos/id/11/640/360",
-								prompt: "Product featured prominently with clean background",
-								status: "ready" as const,
-							},
-							{
-								id: "thumb-3",
-								url: "https://picsum.photos/id/12/640/360",
-								prompt:
-									"Action shot with dynamic composition and vibrant colors",
-								status: "ready" as const,
-							},
-							{
-								id: "thumb-4",
-								url: "https://picsum.photos/id/13/640/360",
-								prompt:
-									"Infographic style with text overlay and minimal design",
-								status: "ready" as const,
-							},
-						];
-						setThumbnails(mockThumbnails);
-					}
-				} else {
-					setVideoData(null);
-					setForm(null);
-				}
-				setLoading(false);
-			},
-			(error) => {
-				console.error("Error fetching video data:", error);
-				setVideoData(null);
-				setForm(null);
-				setLoading(false);
-			},
-		);
-		return () => unsubscribe();
+		// const docRef = doc(db, "videos", videoId);
+		// const unsubscribe = onSnapshot(
+		// 	docRef,
+		// 	(docSnap: DocumentSnapshot<DocumentData>) => {
+		// 		if (docSnap.exists()) {
+		// 			const data = docSnap.data() as VideoData;
+		// 			setVideoData(data);
+		// 			setForm(data);
+		//
+		// 			// Generate mock title options if not present
+		// 			if (!data.titleOptions || data.titleOptions.length === 0) {
+		// 				const mockTitles = generateMockTitles(data.title || "Video Title");
+		// 				setTitleOptions(mockTitles);
+		// 			} else {
+		// 				setTitleOptions(data.titleOptions);
+		// 			}
+		//
+		// 			// Format thumbnails for our component
+		// 			if (data.thumbnails && data.thumbnails.length > 0) {
+		// 				const formattedThumbnails = data.thumbnails.map((thumb, index) => ({
+		// 					id: `thumb-${index}`,
+		// 					url: thumb.url,
+		// 					prompt: thumb.prompt,
+		// 					status: thumb.status as "ready" | "generating" | "failed",
+		// 					isSelected: index === 0, // Default first one selected
+		// 				}));
+		//
+		// 				// If we don't have at least 4, add placeholders
+		// 				while (formattedThumbnails.length < 4) {
+		// 					formattedThumbnails.push({
+		// 						id: `thumb-placeholder-${formattedThumbnails.length}`,
+		// 						url: `https://picsum.photos/id/${formattedThumbnails.length + 10}/640/360`,
+		// 						prompt: "Example thumbnail prompt with style settings",
+		// 						status: "ready",
+		// 						isSelected: false,
+		// 					});
+		// 				}
+		//
+		// 				setThumbnails(formattedThumbnails);
+		// 			} else {
+		// 				// Create 4 mock thumbnails
+		// 				const mockThumbnails = [
+		// 					{
+		// 						id: "thumb-1",
+		// 						url: "https://picsum.photos/id/10/640/360",
+		// 						prompt:
+		// 							"Professional headshot with blurred background, high contrast",
+		// 						status: "ready" as const,
+		// 						isSelected: true,
+		// 					},
+		// 					{
+		// 						id: "thumb-2",
+		// 						url: "https://picsum.photos/id/11/640/360",
+		// 						prompt: "Product featured prominently with clean background",
+		// 						status: "ready" as const,
+		// 					},
+		// 					{
+		// 						id: "thumb-3",
+		// 						url: "https://picsum.photos/id/12/640/360",
+		// 						prompt:
+		// 							"Action shot with dynamic composition and vibrant colors",
+		// 						status: "ready" as const,
+		// 					},
+		// 					{
+		// 						id: "thumb-4",
+		// 						url: "https://picsum.photos/id/13/640/360",
+		// 						prompt:
+		// 							"Infographic style with text overlay and minimal design",
+		// 						status: "ready" as const,
+		// 					},
+		// 				];
+		// 				setThumbnails(mockThumbnails);
+		// 			}
+		// 		} else {
+		// 			setVideoData(null);
+		// 			setForm(null);
+		// 		}
+		// 		setLoading(false);
+		// 	},
+		// 	(error) => {
+		// 		console.error("Error fetching video data:", error);
+		// 		setVideoData(null);
+		// 		setForm(null);
+		// 		setLoading(false);
+		// 	},
+		// );
+		// return () => unsubscribe();
+		// NOTE: The above Firebase listener logic needs to be replaced
+		// with a TanStack Query hook using api.getVideoDetails(videoId)
+		// For now, we'll leave it to expose the missing data load.
+		// Actual data loading logic using api.getVideoDetails should be implemented
+		// as part of the VideoDetail component or a TanStack Query hook.
+		setLoading(false); // Placeholder
 	}, [videoId]);
 
 	const handleSave = async (updates: Partial<VideoData>) => {
 		setSaving(true);
-		const docRef = doc(db, "videos", videoId);
+		// const docRef = doc(db, "videos", videoId);
 		try {
-			await updateDoc(docRef, updates);
+			// await updateDoc(docRef, updates);
+			// NOTE: This needs to be replaced with a call to api.updateVideoMetadata(videoId, updates)
+			// For now, logging the intent.
+			console.log("Attempting to save updates (Firebase logic removed):", updates);
 		} catch (error) {
 			console.error("Error updating video data:", error);
 		} finally {

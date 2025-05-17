@@ -25,14 +25,38 @@ function JobDetailsPage() {
       <div className="container mx-auto p-4">
         <Card>
           <CardHeader>
-            <Skeleton className="h-8 w-3/4" />
-            <Skeleton className="h-4 w-1/2 mt-2" />
+            <div className="flex justify-between items-center mb-2">
+              <Skeleton className="h-8 w-1/2" /> {/* Job ID Title */}
+              <Skeleton className="h-6 w-24" /> {/* Status Badge */}
+            </div>
+            <Skeleton className="h-4 w-3/4" /> {/* Description */}
           </CardHeader>
-          <CardContent className="space-y-4">
-            <Skeleton className="h-6 w-1/4" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-3/4" />
-            {/* Skeleton for progress bar area removed */}
+          <CardContent className="space-y-6">
+            {/* Video Information Section Skeleton */}
+            <div>
+              <Skeleton className="h-6 w-1/3 mb-2" /> {/* Section Title */}
+              <Skeleton className="h-4 w-full mb-1" /> {/* Video ID line */}
+              <Skeleton className="h-4 w-3/4" />      {/* Filename line */}
+            </div>
+            {/* Job Progress/Stages Section Skeleton */}
+            <div>
+              <Skeleton className="h-6 w-1/3 mb-2" /> {/* Section Title */}
+              <Skeleton className="h-16 w-full" />    {/* Placeholder for stages/status text */}
+            </div>
+            {/* Timestamps Section Skeleton */}
+            <div>
+              <Skeleton className="h-6 w-1/3 mb-2" /> {/* Section Title */}
+              <Skeleton className="h-4 w-full mb-1" /> {/* Created at line */}
+              <Skeleton className="h-4 w-3/4" />      {/* Updated at line */}
+            </div>
+            {/* Potential Error Details Section Skeleton (optional, shows if error part visible) */}
+            {/* No explicit skeleton for error_message as it only appears if there is an error, 
+                which wouldn't be the case during isLoading. But if it were a default visible section:
+            <div>
+              <Skeleton className="h-6 w-1/3 mb-2 text-destructive" /> 
+              <Skeleton className="h-10 w-full" /> 
+            </div> 
+            */}
           </CardContent>
         </Card>
       </div>

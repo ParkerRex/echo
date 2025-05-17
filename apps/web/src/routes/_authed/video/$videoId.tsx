@@ -23,13 +23,22 @@ import type { VideoDetailsResponse, VideoMetadataUpdateRequest } from "@/types/a
 import { useEffect } from 'react';
 
 // Placeholder for MediaPlayer component - to be created later
-const MediaPlayer = ({ src, title }: { src: string; title?: string }) => {
+const MediaPlayer = ({ src, title, subtitleFilesUrls }: { src: string; title?: string; subtitleFilesUrls?: { [key: string]: string } | null }) => {
   return (
     <div className="aspect-video bg-slate-900 flex items-center justify-center text-slate-100 rounded-lg overflow-hidden">
       {src ? (
-        <video controls src={src} title={title || 'Video player'} className="w-full h-full">
+        <video controls src={src} title={title || 'Video player'} className="w-full h-full" crossOrigin="anonymous">
           Your browser does not support the video tag.
-          {/* TODO: Add <track> elements for subtitles if available from VideoDetailsResponse */}
+          {subtitleFilesUrls && Object.entries(subtitleFilesUrls).map(([lang, subtitleSrc], index) => (
+            <track
+              key={lang}
+              kind="subtitles"
+              srcLang={lang}
+              src={subtitleSrc}
+              label={lang.toUpperCase()} // Simple label, could be more descriptive
+              default={index === 0} // Set the first subtitle track as default
+            />
+          ))}
         </video>
       ) : (
         <p>Video playback URL not available. Please ensure backend provides it.</p>
@@ -108,12 +117,13 @@ function VideoDetailPage() {
     );
   }
 
-  // Playback URL needs to be provided by the backend in VideoDetailsResponse.
-  // Check VideoDetailsResponse and its nested video/metadata schemas for a playback_url or similar field.
-  // For now, using a placeholder. If videoDetails.video.storage_path could be a direct playback URL (unlikely for GCS without signing),
-  // that would be an option, but typically a dedicated, possibly signed, playback URL is needed.
-  const playbackUrl = videoDetails.video?.storage_path || ""; // Updated placeholder: Using storage_path if available, but likely needs to be a dedicated playback URL from backend
+  // Playback URL needs to be provided by the backend in VideoDetailsResponse, ideally as a direct field
+  // like `video.playback_url` (e.g., a GCS signed URL).
+  // The `storage_path` (e.g., gs://bucket/path) is generally not directly playable.
+  // Waiting for backend to add a dedicated playback URL field to VideoSchema or VideoDetailsResponse.
+  const playbackUrl = (videoDetails.video as any)?.playback_url || videoDetails.video?.storage_path || "";
   const videoTitle = videoDetails.metadata?.title || videoDetails.video?.original_filename || "Video";
+  const subtitles = videoDetails.metadata?.subtitle_files_urls as { [key: string]: string } | undefined;
 
   return (
     <div className="container mx-auto p-4 space-y-6">
@@ -123,7 +133,7 @@ function VideoDetailPage() {
           {videoDetails.video?.original_filename && <CardDescription>Original file: {videoDetails.video.original_filename}</CardDescription>}
         </CardHeader>
         <CardContent>
-          <MediaPlayer src={playbackUrl} title={videoTitle} />
+          <MediaPlayer src={playbackUrl} title={videoTitle} subtitleFilesUrls={subtitles} />
         </CardContent>
       </Card>
 
@@ -223,6 +233,8 @@ const VideoDetailSkeleton = () => (
             <Skeleton className="h-4 w-full" />
             <Skeleton className="h-4 w-full" />
             <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-2/3" />
           </CardContent>
         </Card>
         <Card>
