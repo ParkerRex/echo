@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "install:all": "pnpm install && (cd apps/core && uv pip sync pyproject.toml || echo 'Skipping backend uv sync: pyproject.toml not found or uv error.')",
+    "install:all": "pnpm install && (cd apps/core && uv venv core-api && uv sync)",
     "dev": "concurrently --kill-others-on-fail --names \"WEB,SUPA,API\" -c \"bgBlue.bold,bgGreen.bold,bgMagenta.bold\" \"pnpm dev:web\" \"pnpm dev:supabase\" \"pnpm dev:backend\"",
     "dev:web": "pnpm --filter @echo/web dev",
     "dev:supabase": "cd supabase && supabase start",
