@@ -8,7 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from 'date-fns';
 
-export const Route = createFileRoute("/_authed/jobs/$jobId")({
+export const Route = createFileRoute("/_authed/jobs/[jobId]")({
   component: JobDetailsPage,
 });
 

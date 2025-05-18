@@ -214,3 +214,14 @@ class VideoJobRepository:
 
         result = await db.execute(stmt)
         return list(result.scalars().all())
+
+
+async def get_video_job_repository() -> VideoJobRepository:
+    """
+    FastAPI dependency for getting a VideoJobRepository instance.
+    Used for dependency injection in API endpoints.
+
+    Returns:
+        VideoJobRepository: An instance of the VideoJobRepository.
+    """
+    return VideoJobRepository()

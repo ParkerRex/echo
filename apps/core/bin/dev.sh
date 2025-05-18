@@ -4,8 +4,11 @@
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$APP_DIR"
 
-# Set PYTHONPATH to include the current directory
-export PYTHONPATH=$APP_DIR
+# Determine the project root directory (which contains the 'apps' folder)
+PROJECT_ROOT_DIR="$(cd "$APP_DIR/../.." && pwd)"
 
-# Run the application
-uv run main.py 
+# Set PYTHONPATH to include the project root directory
+export PYTHONPATH=$PROJECT_ROOT_DIR
+
+# Run the application with Python directly
+python main.py 

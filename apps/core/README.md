@@ -70,7 +70,7 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 3. Install dependencies:
 
 ```bash
-uv pip install -e .
+uv pip install -r pyproject.toml
 ```
 
 ### Supabase Local Setup

@@ -7,7 +7,7 @@
     "dev": "concurrently --kill-others-on-fail --names \"WEB,SUPA,API\" -c \"bgBlue.bold,bgGreen.bold,bgMagenta.bold\" \"pnpm dev:web\" \"pnpm dev:supabase\" \"pnpm dev:backend\"",
     "dev:web": "pnpm --filter @echo/web dev",
     "dev:supabase": "cd supabase && supabase start",
-    "dev:backend": "cd apps/core && ./bin/start_dev.sh",
+    "dev:backend": "cd apps/core && ./bin/dev.sh",
     "build": "npm-run-all --parallel build:web build:backend",
     "build:web": "pnpm --filter @echo/web build",
     "build:backend": "cd apps/core && ./bin/build.sh",
@@ -24,7 +24,7 @@
     "format:supabase": "pnpm --filter @echo/db format",
     "format:backend": "cd apps/core && ruff format . && black .",
     "reinstall": "pnpm clean:ws && pnpm install:all",
-    "fastapi-dev": "cd apps/core && ./bin/start_dev.sh"
+    "fastapi-dev": "cd apps/core && ./bin/dev.sh"
   },
   "dependencies": {
     "@tanstack/react-router": "^1.120.3",

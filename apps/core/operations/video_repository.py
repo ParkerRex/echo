@@ -87,3 +87,14 @@ class VideoRepository:
         """
         result = await db.execute(select(VideoModel).filter(VideoModel.id == video_id))
         return result.scalars().first()
+
+
+async def get_video_repository() -> VideoRepository:
+    """
+    FastAPI dependency for getting a VideoRepository instance.
+    Used for dependency injection in API endpoints.
+
+    Returns:
+        VideoRepository: An instance of the VideoRepository.
+    """
+    return VideoRepository()
