@@ -18,7 +18,8 @@
   "description": "",
   "dependencies": {
     "@supabase/ssr": "0.6.1",
-    "@supabase/supabase-js": "^2.49.4"
+    "@supabase/supabase-js": "^2.49.4",
+    "@tanstack/react-start": "^1.120.5"
   },
   "devDependencies": {
     "typescript": "^5.5.3"

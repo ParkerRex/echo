@@ -12,6 +12,7 @@ import {
   import { NotFound } from '@/components/not-found'
   import appCss from '@/styles/app.css?url'
   import { seo } from '@/utils/seo'
+  import { useAuth } from '../hooks/useAuth'
 
   // Create a single QueryClient instance for the app
   const queryClient = new QueryClient()
@@ -75,6 +76,8 @@ import {
   }
   
   function RootDocument({ children }: { children: React.ReactNode }) {
+	const { session, signOut, isLoading: authIsLoading } = useAuth()
+
 	return (
 	  <html>
 		<head>
@@ -82,7 +85,7 @@ import {
 		</head>
 		<body>
 		  <QueryClientProvider client={queryClient}>
-			<div className="p-2 flex flex-wrap sm:flex-nowrap gap-2 text-base sm:text-lg">
+			<div className="p-2 flex flex-wrap sm:flex-nowrap gap-2 text-base sm:text-lg items-center">
 			  <Link
 				to="/"
 				activeProps={{
@@ -92,47 +95,35 @@ import {
 			  >
 				Home
 			  </Link>{' '}
-			  <Link
-				to="/posts"
-				activeProps={{
-				  className: 'font-bold',
-				}}
-			  >
-				Posts
-			  </Link>{' '}
-			  <Link
-				to="/users"
-				activeProps={{
-				  className: 'font-bold',
-				}}
-			  >
-				Users
-			  </Link>{' '}
-			  <Link
-				to="/route-a"
-				activeProps={{
-				  className: 'font-bold',
-				}}
-			  >
-				Pathless Layout
-			  </Link>{' '}
-			  <Link
-				to="/deferred"
-				activeProps={{
-				  className: 'font-bold',
-				}}
-			  >
-				Deferred
-			  </Link>{' '}
-			  <Link
-				// @ts-expect-error
-				to="/this-route-does-not-exist"
-				activeProps={{
-				  className: 'font-bold',
-				}}
-			  >
-				This Route Does Not Exist
-			  </Link>
+			  {authIsLoading ? (
+				<span className="text-sm text-gray-500">Loading auth...</span>
+			  ) : session ? (
+				<>
+				  <Link
+					to="/dashboard"
+					activeProps={{
+					  className: 'font-bold',
+					}}
+				  >
+					Dashboard
+				  </Link>{' '}
+				  <button
+					onClick={() => signOut()}
+					className="text-blue-600 hover:text-blue-800 text-base sm:text-lg"
+				  >
+					Logout
+				  </button>
+				</>
+			  ) : (
+				<Link
+				  to="/login"
+				  activeProps={{
+					className: 'font-bold',
+				  }}
+				>
+				  Login
+				</Link>
+			  )}
 			</div>
 			<hr />
 			{children}

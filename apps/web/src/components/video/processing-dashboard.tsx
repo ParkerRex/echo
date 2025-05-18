@@ -1,19 +1,16 @@
 import { Button } from "@/components/ui/button";
-import { Link } from "@tanstack/react-router";
 import { PlusIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
-import { useQuery } from "@tanstack/react-query";
-import { getProcessingJobs } from "@/lib/api";
-import type { VideoJobSchema } from "@/types/api";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getProcessingJobs, getSignedUploadUrl, notifyUploadComplete } from "@/lib/api";
+import type { VideoJobSchema, SignedUploadUrlRequest, SignedUploadUrlResponse, UploadCompleteRequest } from "@/types/api";
 import type { Step } from "@/components/ui/progress-steps";
-import {
-	ProcessingStepId,
-	createMockProcessingSteps,
-} from "./processing-steps";
 import { VideoProgressCard } from "./video-progress-card";
+import { useJobStatusManager } from "@/hooks/useJobStatusManager";
+import { toast } from "sonner";
 
 // Map backend processing stages to frontend steps
 const stageToStepMap: Record<string, number> = {
@@ -58,15 +55,101 @@ type ProcessingDashboardProps = {
 };
 
 export function ProcessingDashboard({ className }: ProcessingDashboardProps) {
+	useJobStatusManager();
+	const queryClient = useQueryClient();
+	const inputRef = useRef<HTMLInputElement>(null);
+	const [isUploading, setIsUploading] = useState(false);
+
 	const { 
 		data: processingJobs, 
 		isLoading, 
 		error: fetchError,
 	} = useQuery<VideoJobSchema[], Error>({
 		queryKey: ['processingJobs'],
-		queryFn: getProcessingJobs,
+		queryFn: () => getProcessingJobs(),
 	});
 
+	const handleUploadButtonClick = () => {
+		if (isUploading) return;
+		inputRef.current?.click();
+	};
+
+	const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+		if (event.target.files && event.target.files.length > 0) {
+			const file = event.target.files[0];
+			if (inputRef.current) {
+				inputRef.current.value = "";
+			}
+			
+			setIsUploading(true);
+			const uploadPromise = async () => {
+				let signedUrlResponse: SignedUploadUrlResponse;
+				try {
+					const requestData: SignedUploadUrlRequest = {
+						filename: file.name,
+						content_type: file.type,
+					};
+					signedUrlResponse = await getSignedUploadUrl(requestData);
+					if (!signedUrlResponse.upload_url || !signedUrlResponse.video_id) {
+						throw new Error("Invalid response from signed URL endpoint");
+					}
+				} catch (err: any) {
+					console.error("Failed to get upload URL:", err);
+					throw new Error(err.message || "Failed to get upload URL");
+				}
+
+				const { upload_url: uploadUrl, video_id: videoId } = signedUrlResponse;
+
+				try {
+					await new Promise<void>((resolve, reject) => {
+						const xhr = new XMLHttpRequest();
+						xhr.open("PUT", uploadUrl);
+						xhr.setRequestHeader("Content-Type", file.type);
+						xhr.onload = () => {
+							if (xhr.status >= 200 && xhr.status < 300) {
+								resolve();
+							} else {
+								reject(new Error(`Upload failed with status ${xhr.status}: ${xhr.statusText}`));
+							}
+						};
+						xhr.onerror = () => reject(new Error("Upload failed due to network error"));
+						xhr.send(file);
+					});
+				} catch (err: any) {
+					console.error("Upload failed:", err);
+					throw new Error(err.message || "Upload to storage failed");
+				}
+
+				try {
+					const completeRequestData: UploadCompleteRequest = {
+						video_id: String(videoId),
+						original_filename: file.name,
+						content_type: file.type,
+						size_bytes: file.size,
+					};
+					await notifyUploadComplete(completeRequestData);
+				} catch (err: any) {
+					console.error("Failed to finalize upload:", err);
+					throw new Error(err.message || "Failed to finalize upload with backend");
+				}
+				return videoId;
+			};
+
+			toast.promise(uploadPromise(), {
+				loading: "Uploading video...",
+				success: (videoId) => {
+					queryClient.invalidateQueries({ queryKey: ['processingJobs'] });
+					queryClient.invalidateQueries({ queryKey: ['myVideos'] });
+					return `Video "${file.name}" uploaded successfully! (ID: ${videoId})`;
+				},
+				error: (err) => `Upload failed: ${err.message}`,
+				finally: () => {
+					setIsUploading(false);
+				}
+			});
+		}
+	};
+	
 	const handlePauseResume = (videoId: string) => {
 		console.log(
 			"Pause/resume functionality is not currently supported by the backend.",
@@ -85,13 +168,20 @@ export function ProcessingDashboard({ className }: ProcessingDashboardProps) {
 						Track the status of your video processing tasks
 					</p>
 				</div>
-				<Button asChild>
-					<Link to="/upload">
-						<PlusIcon className="h-4 w-4 mr-2" />
-						Upload New Video
-					</Link>
+				<Button onClick={handleUploadButtonClick} disabled={isUploading}>
+					<PlusIcon className="h-4 w-4 mr-2" />
+					{isUploading ? "Uploading..." : "Upload New Video"}
 				</Button>
 			</div>
+
+			<input
+				type="file"
+				ref={inputRef}
+				onChange={handleFileChange}
+				style={{ display: "none" }}
+				accept="video/*" 
+				disabled={isUploading}
+			/>
 
 			{fetchError && (
 				<div className="py-10">
@@ -131,8 +221,8 @@ export function ProcessingDashboard({ className }: ProcessingDashboardProps) {
 					<p className="text-muted-foreground mb-4">
 						No videos currently processing
 					</p>
-					<Button asChild variant="outline">
-						<Link to="/upload">Upload a new video</Link>
+					<Button variant="outline" onClick={handleUploadButtonClick} disabled={isUploading}>
+						{isUploading ? "Uploading..." : "Upload a new video"}
 					</Button>
 				</div>
 			) : !fetchError && processingJobs ? (

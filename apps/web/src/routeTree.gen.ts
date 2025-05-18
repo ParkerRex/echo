@@ -13,27 +13,15 @@
 import { Route as rootRoute } from './routes/__root'
 import { Route as SignupImport } from './routes/signup'
 import { Route as SettingsImport } from './routes/settings'
-import { Route as RedirectImport } from './routes/redirect'
 import { Route as LogoutImport } from './routes/logout'
 import { Route as LoginImport } from './routes/login'
-import { Route as DeferredImport } from './routes/deferred'
 import { Route as DashboardImport } from './routes/dashboard'
 import { Route as PathlessLayoutImport } from './routes/_pathlessLayout'
 import { Route as AuthedImport } from './routes/_authed'
-import { Route as UsersRouteImport } from './routes/users.route'
 import { Route as IndexImport } from './routes/index'
 import { Route as AuthCallbackImport } from './routes/auth/callback'
-import { Route as ApiUsersImport } from './routes/api/users'
-import { Route as PathlessLayoutNestedLayoutImport } from './routes/_pathlessLayout/_nested-layout'
-import { Route as AuthedPostsImport } from './routes/_authed/posts'
-import { Route as AuthedPostsIndexImport } from './routes/_authed/posts.index'
 import { Route as DashboardE2eTestImport } from './routes/dashboard.e2e.test'
-import { Route as ApiUsersIdImport } from './routes/api/users.$id'
-import { Route as PathlessLayoutNestedLayoutRouteBImport } from './routes/_pathlessLayout/_nested-layout/route-b'
-import { Route as PathlessLayoutNestedLayoutRouteAImport } from './routes/_pathlessLayout/_nested-layout/route-a'
 import { Route as AuthedVideoVideoIdImport } from './routes/_authed/video/$videoId'
-import { Route as AuthedPostsPostIdImport } from './routes/_authed/posts.$postId'
-import { Route as AuthedJobsjobIdImport } from './routes/_authed.jobs.[jobId]'
 import { Route as AuthedJobsJobIdImport } from './routes/_authed.jobs.$jobId'
 
 // Create/Update Routes
@@ -50,12 +38,6 @@ const SettingsRoute = SettingsImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
-const RedirectRoute = RedirectImport.update({
-  id: '/redirect',
-  path: '/redirect',
-  getParentRoute: () => rootRoute,
-} as any)
-
 const LogoutRoute = LogoutImport.update({
   id: '/logout',
   path: '/logout',
@@ -65,12 +47,6 @@ const LogoutRoute = LogoutImport.update({
 const LoginRoute = LoginImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const DeferredRoute = DeferredImport.update({
-  id: '/deferred',
-  path: '/deferred',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -90,12 +66,6 @@ const AuthedRoute = AuthedImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
-const UsersRouteRoute = UsersRouteImport.update({
-  id: '/users',
-  path: '/users',
-  getParentRoute: () => rootRoute,
-} as any)
-
 const IndexRoute = IndexImport.update({
   id: '/',
   path: '/',
@@ -108,72 +78,15 @@ const AuthCallbackRoute = AuthCallbackImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
-const ApiUsersRoute = ApiUsersImport.update({
-  id: '/api/users',
-  path: '/api/users',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const PathlessLayoutNestedLayoutRoute = PathlessLayoutNestedLayoutImport.update(
-  {
-    id: '/_nested-layout',
-    getParentRoute: () => PathlessLayoutRoute,
-  } as any,
-)
-
-const AuthedPostsRoute = AuthedPostsImport.update({
-  id: '/posts',
-  path: '/posts',
-  getParentRoute: () => AuthedRoute,
-} as any)
-
-const AuthedPostsIndexRoute = AuthedPostsIndexImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AuthedPostsRoute,
-} as any)
-
 const DashboardE2eTestRoute = DashboardE2eTestImport.update({
   id: '/e2e/test',
   path: '/e2e/test',
   getParentRoute: () => DashboardRoute,
 } as any)
 
-const ApiUsersIdRoute = ApiUsersIdImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => ApiUsersRoute,
-} as any)
-
-const PathlessLayoutNestedLayoutRouteBRoute =
-  PathlessLayoutNestedLayoutRouteBImport.update({
-    id: '/route-b',
-    path: '/route-b',
-    getParentRoute: () => PathlessLayoutNestedLayoutRoute,
-  } as any)
-
-const PathlessLayoutNestedLayoutRouteARoute =
-  PathlessLayoutNestedLayoutRouteAImport.update({
-    id: '/route-a',
-    path: '/route-a',
-    getParentRoute: () => PathlessLayoutNestedLayoutRoute,
-  } as any)
-
 const AuthedVideoVideoIdRoute = AuthedVideoVideoIdImport.update({
   id: '/video/$videoId',
   path: '/video/$videoId',
-  getParentRoute: () => AuthedRoute,
-} as any)
-
-const AuthedPostsPostIdRoute = AuthedPostsPostIdImport.update({
-  id: '/$postId',
-  path: '/$postId',
-  getParentRoute: () => AuthedPostsRoute,
-} as any)
-
-const AuthedJobsjobIdRoute = AuthedJobsjobIdImport.update({
-  id: '/jobs/[jobId]',
-  path: '/jobs/[jobId]',
   getParentRoute: () => AuthedRoute,
 } as any)
 
@@ -192,13 +105,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexImport
-      parentRoute: typeof rootRoute
-    }
-    '/users': {
-      id: '/users'
-      path: '/users'
-      fullPath: '/users'
-      preLoaderRoute: typeof UsersRouteImport
       parentRoute: typeof rootRoute
     }
     '/_authed': {
@@ -222,13 +128,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardImport
       parentRoute: typeof rootRoute
     }
-    '/deferred': {
-      id: '/deferred'
-      path: '/deferred'
-      fullPath: '/deferred'
-      preLoaderRoute: typeof DeferredImport
-      parentRoute: typeof rootRoute
-    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -241,13 +140,6 @@ declare module '@tanstack/react-router' {
       path: '/logout'
       fullPath: '/logout'
       preLoaderRoute: typeof LogoutImport
-      parentRoute: typeof rootRoute
-    }
-    '/redirect': {
-      id: '/redirect'
-      path: '/redirect'
-      fullPath: '/redirect'
-      preLoaderRoute: typeof RedirectImport
       parentRoute: typeof rootRoute
     }
     '/settings': {
@@ -264,27 +156,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignupImport
       parentRoute: typeof rootRoute
     }
-    '/_authed/posts': {
-      id: '/_authed/posts'
-      path: '/posts'
-      fullPath: '/posts'
-      preLoaderRoute: typeof AuthedPostsImport
-      parentRoute: typeof AuthedImport
-    }
-    '/_pathlessLayout/_nested-layout': {
-      id: '/_pathlessLayout/_nested-layout'
-      path: ''
-      fullPath: ''
-      preLoaderRoute: typeof PathlessLayoutNestedLayoutImport
-      parentRoute: typeof PathlessLayoutImport
-    }
-    '/api/users': {
-      id: '/api/users'
-      path: '/api/users'
-      fullPath: '/api/users'
-      preLoaderRoute: typeof ApiUsersImport
-      parentRoute: typeof rootRoute
-    }
     '/auth/callback': {
       id: '/auth/callback'
       path: '/auth/callback'
@@ -299,47 +170,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedJobsJobIdImport
       parentRoute: typeof AuthedImport
     }
-    '/_authed/jobs/[jobId]': {
-      id: '/_authed/jobs/[jobId]'
-      path: '/jobs/[jobId]'
-      fullPath: '/jobs/[jobId]'
-      preLoaderRoute: typeof AuthedJobsjobIdImport
-      parentRoute: typeof AuthedImport
-    }
-    '/_authed/posts/$postId': {
-      id: '/_authed/posts/$postId'
-      path: '/$postId'
-      fullPath: '/posts/$postId'
-      preLoaderRoute: typeof AuthedPostsPostIdImport
-      parentRoute: typeof AuthedPostsImport
-    }
     '/_authed/video/$videoId': {
       id: '/_authed/video/$videoId'
       path: '/video/$videoId'
       fullPath: '/video/$videoId'
       preLoaderRoute: typeof AuthedVideoVideoIdImport
       parentRoute: typeof AuthedImport
-    }
-    '/_pathlessLayout/_nested-layout/route-a': {
-      id: '/_pathlessLayout/_nested-layout/route-a'
-      path: '/route-a'
-      fullPath: '/route-a'
-      preLoaderRoute: typeof PathlessLayoutNestedLayoutRouteAImport
-      parentRoute: typeof PathlessLayoutNestedLayoutImport
-    }
-    '/_pathlessLayout/_nested-layout/route-b': {
-      id: '/_pathlessLayout/_nested-layout/route-b'
-      path: '/route-b'
-      fullPath: '/route-b'
-      preLoaderRoute: typeof PathlessLayoutNestedLayoutRouteBImport
-      parentRoute: typeof PathlessLayoutNestedLayoutImport
-    }
-    '/api/users/$id': {
-      id: '/api/users/$id'
-      path: '/$id'
-      fullPath: '/api/users/$id'
-      preLoaderRoute: typeof ApiUsersIdImport
-      parentRoute: typeof ApiUsersImport
     }
     '/dashboard/e2e/test': {
       id: '/dashboard/e2e/test'
@@ -348,78 +184,23 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardE2eTestImport
       parentRoute: typeof DashboardImport
     }
-    '/_authed/posts/': {
-      id: '/_authed/posts/'
-      path: '/'
-      fullPath: '/posts/'
-      preLoaderRoute: typeof AuthedPostsIndexImport
-      parentRoute: typeof AuthedPostsImport
-    }
   }
 }
 
 // Create and export the route tree
 
-interface AuthedPostsRouteChildren {
-  AuthedPostsPostIdRoute: typeof AuthedPostsPostIdRoute
-  AuthedPostsIndexRoute: typeof AuthedPostsIndexRoute
-}
-
-const AuthedPostsRouteChildren: AuthedPostsRouteChildren = {
-  AuthedPostsPostIdRoute: AuthedPostsPostIdRoute,
-  AuthedPostsIndexRoute: AuthedPostsIndexRoute,
-}
-
-const AuthedPostsRouteWithChildren = AuthedPostsRoute._addFileChildren(
-  AuthedPostsRouteChildren,
-)
-
 interface AuthedRouteChildren {
-  AuthedPostsRoute: typeof AuthedPostsRouteWithChildren
   AuthedJobsJobIdRoute: typeof AuthedJobsJobIdRoute
-  AuthedJobsjobIdRoute: typeof AuthedJobsjobIdRoute
   AuthedVideoVideoIdRoute: typeof AuthedVideoVideoIdRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
-  AuthedPostsRoute: AuthedPostsRouteWithChildren,
   AuthedJobsJobIdRoute: AuthedJobsJobIdRoute,
-  AuthedJobsjobIdRoute: AuthedJobsjobIdRoute,
   AuthedVideoVideoIdRoute: AuthedVideoVideoIdRoute,
 }
 
 const AuthedRouteWithChildren =
   AuthedRoute._addFileChildren(AuthedRouteChildren)
-
-interface PathlessLayoutNestedLayoutRouteChildren {
-  PathlessLayoutNestedLayoutRouteARoute: typeof PathlessLayoutNestedLayoutRouteARoute
-  PathlessLayoutNestedLayoutRouteBRoute: typeof PathlessLayoutNestedLayoutRouteBRoute
-}
-
-const PathlessLayoutNestedLayoutRouteChildren: PathlessLayoutNestedLayoutRouteChildren =
-  {
-    PathlessLayoutNestedLayoutRouteARoute:
-      PathlessLayoutNestedLayoutRouteARoute,
-    PathlessLayoutNestedLayoutRouteBRoute:
-      PathlessLayoutNestedLayoutRouteBRoute,
-  }
-
-const PathlessLayoutNestedLayoutRouteWithChildren =
-  PathlessLayoutNestedLayoutRoute._addFileChildren(
-    PathlessLayoutNestedLayoutRouteChildren,
-  )
-
-interface PathlessLayoutRouteChildren {
-  PathlessLayoutNestedLayoutRoute: typeof PathlessLayoutNestedLayoutRouteWithChildren
-}
-
-const PathlessLayoutRouteChildren: PathlessLayoutRouteChildren = {
-  PathlessLayoutNestedLayoutRoute: PathlessLayoutNestedLayoutRouteWithChildren,
-}
-
-const PathlessLayoutRouteWithChildren = PathlessLayoutRoute._addFileChildren(
-  PathlessLayoutRouteChildren,
-)
 
 interface DashboardRouteChildren {
   DashboardE2eTestRoute: typeof DashboardE2eTestRoute
@@ -433,201 +214,115 @@ const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
   DashboardRouteChildren,
 )
 
-interface ApiUsersRouteChildren {
-  ApiUsersIdRoute: typeof ApiUsersIdRoute
-}
-
-const ApiUsersRouteChildren: ApiUsersRouteChildren = {
-  ApiUsersIdRoute: ApiUsersIdRoute,
-}
-
-const ApiUsersRouteWithChildren = ApiUsersRoute._addFileChildren(
-  ApiUsersRouteChildren,
-)
-
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/users': typeof UsersRouteRoute
-  '': typeof PathlessLayoutNestedLayoutRouteWithChildren
+  '': typeof PathlessLayoutRoute
   '/dashboard': typeof DashboardRouteWithChildren
-  '/deferred': typeof DeferredRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
-  '/redirect': typeof RedirectRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
-  '/posts': typeof AuthedPostsRouteWithChildren
-  '/api/users': typeof ApiUsersRouteWithChildren
   '/auth/callback': typeof AuthCallbackRoute
   '/jobs/$jobId': typeof AuthedJobsJobIdRoute
-  '/jobs/[jobId]': typeof AuthedJobsjobIdRoute
-  '/posts/$postId': typeof AuthedPostsPostIdRoute
   '/video/$videoId': typeof AuthedVideoVideoIdRoute
-  '/route-a': typeof PathlessLayoutNestedLayoutRouteARoute
-  '/route-b': typeof PathlessLayoutNestedLayoutRouteBRoute
-  '/api/users/$id': typeof ApiUsersIdRoute
   '/dashboard/e2e/test': typeof DashboardE2eTestRoute
-  '/posts/': typeof AuthedPostsIndexRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/users': typeof UsersRouteRoute
-  '': typeof PathlessLayoutNestedLayoutRouteWithChildren
+  '': typeof PathlessLayoutRoute
   '/dashboard': typeof DashboardRouteWithChildren
-  '/deferred': typeof DeferredRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
-  '/redirect': typeof RedirectRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
-  '/api/users': typeof ApiUsersRouteWithChildren
   '/auth/callback': typeof AuthCallbackRoute
   '/jobs/$jobId': typeof AuthedJobsJobIdRoute
-  '/jobs/[jobId]': typeof AuthedJobsjobIdRoute
-  '/posts/$postId': typeof AuthedPostsPostIdRoute
   '/video/$videoId': typeof AuthedVideoVideoIdRoute
-  '/route-a': typeof PathlessLayoutNestedLayoutRouteARoute
-  '/route-b': typeof PathlessLayoutNestedLayoutRouteBRoute
-  '/api/users/$id': typeof ApiUsersIdRoute
   '/dashboard/e2e/test': typeof DashboardE2eTestRoute
-  '/posts': typeof AuthedPostsIndexRoute
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexRoute
-  '/users': typeof UsersRouteRoute
   '/_authed': typeof AuthedRouteWithChildren
-  '/_pathlessLayout': typeof PathlessLayoutRouteWithChildren
+  '/_pathlessLayout': typeof PathlessLayoutRoute
   '/dashboard': typeof DashboardRouteWithChildren
-  '/deferred': typeof DeferredRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
-  '/redirect': typeof RedirectRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
-  '/_authed/posts': typeof AuthedPostsRouteWithChildren
-  '/_pathlessLayout/_nested-layout': typeof PathlessLayoutNestedLayoutRouteWithChildren
-  '/api/users': typeof ApiUsersRouteWithChildren
   '/auth/callback': typeof AuthCallbackRoute
   '/_authed/jobs/$jobId': typeof AuthedJobsJobIdRoute
-  '/_authed/jobs/[jobId]': typeof AuthedJobsjobIdRoute
-  '/_authed/posts/$postId': typeof AuthedPostsPostIdRoute
   '/_authed/video/$videoId': typeof AuthedVideoVideoIdRoute
-  '/_pathlessLayout/_nested-layout/route-a': typeof PathlessLayoutNestedLayoutRouteARoute
-  '/_pathlessLayout/_nested-layout/route-b': typeof PathlessLayoutNestedLayoutRouteBRoute
-  '/api/users/$id': typeof ApiUsersIdRoute
   '/dashboard/e2e/test': typeof DashboardE2eTestRoute
-  '/_authed/posts/': typeof AuthedPostsIndexRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/users'
     | ''
     | '/dashboard'
-    | '/deferred'
     | '/login'
     | '/logout'
-    | '/redirect'
     | '/settings'
     | '/signup'
-    | '/posts'
-    | '/api/users'
     | '/auth/callback'
     | '/jobs/$jobId'
-    | '/jobs/[jobId]'
-    | '/posts/$postId'
     | '/video/$videoId'
-    | '/route-a'
-    | '/route-b'
-    | '/api/users/$id'
     | '/dashboard/e2e/test'
-    | '/posts/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/users'
     | ''
     | '/dashboard'
-    | '/deferred'
     | '/login'
     | '/logout'
-    | '/redirect'
     | '/settings'
     | '/signup'
-    | '/api/users'
     | '/auth/callback'
     | '/jobs/$jobId'
-    | '/jobs/[jobId]'
-    | '/posts/$postId'
     | '/video/$videoId'
-    | '/route-a'
-    | '/route-b'
-    | '/api/users/$id'
     | '/dashboard/e2e/test'
-    | '/posts'
   id:
     | '__root__'
     | '/'
-    | '/users'
     | '/_authed'
     | '/_pathlessLayout'
     | '/dashboard'
-    | '/deferred'
     | '/login'
     | '/logout'
-    | '/redirect'
     | '/settings'
     | '/signup'
-    | '/_authed/posts'
-    | '/_pathlessLayout/_nested-layout'
-    | '/api/users'
     | '/auth/callback'
     | '/_authed/jobs/$jobId'
-    | '/_authed/jobs/[jobId]'
-    | '/_authed/posts/$postId'
     | '/_authed/video/$videoId'
-    | '/_pathlessLayout/_nested-layout/route-a'
-    | '/_pathlessLayout/_nested-layout/route-b'
-    | '/api/users/$id'
     | '/dashboard/e2e/test'
-    | '/_authed/posts/'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  UsersRouteRoute: typeof UsersRouteRoute
   AuthedRoute: typeof AuthedRouteWithChildren
-  PathlessLayoutRoute: typeof PathlessLayoutRouteWithChildren
+  PathlessLayoutRoute: typeof PathlessLayoutRoute
   DashboardRoute: typeof DashboardRouteWithChildren
-  DeferredRoute: typeof DeferredRoute
   LoginRoute: typeof LoginRoute
   LogoutRoute: typeof LogoutRoute
-  RedirectRoute: typeof RedirectRoute
   SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
-  ApiUsersRoute: typeof ApiUsersRouteWithChildren
   AuthCallbackRoute: typeof AuthCallbackRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  UsersRouteRoute: UsersRouteRoute,
   AuthedRoute: AuthedRouteWithChildren,
-  PathlessLayoutRoute: PathlessLayoutRouteWithChildren,
+  PathlessLayoutRoute: PathlessLayoutRoute,
   DashboardRoute: DashboardRouteWithChildren,
-  DeferredRoute: DeferredRoute,
   LoginRoute: LoginRoute,
   LogoutRoute: LogoutRoute,
-  RedirectRoute: RedirectRoute,
   SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,
-  ApiUsersRoute: ApiUsersRouteWithChildren,
   AuthCallbackRoute: AuthCallbackRoute,
 }
 
@@ -642,40 +337,28 @@ export const routeTree = rootRoute
       "filePath": "__root.tsx",
       "children": [
         "/",
-        "/users",
         "/_authed",
         "/_pathlessLayout",
         "/dashboard",
-        "/deferred",
         "/login",
         "/logout",
-        "/redirect",
         "/settings",
         "/signup",
-        "/api/users",
         "/auth/callback"
       ]
     },
     "/": {
       "filePath": "index.tsx"
     },
-    "/users": {
-      "filePath": "users.route.tsx"
-    },
     "/_authed": {
       "filePath": "_authed.tsx",
       "children": [
-        "/_authed/posts",
         "/_authed/jobs/$jobId",
-        "/_authed/jobs/[jobId]",
         "/_authed/video/$videoId"
       ]
     },
     "/_pathlessLayout": {
-      "filePath": "_pathlessLayout.tsx",
-      "children": [
-        "/_pathlessLayout/_nested-layout"
-      ]
+      "filePath": "_pathlessLayout.tsx"
     },
     "/dashboard": {
       "filePath": "dashboard.tsx",
@@ -683,45 +366,17 @@ export const routeTree = rootRoute
         "/dashboard/e2e/test"
       ]
     },
-    "/deferred": {
-      "filePath": "deferred.tsx"
-    },
     "/login": {
       "filePath": "login.tsx"
     },
     "/logout": {
       "filePath": "logout.tsx"
     },
-    "/redirect": {
-      "filePath": "redirect.tsx"
-    },
     "/settings": {
       "filePath": "settings.tsx"
     },
     "/signup": {
       "filePath": "signup.tsx"
-    },
-    "/_authed/posts": {
-      "filePath": "_authed/posts.tsx",
-      "parent": "/_authed",
-      "children": [
-        "/_authed/posts/$postId",
-        "/_authed/posts/"
-      ]
-    },
-    "/_pathlessLayout/_nested-layout": {
-      "filePath": "_pathlessLayout/_nested-layout.tsx",
-      "parent": "/_pathlessLayout",
-      "children": [
-        "/_pathlessLayout/_nested-layout/route-a",
-        "/_pathlessLayout/_nested-layout/route-b"
-      ]
-    },
-    "/api/users": {
-      "filePath": "api/users.ts",
-      "children": [
-        "/api/users/$id"
-      ]
     },
     "/auth/callback": {
       "filePath": "auth/callback.tsx"
@@ -730,37 +385,13 @@ export const routeTree = rootRoute
       "filePath": "_authed.jobs.$jobId.tsx",
       "parent": "/_authed"
     },
-    "/_authed/jobs/[jobId]": {
-      "filePath": "_authed.jobs.[jobId].tsx",
-      "parent": "/_authed"
-    },
-    "/_authed/posts/$postId": {
-      "filePath": "_authed/posts.$postId.tsx",
-      "parent": "/_authed/posts"
-    },
     "/_authed/video/$videoId": {
       "filePath": "_authed/video/$videoId.tsx",
       "parent": "/_authed"
     },
-    "/_pathlessLayout/_nested-layout/route-a": {
-      "filePath": "_pathlessLayout/_nested-layout/route-a.tsx",
-      "parent": "/_pathlessLayout/_nested-layout"
-    },
-    "/_pathlessLayout/_nested-layout/route-b": {
-      "filePath": "_pathlessLayout/_nested-layout/route-b.tsx",
-      "parent": "/_pathlessLayout/_nested-layout"
-    },
-    "/api/users/$id": {
-      "filePath": "api/users.$id.ts",
-      "parent": "/api/users"
-    },
     "/dashboard/e2e/test": {
       "filePath": "dashboard.e2e.test.tsx",
       "parent": "/dashboard"
-    },
-    "/_authed/posts/": {
-      "filePath": "_authed/posts.index.tsx",
-      "parent": "/_authed/posts"
     }
   }
 }
