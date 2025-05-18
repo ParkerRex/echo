@@ -3,7 +3,8 @@ import os
 
 import pytest
 from fastapi import FastAPI, status
-from fastapi.testclient import TestClient
+from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.core.api.schemas.video_processing_schemas import VideoUploadResponseSchema
 from apps.core.lib.database.connection import get_db_session
@@ -13,7 +14,10 @@ from apps.core.models.enums import ProcessingStatus
 pytestmark = pytest.mark.integration
 
 
-def test_upload_video_successful(client: TestClient, test_video_file: str, db_session):
+@pytest.mark.asyncio
+async def test_upload_video_successful(
+    client: AsyncClient, test_video_file: str, db_session: AsyncSession
+):
     """Test successful video upload and initial job creation"""
     # Read the test video file
     with open(test_video_file, "rb") as f:
@@ -23,7 +27,7 @@ def test_upload_video_successful(client: TestClient, test_video_file: str, db_se
     file = io.BytesIO(file_content)
 
     # Make the request
-    response = client.post(
+    response = await client.post(
         "/api/v1/videos/upload",
         files={"file": ("test_video.mp4", file, "video/mp4")},
     )
@@ -43,11 +47,9 @@ def test_upload_video_successful(client: TestClient, test_video_file: str, db_se
     assert json_response["status"] == ProcessingStatus.PENDING.value
 
     # Verify job exists in database
-    db = next(get_db_session())
     from apps.core.operations.video_job_repository import VideoJobRepository
 
-    job_repo = VideoJobRepository()
-    job = job_repo.get_by_id(db, job_id)
+    job = await VideoJobRepository.get_by_id(db_session, job_id)
 
     assert job is not None
     assert job.status == ProcessingStatus.PENDING
@@ -55,8 +57,8 @@ def test_upload_video_successful(client: TestClient, test_video_file: str, db_se
     # Verify video was created in database
     from apps.core.operations.video_repository import VideoRepository
 
-    video_repo = VideoRepository()
-    video = video_repo.get_by_id(db, job.video_id)
+    video_id_value: int = job.video_id
+    video = await VideoRepository.get_by_id(db_session, video_id_value)
 
     assert video is not None
     assert video.uploader_user_id == "test-user-id"
@@ -64,18 +66,20 @@ def test_upload_video_successful(client: TestClient, test_video_file: str, db_se
     assert video.content_type == "video/mp4"
 
 
-def test_upload_video_no_file(client: TestClient):
+@pytest.mark.asyncio
+async def test_upload_video_no_file(client: AsyncClient):
     """Test uploading without a file returns 422"""
-    response = client.post("/api/v1/videos/upload")
+    response = await client.post("/api/v1/videos/upload")
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
-def test_upload_video_unsupported_file_type(client: TestClient):
+@pytest.mark.asyncio
+async def test_upload_video_unsupported_file_type(client: AsyncClient):
     """Test uploading an unsupported file type"""
     # Create a text file
     file = io.BytesIO(b"This is not a video")
 
-    response = client.post(
+    response = await client.post(
         "/api/v1/videos/upload",
         files={"file": ("test.txt", file, "text/plain")},
     )
@@ -84,7 +88,8 @@ def test_upload_video_unsupported_file_type(client: TestClient):
     assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
-def test_upload_video_unauthenticated(client: TestClient, test_video_file: str):
+@pytest.mark.asyncio
+async def test_upload_video_unauthenticated(client: AsyncClient, test_video_file: str):
     """Test upload fails with invalid authentication"""
     # Temporarily override the auth dependency to simulate unauthenticated request
     from fastapi import HTTPException
@@ -93,7 +98,7 @@ def test_upload_video_unauthenticated(client: TestClient, test_video_file: str):
     from apps.core.main import app
 
     # Create a function that raises an authentication error
-    def mock_unauthenticated_user():
+    async def mock_unauthenticated_user():
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
@@ -112,7 +117,7 @@ def test_upload_video_unauthenticated(client: TestClient, test_video_file: str):
         file = io.BytesIO(file_content)
 
         # Make the request
-        response = client.post(
+        response = await client.post(
             "/api/v1/videos/upload",
             files={"file": ("test_video.mp4", file, "video/mp4")},
         )
@@ -128,12 +133,13 @@ def test_upload_video_unauthenticated(client: TestClient, test_video_file: str):
             del app.dependency_overrides[get_current_user]
 
 
-def test_upload_large_video(client: TestClient):
+@pytest.mark.asyncio
+async def test_upload_large_video(client: AsyncClient):
     """Test handling of large video files"""
     # Create a large file (10MB)
     large_file = io.BytesIO(b"0" * (10 * 1024 * 1024))
 
-    response = client.post(
+    response = await client.post(
         "/api/v1/videos/upload",
         files={"file": ("large_video.mp4", large_file, "video/mp4")},
     )

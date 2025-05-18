@@ -1,6 +1,6 @@
 import pytest
 from fastapi import FastAPI, status
-from fastapi.testclient import TestClient
+from httpx import AsyncClient
 
 from apps.core.lib.auth.supabase_auth import get_current_user
 from apps.core.models.enums import ProcessingStatus
@@ -8,13 +8,14 @@ from apps.core.models.enums import ProcessingStatus
 pytestmark = pytest.mark.integration
 
 
-def test_get_job_status_successful(client: TestClient, populated_db):
+@pytest.mark.asyncio
+async def test_get_job_status_successful(client: AsyncClient, populated_db):
     """Test successful retrieval of job status for an authorized user."""
     # Get the job from the populated database
     job = populated_db["job"]
 
     # Make the request
-    response = client.get(f"/api/v1/videos/jobs/{job.id}")
+    response = await client.get(f"/api/v1/videos/jobs/{job.id}")
 
     # Assert response status
     assert response.status_code == status.HTTP_200_OK
@@ -36,19 +37,21 @@ def test_get_job_status_successful(client: TestClient, populated_db):
     assert json_response["video"]["original_filename"] == "test_video.mp4"
 
 
-def test_get_job_status_nonexistent_job(client: TestClient):
+@pytest.mark.asyncio
+async def test_get_job_status_nonexistent_job(client: AsyncClient):
     """Test error handling for non-existent job ID."""
     # Use a job ID that doesn't exist
     non_existent_job_id = 9999
 
     # Make the request
-    response = client.get(f"/api/v1/videos/jobs/{non_existent_job_id}")
+    response = await client.get(f"/api/v1/videos/jobs/{non_existent_job_id}")
 
     # Should return 404 Not Found
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
-def test_get_job_status_unauthorized_user(client: TestClient, populated_db):
+@pytest.mark.asyncio
+async def test_get_job_status_unauthorized_user(client: AsyncClient, populated_db):
     """Test unauthorized access to a job owned by another user."""
     # Get the job from the populated database
     job = populated_db["job"]
@@ -58,7 +61,7 @@ def test_get_job_status_unauthorized_user(client: TestClient, populated_db):
     from apps.core.main import app
 
     # Create a different user
-    def mock_different_user():
+    async def mock_different_user():
         return AuthenticatedUser(
             id="different-user-id", email="different@example.com", aud="authenticated"
         )
@@ -69,7 +72,7 @@ def test_get_job_status_unauthorized_user(client: TestClient, populated_db):
 
     try:
         # Make the request
-        response = client.get(f"/api/v1/videos/jobs/{job.id}")
+        response = await client.get(f"/api/v1/videos/jobs/{job.id}")
 
         # Should return 403 Forbidden since the job belongs to another user
         assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -82,7 +85,8 @@ def test_get_job_status_unauthorized_user(client: TestClient, populated_db):
             del app.dependency_overrides[get_current_user]
 
 
-def test_get_job_status_unauthenticated(client: TestClient, populated_db):
+@pytest.mark.asyncio
+async def test_get_job_status_unauthenticated(client: AsyncClient, populated_db):
     """Test job status retrieval for unauthenticated user."""
     # Get the job from the populated database
     job = populated_db["job"]
@@ -93,7 +97,7 @@ def test_get_job_status_unauthenticated(client: TestClient, populated_db):
     from apps.core.main import app
 
     # Create a function that raises an authentication error
-    def mock_unauthenticated_user():
+    async def mock_unauthenticated_user():
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
@@ -106,7 +110,7 @@ def test_get_job_status_unauthenticated(client: TestClient, populated_db):
 
     try:
         # Make the request
-        response = client.get(f"/api/v1/videos/jobs/{job.id}")
+        response = await client.get(f"/api/v1/videos/jobs/{job.id}")
 
         # Should return 401 Unauthorized
         assert response.status_code == status.HTTP_401_UNAUTHORIZED

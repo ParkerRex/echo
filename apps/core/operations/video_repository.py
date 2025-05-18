@@ -27,6 +27,8 @@ Usage:
 
 from typing import Optional
 
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from apps.core.models.video_model import VideoModel
@@ -38,8 +40,8 @@ class VideoRepository:
     """
 
     @staticmethod
-    def create(
-        db: Session,
+    async def create(
+        db: AsyncSession,
         uploader_user_id: str,
         original_filename: str,
         storage_path: str,
@@ -50,7 +52,7 @@ class VideoRepository:
         Create and persist a new VideoModel.
 
         Args:
-            db (Session): SQLAlchemy session.
+            db (AsyncSession): SQLAlchemy async session.
             uploader_user_id (str): Supabase Auth user ID.
             original_filename (str): Original filename.
             storage_path (str): Path in storage backend.
@@ -68,19 +70,20 @@ class VideoRepository:
             size_bytes=size_bytes,
         )
         db.add(video)
-        db.flush()  # Assigns ID
+        await db.flush()  # Assigns ID
         return video
 
     @staticmethod
-    def get_by_id(db: Session, video_id: int) -> Optional[VideoModel]:
+    async def get_by_id(db: AsyncSession, video_id: int) -> Optional[VideoModel]:
         """
         Retrieve a VideoModel by its ID.
 
         Args:
-            db (Session): SQLAlchemy session.
+            db (AsyncSession): SQLAlchemy async session.
             video_id (int): Video ID.
 
         Returns:
             Optional[VideoModel]: The video model, or None if not found.
         """
-        return db.query(VideoModel).filter(VideoModel.id == video_id).first()
+        result = await db.execute(select(VideoModel).filter(VideoModel.id == video_id))
+        return result.scalars().first()

@@ -4,6 +4,7 @@ Service layer for job-related operations.
 
 from typing import List, Optional
 
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from apps.core.models.enums import ProcessingStatus
@@ -15,7 +16,7 @@ from apps.core.operations.video_job_repository import VideoJobRepository
 
 
 async def get_user_jobs_by_statuses(
-    db: Session,  # Note: Synchronous session for now
+    db: AsyncSession,  # Changed to AsyncSession
     user_id: str,  # Supabase User ID (string/UUID)
     statuses: Optional[List[ProcessingStatus]] = None,
 ) -> List[VideoJobModel]:
@@ -23,7 +24,7 @@ async def get_user_jobs_by_statuses(
     Retrieves video processing jobs for a specific user, filtered by specified statuses.
 
     Args:
-        db: SQLAlchemy session.
+        db: SQLAlchemy async session.
         user_id: The ID of the user (Supabase string UUID).
         statuses: An optional list of ProcessingStatus enums to filter by.
                   If None or empty, this service will default to PENDING and PROCESSING.
@@ -38,9 +39,8 @@ async def get_user_jobs_by_statuses(
     else:
         statuses_to_fetch = statuses
 
-    # Since the repository method and DB session are synchronous,
-    # we don't use await here. If they become async, this call should be awaited.
-    jobs = VideoJobRepository.get_by_user_id_and_statuses(
+    # Repository method is now async, so await the call.
+    jobs = await VideoJobRepository.get_by_user_id_and_statuses(
         db=db,
         user_id=user_id,
         statuses=statuses_to_fetch,

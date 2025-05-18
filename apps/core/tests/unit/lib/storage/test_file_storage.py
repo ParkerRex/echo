@@ -108,7 +108,8 @@ class TestFileStorageService:
 
         assert "GCS_BUCKET_NAME must be set" in str(excinfo.value)
 
-    def test_init_unsupported_backend(self):
+    @pytest.mark.asyncio
+    async def test_init_unsupported_backend(self):
         """Test initialization fails with an unsupported storage backend."""
         settings = Settings()
         settings.STORAGE_BACKEND = "unsupported"
@@ -118,7 +119,7 @@ class TestFileStorageService:
 
         # But operations should fail
         with pytest.raises(ValueError) as excinfo:
-            asyncio.run(service.save_file(b"test content", "test.txt"))
+            await service.save_file(b"test content", "test.txt")
 
         assert "Unsupported storage backend" in str(excinfo.value)
 

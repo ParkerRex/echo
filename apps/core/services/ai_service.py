@@ -47,7 +47,7 @@ class AIService:
             "chat_id": chat_id,
         }
 
-        ai_message = self.chat_repository.create_message(message_data)
+        ai_message = await self.chat_repository.create_message(message_data)
 
         return {
             "id": ai_message.id,
@@ -59,7 +59,7 @@ class AIService:
 
     async def get_chat_history(self, chat_id: UUID) -> List[Dict[str, Any]]:
         """Get the chat history in a format usable for AI context"""
-        messages = self.chat_repository.get_messages_by_chat(chat_id)
+        messages = await self.chat_repository.get_messages_by_chat(chat_id)
         result = []
 
         for msg in messages:
@@ -98,7 +98,7 @@ class AIService:
             "is_from_ai": False,
             "chat_id": chat_id,
         }
-        self.chat_repository.create_message(user_message_data)
+        await self.chat_repository.create_message(user_message_data)
 
         # Use OpenAI streaming API
         complete_response = ""
@@ -134,7 +134,7 @@ class AIService:
             "is_from_ai": True,
             "chat_id": chat_id,
         }
-        self.chat_repository.create_message(ai_message_data)
+        await self.chat_repository.create_message(ai_message_data)
 
     async def convert_to_openai_messages(self, client_messages: List[Dict[str, Any]]):
         """
@@ -180,7 +180,7 @@ class AIService:
             yield "No valid user messages found"
 
 
-def get_ai_service(
+async def get_ai_service(
     chat_repository: ChatRepository = Depends(get_chat_repository),
 ) -> AIService:
     return AIService(chat_repository)

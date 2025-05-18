@@ -7,6 +7,8 @@ requires-python = ">=3.13"
 
 dependencies = [
     # Core dependencies
+    "aiosqlite>=0.20.0",
+    "asyncpg>=0.29.0",
     "autoflake>=2.3.1",
     "email-validator>=2.2.0",
     "fastapi>=0.115.12",
@@ -52,6 +54,7 @@ dependencies = [
 dev = [
     # Testing dependencies
     "pytest>=8.3.5",
+    "pytest-asyncio",
     "pytest-mock==3.11.1",
     "pytest-cov==4.1.0",
     

@@ -2,18 +2,20 @@ import hashlib
 from typing import Any, Dict, Optional
 
 from fastapi import Depends, HTTPException, status
-from operations.user_repository import UserRepository, get_user_repository
+
+# Corrected import paths
+from apps.core.operations.user_repository import UserRepository, get_user_repository
 
 
 class AuthService:
     def __init__(self, user_repository: UserRepository):
         self.user_repository = user_repository
 
-    def authenticate_user(
+    async def authenticate_user(
         self, username: str, password: str
     ) -> Optional[Dict[str, Any]]:
         # Find the user
-        user = self.user_repository.get_user_by_username(username)
+        user = await self.user_repository.get_user_by_username(username)
         if not user:
             return None
 
@@ -31,7 +33,7 @@ class AuthService:
             "is_active": user.is_active,
         }
 
-    def register_user(self, user_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def register_user(self, user_data: Dict[str, Any]) -> Dict[str, Any]:
         # Check if username or email already exists
         email = user_data.get("email")
         if not email:
@@ -39,7 +41,7 @@ class AuthService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email is required",
             )
-        if self.user_repository.get_user_by_email(email):
+        if await self.user_repository.get_user_by_email(email):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email already registered",
@@ -51,7 +53,7 @@ class AuthService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Username is required",
             )
-        if self.user_repository.get_user_by_username(username):
+        if await self.user_repository.get_user_by_username(username):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Username already taken",
@@ -62,7 +64,7 @@ class AuthService:
         user_data["hashed_password"] = hashlib.sha256(password.encode()).hexdigest()
 
         # Create user
-        user = self.user_repository.create_user(user_data)
+        user = await self.user_repository.create_user(user_data)
 
         # Return user without sensitive information
         return {
@@ -74,7 +76,7 @@ class AuthService:
         }
 
 
-def get_auth_service(
+async def get_auth_service(
     user_repository: UserRepository = Depends(get_user_repository),
 ) -> AuthService:
     return AuthService(user_repository)

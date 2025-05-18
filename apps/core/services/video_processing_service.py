@@ -47,11 +47,13 @@ Usage:
 from typing import Optional
 
 from fastapi import BackgroundTasks, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from apps.core.core.exceptions import VideoProcessingError
 from apps.core.lib.ai.base_adapter import AIAdapterInterface
 from apps.core.lib.auth.supabase_auth import AuthenticatedUser
+from apps.core.lib.database.connection import AsyncSessionLocal, create_async_session
 from apps.core.lib.storage.file_storage import FileStorageService
 from apps.core.lib.utils.ffmpeg_utils import FfmpegUtils
 from apps.core.lib.utils.file_utils import FileUtils
@@ -106,7 +108,7 @@ class VideoProcessingService:
 
     async def initiate_video_processing(
         self,
-        db: Session,
+        db: AsyncSession,
         original_filename: str,
         video_content: bytes,
         content_type: str,
@@ -122,7 +124,7 @@ class VideoProcessingService:
         3. Schedules the full processing pipeline as a background task
 
         Args:
-            db (Session): Database session for database operations
+            db (AsyncSession): Database async session for database operations
             original_filename (str): Original filename of the uploaded video
             video_content (bytes): Raw video file content
             content_type (str): MIME type of the video file (e.g., "video/mp4")
@@ -143,7 +145,7 @@ class VideoProcessingService:
             subdir=f"uploads/{uploader_user_id}",
         )
         # Create VideoModel
-        video = self.video_repo.create(
+        video = await self.video_repo.create(
             db=db,
             uploader_user_id=uploader_user_id,
             original_filename=original_filename,
@@ -152,17 +154,19 @@ class VideoProcessingService:
             size_bytes=len(video_content),
         )
         # Create VideoJobModel
-        job = self.job_repo.create(
+        job = await self.job_repo.create(
             db=db,
-            video_id=video.id,
+            video_id=video.id,  # type: ignore[arg-type]
             status=ProcessingStatus.PENDING,
             processing_stages=None,
             error_message=None,
         )
-        db.commit()
+        await db.commit()
         # Schedule background processing
         background_tasks.add_task(
-            self._execute_processing_pipeline, job.id, stored_video_path
+            self._execute_processing_pipeline,
+            job.id,  # type: ignore[arg-type]
+            stored_video_path,  # type: ignore[arg-type]
         )
         return job
 
@@ -199,157 +203,175 @@ class VideoProcessingService:
             if any step encounters an exception. It also ensures proper cleanup of temporary
             files and database connections.
         """
-        from apps.core.lib.database.connection import get_db_session
+        async with AsyncSessionLocal() as db_bg:
+            temp_dir = self.file_utils.create_temp_dir()
+            try:
+                job = await self.job_repo.get_by_id(db_bg, job_id)
+                if not job:
+                    raise VideoProcessingError(
+                        f"Job {job_id} not found or video relationship missing"
+                    )
 
-        db_bg = next(get_db_session())
-        temp_dir = self.file_utils.create_temp_dir()
-        try:
-            job = self.job_repo.get_by_id(db_bg, job_id)
-            if not job:
-                raise VideoProcessingError(f"Job {job_id} not found")
-            self.job_repo.update_status(db_bg, job_id, ProcessingStatus.PROCESSING)
-            db_bg.commit()
+                await self.job_repo.update_status(
+                    db_bg, job_id, ProcessingStatus.PROCESSING
+                )
+                await db_bg.commit()
 
-            # Download video to temp dir
-            local_video_path = f"{temp_dir}/{job.video.original_filename}"
-            await self.storage.download_file(video_storage_path, local_video_path)
+                # Download video to temp dir
+                if job.video is None:
+                    raise VideoProcessingError(
+                        f"Video data not found for job {job_id}. Ensure video relationship is loaded."
+                    )
+                local_video_path = f"{temp_dir}/{job.video.original_filename}"
+                await self.storage.download_file(video_storage_path, local_video_path)
 
-            # Step 1: Basic Metadata
-            video_metadata = self.ffmpeg_utils.get_video_metadata_sync(local_video_path)
-            self.metadata_repo.create_or_update(
-                db_bg,
-                job_id,
-                extracted_video_duration_seconds=video_metadata.get("duration"),
-                extracted_video_resolution=video_metadata.get("resolution"),
-                extracted_video_format=video_metadata.get("format"),
-            )
-            db_bg.commit()
+                # Step 1: Basic Metadata
+                video_metadata = self.ffmpeg_utils.get_video_metadata_sync(
+                    local_video_path
+                )
+                await self.metadata_repo.create_or_update(
+                    db_bg,
+                    job_id,
+                    extracted_video_duration_seconds=video_metadata.get("duration"),
+                    extracted_video_resolution=video_metadata.get("resolution"),
+                    extracted_video_format=video_metadata.get("format"),
+                )
+                await db_bg.commit()
 
-            # Step 2: Extract Audio
-            audio_path = f"{temp_dir}/audio.wav"
-            self.ffmpeg_utils.extract_audio_sync(local_video_path, audio_path)
+                # Step 2: Extract Audio
+                audio_path = f"{temp_dir}/audio.wav"
+                self.ffmpeg_utils.extract_audio_sync(local_video_path, audio_path)
 
-            # Step 3: Transcript
-            transcript_text = await self.ai_adapter.transcribe_audio(audio_path)
-            transcript_file_path = f"{temp_dir}/transcript.txt"
-            with open(transcript_file_path, "w") as f:
-                f.write(transcript_text)
-            transcript_url = await self.storage.save_file(
-                file_content=transcript_text.encode("utf-8"),
-                filename="transcript.txt",
-                subdir=f"transcripts/{job.video.uploader_user_id}",
-            )
+                # Step 3: Transcript
+                transcript_text = await self.ai_adapter.transcribe_audio(audio_path)
+                transcript_file_path = f"{temp_dir}/transcript.txt"
+                with open(transcript_file_path, "w") as f:
+                    f.write(transcript_text)
+                transcript_url = await self.storage.save_file(
+                    file_content=transcript_text.encode("utf-8"),
+                    filename="transcript.txt",
+                    subdir=f"transcripts/{job.video.uploader_user_id}",
+                )
 
-            self.metadata_repo.create_or_update(
-                db_bg,
-                job_id,
-                transcript_text=transcript_text,
-                transcript_file_url=transcript_url,
-            )
-            db_bg.commit()
+                await self.metadata_repo.create_or_update(
+                    db_bg,
+                    job_id,
+                    transcript_text=transcript_text,
+                    transcript_file_url=transcript_url,
+                )
+                await db_bg.commit()
 
-            # Step 4: Content Metadata
-            title = await self.ai_adapter.generate_text(
-                prompt="Generate a YouTube-style title for this video.",
-                context=transcript_text,
-            )
-            description = await self.ai_adapter.generate_text(
-                prompt="Generate a YouTube-style description for this video.",
-                context=transcript_text,
-            )
-            tags = await self.ai_adapter.generate_text(
-                prompt="Generate a comma-separated list of tags for this video.",
-                context=transcript_text,
-            )
-            show_notes = await self.ai_adapter.generate_text(
-                prompt="Generate show notes for this video.", context=transcript_text
-            )
-            self.metadata_repo.create_or_update(
-                db_bg,
-                job_id,
-                title=title,
-                description=description,
-                tags=[t.strip() for t in tags.split(",")],
-                show_notes_text=show_notes,
-            )
-            db_bg.commit()
+                # Step 4: Content Metadata
+                title = await self.ai_adapter.generate_text(
+                    prompt="Generate a YouTube-style title for this video.",
+                    context=transcript_text,
+                )
+                description = await self.ai_adapter.generate_text(
+                    prompt="Generate a YouTube-style description for this video.",
+                    context=transcript_text,
+                )
+                tags = await self.ai_adapter.generate_text(
+                    prompt="Generate a comma-separated list of tags for this video.",
+                    context=transcript_text,
+                )
+                show_notes = await self.ai_adapter.generate_text(
+                    prompt="Generate show notes for this video.",
+                    context=transcript_text,
+                )
+                await self.metadata_repo.create_or_update(
+                    db_bg,
+                    job_id,
+                    title=title,
+                    description=description,
+                    tags=[t.strip() for t in tags.split(",")],
+                    show_notes_text=show_notes,
+                )
+                await db_bg.commit()
 
-            # Step 5: Subtitles
-            segments = [
-                {"text": line, "start_time": 0.0, "end_time": 0.0}
-                for line in transcript_text.splitlines()
-            ]
-            vtt_content = self.subtitle_utils.generate_vtt(segments)
-            srt_content = self.subtitle_utils.generate_srt(segments)
-            vtt_url = await self.storage.save_file(
-                file_content=vtt_content.encode("utf-8"),
-                filename="subtitles.vtt",
-                subdir=f"subtitles/{job.video.uploader_user_id}",
-            )
-            srt_url = await self.storage.save_file(
-                file_content=srt_content.encode("utf-8"),
-                filename="subtitles.srt",
-                subdir=f"subtitles/{job.video.uploader_user_id}",
-            )
-            self.metadata_repo.create_or_update(
-                db_bg,
-                job_id,
-                subtitle_files_urls={"vtt": vtt_url, "srt": srt_url},
-            )
-            db_bg.commit()
+                # Step 5: Subtitles
+                segments = [
+                    {"text": line, "start_time": 0.0, "end_time": 0.0}
+                    for line in transcript_text.splitlines()
+                ]
+                vtt_content = self.subtitle_utils.generate_vtt(segments)
+                srt_content = self.subtitle_utils.generate_srt(segments)
+                vtt_url = await self.storage.save_file(
+                    file_content=vtt_content.encode("utf-8"),
+                    filename="subtitles.vtt",
+                    subdir=f"subtitles/{job.video.uploader_user_id}",
+                )
+                srt_url = await self.storage.save_file(
+                    file_content=srt_content.encode("utf-8"),
+                    filename="subtitles.srt",
+                    subdir=f"subtitles/{job.video.uploader_user_id}",
+                )
+                await self.metadata_repo.create_or_update(
+                    db_bg,
+                    job_id,
+                    subtitle_files_urls={"vtt": vtt_url, "srt": srt_url},
+                )
+                await db_bg.commit()
 
-            # Step 6: Thumbnail
-            thumbnail_path = f"{temp_dir}/thumbnail.jpg"
-            self.ffmpeg_utils.extract_frame_sync(local_video_path, 1.0, thumbnail_path)
-            with open(thumbnail_path, "rb") as f:
-                thumbnail_bytes = f.read()
-            thumbnail_url = await self.storage.save_file(
-                file_content=thumbnail_bytes,
-                filename="thumbnail.jpg",
-                subdir=f"thumbnails/{job.video.uploader_user_id}",
-            )
-            self.metadata_repo.create_or_update(
-                db_bg,
-                job_id,
-                thumbnail_file_url=thumbnail_url,
-            )
-            db_bg.commit()
+                # Step 6: Thumbnail
+                thumbnail_path = f"{temp_dir}/thumbnail.jpg"
+                self.ffmpeg_utils.extract_frame_sync(
+                    local_video_path, 1.0, thumbnail_path
+                )
+                with open(thumbnail_path, "rb") as f:
+                    thumbnail_bytes = f.read()
+                thumbnail_url = await self.storage.save_file(
+                    file_content=thumbnail_bytes,
+                    filename="thumbnail.jpg",
+                    subdir=f"thumbnails/{job.video.uploader_user_id}",
+                )
+                await self.metadata_repo.create_or_update(
+                    db_bg,
+                    job_id,
+                    thumbnail_file_url=thumbnail_url,
+                )
+                await db_bg.commit()
 
-            # Mark job as completed
-            self.job_repo.update_status(db_bg, job_id, ProcessingStatus.COMPLETED)
-            db_bg.commit()
-        except Exception as e:
-            self.job_repo.update_status(db_bg, job_id, ProcessingStatus.FAILED)
-            self.job_repo.add_processing_stage(db_bg, job_id, f"Error: {str(e)}")
-            db_bg.commit()
-        finally:
-            self.file_utils.cleanup_temp_dir(temp_dir)
-            db_bg.close()
+                # Mark job as completed
+                await self.job_repo.update_status(
+                    db_bg, job_id, ProcessingStatus.COMPLETED
+                )
+                await db_bg.commit()
+            except Exception as e:
+                await self.job_repo.update_status(
+                    db_bg, job_id, ProcessingStatus.FAILED
+                )
+                await self.job_repo.add_processing_stage(
+                    db_bg, job_id, f"Error: {str(e)}"
+                )
+                await db_bg.commit()
+            finally:
+                self.file_utils.cleanup_temp_dir(temp_dir)
+                await db_bg.close()
 
     async def get_job_details(
-        self, db: Session, job_id: int, user_id: str
+        self, db: AsyncSession, job_id: int, user_id: str
     ) -> Optional[VideoJobModel]:
         """
-        Retrieve video processing job details with access control checks.
+        Retrieve details of a specific video processing job.
 
-        This method fetches a video processing job by ID, but includes authorization
-        checks to ensure the requesting user is the owner of the associated video.
-        It returns the job with its related video and metadata objects for a
-        complete view of the processing status.
+        Ensures that the job belongs to the requesting user before returning details.
 
         Args:
-            db (Session): Database session for database operations
-            job_id (int): ID of the video processing job to retrieve
-            user_id (str): ID of the user requesting the job details
+            db (AsyncSession): Database async session for database operations.
+            job_id (int): ID of the video processing job.
+            user_id (str): ID of the user requesting the job details.
 
         Returns:
-            Optional[VideoJobModel]: The job with related objects if found and authorized
-
-        Raises:
-            HTTPException: 404 error if job not found or user is not authorized to view it
+            Optional[VideoJobModel]: The job model if found and user is authorized,
+                                     otherwise None or raises HTTPException.
         """
-        job = self.job_repo.get_by_id(db, job_id)
-        if not job or job.video.uploader_user_id != user_id:
+        job = await self.job_repo.get_by_id(db, job_id)
+        if not job:
             raise HTTPException(status_code=404, detail="Job not found")
-        # Eagerly load related video and metadata if not already loaded
+
+        # Ensure video relationship is loaded by get_by_id or handle potential None
+        if job.video is None or job.video.uploader_user_id != user_id:
+            raise HTTPException(
+                status_code=403, detail="User not authorized to view this job"
+            )
         return job

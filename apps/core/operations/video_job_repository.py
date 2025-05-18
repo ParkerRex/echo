@@ -37,6 +37,8 @@ Usage:
 
 from typing import Any, List, Optional
 
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session, joinedload
 
 from apps.core.models.enums import ProcessingStatus
@@ -50,8 +52,8 @@ class VideoJobRepository:
     """
 
     @staticmethod
-    def create(
-        db: Session,
+    async def create(
+        db: AsyncSession,
         video_id: int,
         status: ProcessingStatus = ProcessingStatus.PENDING,
         processing_stages: Optional[Any] = None,
@@ -61,7 +63,7 @@ class VideoJobRepository:
         Create and persist a new VideoJobModel.
 
         Args:
-            db (Session): SQLAlchemy session.
+            db (AsyncSession): SQLAlchemy async session.
             video_id (int): Associated video ID.
             status (ProcessingStatus): Initial processing status.
             processing_stages (Optional[Any]): Initial processing stages (JSON/text).
@@ -77,26 +79,29 @@ class VideoJobRepository:
             error_message=error_message,
         )
         db.add(job)
-        db.flush()
+        await db.flush()
         return job
 
     @staticmethod
-    def get_by_id(db: Session, job_id: int) -> Optional[VideoJobModel]:
+    async def get_by_id(db: AsyncSession, job_id: int) -> Optional[VideoJobModel]:
         """
         Retrieve a VideoJobModel by its ID.
 
         Args:
-            db (Session): SQLAlchemy session.
+            db (AsyncSession): SQLAlchemy async session.
             job_id (int): Job ID.
 
         Returns:
             Optional[VideoJobModel]: The job model, or None if not found.
         """
-        return db.query(VideoJobModel).filter(VideoJobModel.id == job_id).first()
+        result = await db.execute(
+            select(VideoJobModel).filter(VideoJobModel.id == job_id)
+        )
+        return result.scalars().first()
 
     @staticmethod
-    def update_status(
-        db: Session,
+    async def update_status(
+        db: AsyncSession,
         job_id: int,
         status: ProcessingStatus,
         error_message: Optional[str] = None,
@@ -105,7 +110,7 @@ class VideoJobRepository:
         Update the status (and optionally error message) of a VideoJobModel.
 
         Args:
-            db (Session): SQLAlchemy session.
+            db (AsyncSession): SQLAlchemy async session.
             job_id (int): Job ID.
             status (ProcessingStatus): New status.
             error_message (Optional[str]): Error message.
@@ -113,32 +118,44 @@ class VideoJobRepository:
         Returns:
             Optional[VideoJobModel]: The updated job model, or None if not found.
         """
-        job = db.query(VideoJobModel).filter(VideoJobModel.id == job_id).first()
+        result = await db.execute(
+            select(VideoJobModel).filter(VideoJobModel.id == job_id)
+        )
+        job = result.scalars().first()
         if job is not None:
             job.status = status  # type: ignore
             if error_message is not None:
                 job.error_message = error_message  # type: ignore
-            db.flush()
+            await db.flush()
         return job
 
     @staticmethod
-    def add_processing_stage(
-        db: Session, job_id: int, stage: str
+    async def add_processing_stage(
+        db: AsyncSession, job_id: int, stage: str
     ) -> Optional[VideoJobModel]:
         """
         Add a processing stage to the job's processing_stages list (assumes JSON/text).
 
         Args:
-            db (Session): SQLAlchemy session.
+            db (AsyncSession): SQLAlchemy async session.
             job_id (int): Job ID.
             stage (str): Stage to add.
 
         Returns:
             Optional[VideoJobModel]: The updated job model, or None if not found.
         """
-        job = db.query(VideoJobModel).filter(VideoJobModel.id == job_id).first()
+        result = await db.execute(
+            select(VideoJobModel).filter(VideoJobModel.id == job_id)
+        )
+        job = result.scalars().first()
         if job is not None:
-            stages = job.processing_stages or []
+            # Explicitly handle None to avoid potential issues with linter and SQLAlchemy attributes
+            current_processing_stages = job.processing_stages
+            if current_processing_stages is None:
+                stages = []
+            else:
+                stages = current_processing_stages
+
             if isinstance(stages, str):
                 import json
 
@@ -150,12 +167,12 @@ class VideoJobRepository:
                 stages = []
             stages.append(stage)
             job.processing_stages = stages  # type: ignore
-            db.flush()
+            await db.flush()
         return job
 
     @staticmethod
-    def get_by_user_id_and_statuses(
-        db: Session,
+    async def get_by_user_id_and_statuses(
+        db: AsyncSession,
         user_id: str,
         statuses: Optional[List[ProcessingStatus]] = None,
         limit: int = 100,
@@ -165,7 +182,7 @@ class VideoJobRepository:
         Retrieve VideoJobModels for a specific user, filtered by statuses, with pagination.
 
         Args:
-            db (Session): SQLAlchemy session.
+            db (AsyncSession): SQLAlchemy async session.
             user_id (str): The uploader_user_id (Supabase string UUID) from VideoModel.
             statuses (Optional[List[ProcessingStatus]]): List of statuses to filter by.
                                                       If None or empty, default statuses might be applied
@@ -176,23 +193,24 @@ class VideoJobRepository:
         Returns:
             List[VideoJobModel]: A list of job models.
         """
-        query = (
-            db.query(VideoJobModel)
+        stmt = (
+            select(VideoJobModel)
             .join(VideoModel, VideoJobModel.video_id == VideoModel.id)
             .filter(VideoModel.uploader_user_id == user_id)
         )
 
         if statuses:
-            query = query.filter(VideoJobModel.status.in_(statuses))
+            stmt = stmt.filter(VideoJobModel.status.in_(statuses))
 
         # Eager load related video and metadata to prevent N+1 queries if accessed later
         # This is useful if the VideoJobSchema nests VideoSchema and VideoMetadataSchema
-        query = query.options(
+        stmt = stmt.options(
             joinedload(VideoJobModel.video), joinedload(VideoJobModel.video_metadata)
         )
 
-        query = (
-            query.order_by(VideoJobModel.created_at.desc()).offset(offset).limit(limit)
+        stmt = (
+            stmt.order_by(VideoJobModel.created_at.desc()).offset(offset).limit(limit)
         )
 
-        return query.all()
+        result = await db.execute(stmt)
+        return list(result.scalars().all())

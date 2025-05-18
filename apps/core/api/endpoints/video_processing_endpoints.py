@@ -16,6 +16,7 @@ focusing solely on HTTP concerns.
 """
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from apps.core.api.schemas.video_processing_schemas import (
@@ -25,30 +26,59 @@ from apps.core.api.schemas.video_processing_schemas import (
 from apps.core.core.config import settings
 from apps.core.lib.ai.ai_client_factory import get_ai_adapter
 from apps.core.lib.auth.supabase_auth import AuthenticatedUser, get_current_user
-from apps.core.lib.database.connection import get_db_session
+from apps.core.lib.database.connection import get_async_db_session, get_db_session
 from apps.core.lib.storage.file_storage import FileStorageService
 from apps.core.lib.utils.ffmpeg_utils import FfmpegUtils
 from apps.core.lib.utils.file_utils import FileUtils
 from apps.core.lib.utils.subtitle_utils import SubtitleUtils
-from apps.core.operations.video_job_repository import VideoJobRepository
+from apps.core.operations.video_job_repository import (
+    VideoJobRepository,
+    get_video_job_repository,
+)
 from apps.core.operations.video_metadata_repository import VideoMetadataRepository
-from apps.core.operations.video_repository import VideoRepository
+from apps.core.operations.video_repository import VideoRepository, get_video_repository
 from apps.core.services.video_processing_service import VideoProcessingService
 
 router = APIRouter()
 
 
-def get_video_processing_service() -> VideoProcessingService:
+async def get_video_processing_service(
+    # Repositories are now injected via their async getters
+    video_repo: VideoRepository = Depends(get_video_repository),
+    job_repo: VideoJobRepository = Depends(get_video_job_repository),
+    # VideoMetadataRepository uses static methods, so no instance needed for them directly
+    # However, VideoProcessingService expects an instance. We can pass a dummy or refactor service.
+    # For now, let's assume VideoProcessingService can handle VideoMetadataRepository methods being called statically if needed
+    # or we can instantiate it if it has a simple __init__.
+    # VideoMetadataRepository has no __init__, its methods are static.
+    # The service VideoProcessingService instantiates it as `metadata_repo: VideoMetadataRepository`. Let's keep that for now.
+    # If VideoProcessingService directly calls VideoMetadataRepository.create_or_update (which it does), that's fine.
+    storage_service: FileStorageService = Depends(
+        FileStorageService
+    ),  # Assuming FileStorageService can be Depended on directly or has a getter
+    ai_adapter_instance=Depends(
+        get_ai_adapter
+    ),  # Renamed to avoid conflict, uses existing getter
+    ffmpeg_utils_instance: FfmpegUtils = Depends(
+        FfmpegUtils
+    ),  # Assuming FfmpegUtils can be Depended on
+    subtitle_utils_instance: SubtitleUtils = Depends(
+        SubtitleUtils
+    ),  # Assuming SubtitleUtils can be Depended on
+    file_utils_instance: FileUtils = Depends(
+        FileUtils
+    ),  # Assuming FileUtils can be Depended on
+) -> VideoProcessingService:
     # Dependency injection for the service and its dependencies
     return VideoProcessingService(
-        video_repo=VideoRepository(),
-        job_repo=VideoJobRepository(),
-        metadata_repo=VideoMetadataRepository(),
-        storage=FileStorageService(settings),
-        ai_adapter=get_ai_adapter(settings),
-        ffmpeg_utils=FfmpegUtils(),
-        subtitle_utils=SubtitleUtils(),
-        file_utils=FileUtils(),
+        video_repo=video_repo,  # Injected async repo
+        job_repo=job_repo,  # Injected async repo
+        metadata_repo=VideoMetadataRepository(),  # Instantiated as before (static methods)
+        storage=storage_service,
+        ai_adapter=ai_adapter_instance,
+        ffmpeg_utils=ffmpeg_utils_instance,
+        subtitle_utils=subtitle_utils_instance,
+        file_utils=file_utils_instance,
     )
 
 
@@ -61,7 +91,7 @@ async def upload_video(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     current_user: AuthenticatedUser = Depends(get_current_user),
-    db: Session = Depends(get_db_session),
+    db: AsyncSession = Depends(get_async_db_session),
     service: VideoProcessingService = Depends(get_video_processing_service),
 ):
     """
@@ -108,7 +138,7 @@ async def upload_video(
 async def get_job_details(
     job_id: int,
     current_user: AuthenticatedUser = Depends(get_current_user),
-    db: Session = Depends(get_db_session),
+    db: AsyncSession = Depends(get_async_db_session),
     service: VideoProcessingService = Depends(get_video_processing_service),
 ):
     """

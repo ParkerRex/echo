@@ -1,11 +1,12 @@
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from apps.core.api.schemas.video_processing_schemas import VideoJobSchema
 from apps.core.lib.auth.supabase_auth import AuthenticatedUser, get_current_user
-from apps.core.lib.database.connection import get_db_session
+from apps.core.lib.database.connection import get_async_db_session, get_db_session
 from apps.core.models.enums import ProcessingStatus
 from apps.core.services.job_service import get_user_jobs_by_statuses
 
@@ -23,7 +24,7 @@ router = APIRouter()
 )
 async def get_my_processing_jobs(
     *,  # Enforces keyword-only arguments for clarity
-    db: Session = Depends(get_db_session),
+    db: AsyncSession = Depends(get_async_db_session),
     current_user: AuthenticatedUser = Depends(get_current_user),
     status: Optional[List[ProcessingStatus]] = Query(
         default=None,  # Default to None, meaning all non-terminal if not specified by service

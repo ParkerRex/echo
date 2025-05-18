@@ -1,10 +1,12 @@
 import os
 import tempfile
+from typing import Optional
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import Header, HTTPException, status
 from fastapi.testclient import TestClient
+from httpx import AsyncClient
 
 import apps.core.models  # Ensure all models are registered before app/db usage
 from apps.core.lib.auth.supabase_auth import AuthenticatedUser, get_current_user
@@ -13,7 +15,7 @@ from apps.core.main import app
 
 # Dummy AI Adapter for testing
 class DummyAIAdapter:
-    async def generate_text(self, prompt: str, context: str = None) -> str:
+    async def generate_text(self, prompt: str, context: Optional[str] = None) -> str:
         return "dummy ai response"
 
     async def transcribe_audio(self, audio_file_path: str) -> str:
@@ -48,7 +50,7 @@ app.dependency_overrides[ai_client_factory.get_ai_adapter] = override_get_ai_ada
 
 # Override get_current_user dependency to bypass JWT validation for tests
 # while still requiring an Authorization header to be present
-def override_get_current_user(authorization: str = Header(None)):
+async def override_get_current_user(authorization: Optional[str] = Header(None)):
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -64,7 +66,7 @@ def override_get_current_user(authorization: str = Header(None)):
 app.dependency_overrides = getattr(app, "dependency_overrides", {})
 app.dependency_overrides[get_current_user] = override_get_current_user
 
-client = TestClient(app)
+# client = TestClient(app) # REMOVE: Client will be injected by pytest fixture
 
 
 # Patch OpenAI client for all tests to avoid real API calls and missing API key errors
@@ -97,14 +99,15 @@ def test_video_file():
     os.remove(path)
 
 
-def test_upload_video_success(test_video_file):
+@pytest.mark.asyncio
+async def test_upload_video_success(test_video_file, client: AsyncClient):
     """
     Test uploading a video with valid authentication and check response structure.
     """
     # TODO: Replace with a real or properly mocked JWT for Supabase
     valid_token = os.environ.get("TEST_AUTH_TOKEN", "test-token")
     with open(test_video_file, "rb") as f:
-        response = client.post(
+        response = await client.post(
             "/api/v1/videos/upload",
             files={"file": ("test.mp4", f, "video/mp4")},
             headers={"Authorization": f"Bearer {valid_token}"},
@@ -120,26 +123,30 @@ def test_upload_video_success(test_video_file):
     assert job_id > 0
 
 
-def test_upload_video_unauthorized(test_video_file):
+@pytest.mark.asyncio
+async def test_upload_video_unauthorized(test_video_file, client: AsyncClient):
     """
     Test uploading a video without authentication should fail.
     """
     with open(test_video_file, "rb") as f:
-        response = client.post(
+        response = await client.post(
             "/api/v1/videos/upload",
             files={"file": ("test.mp4", f, "video/mp4")},
         )
     assert response.status_code in (401, 403)
 
 
-def test_get_job_details_success(monkeypatch, test_video_file):
+@pytest.mark.asyncio
+async def test_get_job_details_success(
+    monkeypatch, test_video_file, client: AsyncClient
+):
     """
     Test retrieving job details after uploading a video.
     """
     # Upload a video and get job_id
     valid_token = os.environ.get("TEST_AUTH_TOKEN", "test-token")
     with open(test_video_file, "rb") as f:
-        upload_response = client.post(
+        upload_response = await client.post(
             "/api/v1/videos/upload",
             files={"file": ("test.mp4", f, "video/mp4")},
             headers={"Authorization": f"Bearer {valid_token}"},
@@ -149,7 +156,7 @@ def test_get_job_details_success(monkeypatch, test_video_file):
     job_id = upload_response.json()["job_id"]
 
     # Retrieve job details
-    response = client.get(
+    response = await client.get(
         f"/api/v1/videos/jobs/{job_id}",
         headers={"Authorization": f"Bearer {valid_token}"},
     )
@@ -163,18 +170,20 @@ def test_get_job_details_success(monkeypatch, test_video_file):
     assert "metadata" in data
 
 
-def test_get_job_details_unauthorized():
+@pytest.mark.asyncio
+async def test_get_job_details_unauthorized(client: AsyncClient):
     """
     Test retrieving job details without authentication should fail.
     """
     job_id = 1  # Arbitrary
-    response = client.get(
+    response = await client.get(
         f"/api/v1/videos/jobs/{job_id}",
     )
     assert response.status_code in (401, 403)
 
 
-def test_upload_invalid_file_type():
+@pytest.mark.asyncio
+async def test_upload_invalid_file_type(client: AsyncClient):
     """
     Test uploading a non-video file should fail or be handled gracefully.
     """
@@ -183,7 +192,7 @@ def test_upload_invalid_file_type():
         f.write(b"not a video")
         f.flush()
         f.seek(0)
-        response = client.post(
+        response = await client.post(
             "/api/v1/videos/upload",
             files={"file": ("test.txt", f, "text/plain")},
             headers={"Authorization": f"Bearer {valid_token}"},

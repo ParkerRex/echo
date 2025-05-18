@@ -36,13 +36,15 @@ The backend architecture for `apps/core` is established and follows Clean Archit
 
 ### 2.1. Core Principles & Patterns (Recap from `system-patterns.md`)
 *   **Clean Architecture Layers:** Domain, Application, Adapters, Infrastructure.
-*   **Repository Pattern:** Data access abstracted via repositories in `apps/core/operations/`.
+*   **Repository Pattern:** Data access abstracted via repositories in `apps/core/operations/`. These repositories now implement asynchronous methods for database interactions.
 *   **Adapter Pattern:** For all external services (AI, Storage, Publishing) in `apps/core/lib/`.
-*   **Dependency Injection:** Used for decoupling.
-*   **SQLAlchemy ORM:** For database interactions, with models in `apps/core/models/`.
-*   **FastAPI Framework:** For API endpoints, request/response handling, Pydantic schemas, and WebSocket handling (`apps/core/api/`).
+*   **Dependency Injection:** Used for decoupling, including providing `AsyncSession` for database operations.
+*   **SQLAlchemy ORM:** For database interactions, with models in `apps/core/models/`. Utilizes SQLAlchemy's asynchronous features (`AsyncSession`, `async_engine`).
+*   **FastAPI Framework:** For API endpoints, request/response handling, Pydantic schemas, and WebSocket handling (`apps/core/api/`). Endpoints and services are `async` and leverage asynchronous database calls.
 *   **Centralized Configuration:** Pydantic `Settings` in `apps/core/core/config.py`.
-*   **Asynchronous Operations:** Leveraging `async/await` for I/O-bound tasks.
+*   **Asynchronous Operations:** Deeply integrated using `async/await` throughout the application, now encompassing all database I/O operations via `AsyncSession` and async drivers (e.g., `aiosqlite`, `asyncpg`), in addition to other I/O-bound tasks.
+    *   Testing of asynchronous API endpoints is performed using `httpx.AsyncClient` within `pytest-asyncio` marked tests (e.g., in `apps/core/tests/test_api.py`).
+    *   The broader test suite, including unit and integration tests for operations, services, and APIs, has also been refactored to support these asynchronous operations. This typically involves using `unittest.mock.AsyncMock` for mocking asynchronous dependencies in unit tests, and `httpx.AsyncClient` (often via a shared `test_client_fixture`) for integration/API tests. Test database sessions are managed using `AsyncSession` provided by fixtures like `db_session_fixture` from `apps/core/tests/conftest.py`.
 
 ### 2.2. Current Backend File Structure (`apps/core`)
 (Structure remains as previously documented, no changes here based on decisions)
@@ -59,14 +61,14 @@ apps/core/
 │   ├── ai/                 # AI service adapters (gemini_adapter.py)
 │   ├── auth/               # Authentication utilities (supabase_auth.py)
 │   ├── cache/              # Caching mechanisms (redis_cache.py)
-│   ├── database/           # Database connection (connection.py)
+│   ├── database/           # Database connection (connection.py - now configures async engine and sessions)
 │   ├── messaging/          # (e.g., email.py, websocket_manager.py - NEW)
 │   ├── publishing/         # Publishing adapters (youtube_adapter.py)
 │   ├── storage/            # Storage adapters (file_storage.py for local/GCS)
 │   └── utils/              # General utilities (ffmpeg_utils.py, file_utils.py)
 ├── models/                 # SQLAlchemy ORM models (video_model.py, video_job_model.py, etc.)
-├── operations/             # Repository implementations (video_repository.py, video_job_repository.py)
-├── services/               # Service layer, business logic orchestration (video_processing_service.py - MODIFIED for WebSocket events)
+├── operations/             # Repository implementations (video_repository.py, video_job_repository.py - now fully async)
+├── services/               # Service layer, business logic orchestration (video_processing_service.py - MODIFIED for WebSocket events, and now uses async DB calls)
 ├── tests/                  # Automated tests (unit, integration)
 ├── main.py                 # FastAPI app instantiation and router registration
 ├── pyproject.toml          # Project metadata and dependencies (managed by uv)
@@ -212,7 +214,7 @@ supabase/
     *   WebSocket (WSS) for receiving real-time job status updates. Connection likely authenticated via initial handshake or token.
 *   **Frontend to Supabase (`apps/web` -> Supabase Platform):** (Unchanged) Direct for Auth.
 *   **Frontend to Cloud Storage (GCS):** Direct HTTP PUT for video file uploads using pre-signed URLs obtained from the backend.
-*   **Backend to Supabase (`apps/core` -> Supabase Platform):** (Unchanged) Database ops via SQLAlchemy.
+*   **Backend to Supabase (`apps/core` -> Supabase Platform):** Database operations are performed asynchronously via SQLAlchemy using an `AsyncSession` and async-compatible drivers (e.g., `asyncpg`).
 
 ---
 
