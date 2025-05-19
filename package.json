@@ -26,24 +26,9 @@
     "reinstall": "pnpm clean:ws && pnpm install:all",
     "fastapi-dev": "cd apps/core && ./bin/dev.sh"
   },
-  "dependencies": {
-    "@tanstack/react-router": "^1.120.3",
-    "@tanstack/react-router-devtools": "^1.120.3",
-    "@tanstack/router-plugin": "^1.120.3",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "redaxios": "^0.5.1"
-  },
+  "dependencies": {},
   "devDependencies": {
-    "@types/node": "^22.15.3",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "@vitejs/plugin-react": "^4.3.4",
     "concurrently": "^9.1.2",
-    "eslint": "^9.25.1",
-    "npm-run-all": "^4.1.5",
-    "typescript": "^5.8.3",
-    "vite": "^6.1.0",
-    "vite-plugin-dts": "^4.5.0"
+    "npm-run-all": "^4.1.5"
   }
 }
