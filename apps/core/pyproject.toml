@@ -38,7 +38,6 @@ dependencies = [
     "ffmpeg-python",
     "google-cloud-aiplatform",
     "gunicorn",
-    "alembic",
     "supabase",
     # YouTube API dependencies
     "google-api-python-client>=2.80.0",
@@ -48,6 +47,7 @@ dependencies = [
     "functions-framework",
     "google-auth>=2.40.1",
     "pydantic-to-typescript>=2",
+    "sqlacodegen",
 ]
 
 [project.optional-dependencies]

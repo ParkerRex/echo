@@ -19,7 +19,7 @@ import {
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { toast } from "sonner";
-import { supabase } from "@echo/db/clients/client"; // Import supabase client
+import { supabase } from "@echo/db/clients/browser"; // Import supabase client
 
 // Define the schema for signup form validation
 const signupSchema = z

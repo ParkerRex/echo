@@ -4,6 +4,11 @@
   "private": true,
   "scripts": {
     "install:all": "pnpm install && (cd apps/core && uv venv core-api && uv sync)",
+    "db:up":  "supabase start",
+    "db:down":"supabase stop",
+    "db:types":   "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID --schema public --out packages/db/types/generated.ts",
+    "db:py-models": "sqlacodegen postgresql://postgres:postgres@localhost:54322/postgres --schema public --outfile apps/core/app/db/models.py --selective",
+    "db:refresh": "pnpm db:up && pnpm db:types && pnpm db:py-models",
     "dev": "concurrently --kill-others-on-fail --names \"WEB,SUPA,API\" -c \"bgBlue.bold,bgGreen.bold,bgMagenta.bold\" \"pnpm dev:web\" \"pnpm dev:supabase\" \"pnpm dev:backend\"",
     "dev:web": "pnpm --filter @echo/web dev",
     "dev:supabase": "cd supabase && supabase start",

@@ -9,7 +9,7 @@ import type {
   VideoMetadataUpdateRequest,
   ApiErrorResponse,
 } from '../types/api';
-import { supabase } from '@echo/db/clients/client'; // Import Supabase client
+import { supabase } from '@echo/db/clients/browser'; // Import Supabase client
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 const API_V1_PREFIX = "/api/v1";

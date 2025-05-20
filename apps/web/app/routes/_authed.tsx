@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-import { supabase } from "@echo/db/clients/client";
+import { supabase } from "@echo/db/clients/browser";
 import React from "react";
 
 // Define a simple loading component to be used as the pendingComponent

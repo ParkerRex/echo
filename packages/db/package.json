@@ -1,0 +1,27 @@
+{
+  "name": "@echo/db",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./clients/browser": "./clients/browser.ts",
+    "./clients/ssr": "./clients/ssr.ts",
+    "./types/generated": "./types/generated.ts"
+  },
+  "scripts": {
+    "lint": "eslint ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@supabase/ssr": "0.6.1",
+    "@supabase/supabase-js": "^2.49.4",
+    "@tanstack/react-start": "^1.120.5"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.3"
+  }
+}
