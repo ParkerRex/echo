@@ -3,35 +3,5 @@
         {
             "path": "."
         }
-    ],
-    "settings": {
-        "python.testing.pytestEnabled": true,
-        "python.testing.unittestEnabled": false,
-        "python.testing.nosetestsEnabled": false,
-        "python.testing.pytestArgs": [
-            "."
-        ],
-        "python.testing.autoTestDiscoverOnSaveEnabled": true,
-        "python.terminal.launchArgs": [
-            "-m",
-            "IPython"
-        ],
-        "javascript.updateImportsOnFileMove.enabled": "always",
-        "typescript.updateImportsOnFileMove.enabled": "always",
-        "markdown.updateLinksOnFileMove.enabled": "always",
-        "python.analysis.autoImportCompletions": true,
-        "python.terminal.activateEnvInCurrentTerminal": true,
-        // "python.analysis.extraPaths": [
-        //     "." // This is broad; .vscode/settings.json has a more specific one for apps/core
-        // ],
-        // "terminal.integrated.env.osx": {
-        //     "PYTHONPATH": "${workspaceFolder}" // Prefer venv activation for PYTHONPATH
-        // },
-        // "terminal.integrated.env.linux": {
-        //     "PYTHONPATH": "${workspaceFolder}"
-        // },
-        // "terminal.integrated.env.windows": {
-        //     "PYTHONPATH": "${workspaceFolder}"
-        // }
-    }
+    ]
 }

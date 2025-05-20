@@ -25,7 +25,7 @@ graph TD
   C -->|writes metadata to| D
   A -->|fetches metadata from| D
 ```
-
+ 
 ---
 
 ## 📖 Key Use Cases
@@ -169,6 +169,14 @@ sequenceDiagram
 ---
 
 ## 💻 Development Setup
+
+### Local DB workflow
+pnpm run db:migrate   # apply SQL
+pnpm run db:codegen   # regenerate ORM
+pnpm run dev          # boot FastAPI
+
+### Writing migrations
+For guidelines on writing and managing database migrations, please see the [migrations README](./packages/db/migrations/README.md).
 
 ### Generating API Types
 
