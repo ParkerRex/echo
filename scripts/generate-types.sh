@@ -29,15 +29,20 @@ log_error() {
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_ROOT"
 
-# Load environment variables
-ENV_FILE=".env"
-if [ -f "$ENV_FILE" ]; then
-    set -a
-    source "$ENV_FILE"
-    set +a
-    log_info "Loaded environment variables from $ENV_FILE"
-else
-    log_warning "No .env file found. Using default values."
+# Load environment variables from root directory
+ENV_FILES=(".env" ".env.development")
+for ENV_FILE in "${ENV_FILES[@]}"; do
+    if [ -f "$ENV_FILE" ]; then
+        set -a
+        source "$ENV_FILE"
+        set +a
+        log_info "Loaded environment variables from $ENV_FILE"
+        break
+    fi
+done
+
+if [ ! -f ".env" ] && [ ! -f ".env.development" ]; then
+    log_warning "No .env or .env.development file found. Using default values."
 fi
 
 # Set default values for local development

@@ -7,8 +7,19 @@ from sqlalchemy.orm import sessionmaker
 
 # Construct the path to the root .env file
 # __file__ is engine.py, so ../../.. goes from app/db/engine.py to apps/core/ to apps/ to project root
-dotenv_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", ".env")
-load_dotenv(dotenv_path=dotenv_path)
+root_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")
+env_files = [
+    os.path.join(root_dir, ".env"),
+    os.path.join(root_dir, ".env.development"),
+    os.path.join(root_dir, ".env.production"),
+]
+
+# Load environment files in order of preference
+for env_file in env_files:
+    if os.path.exists(env_file):
+        load_dotenv(
+            dotenv_path=env_file, override=False
+        )  # Don't override already set variables
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL", "postgresql://postgres:postgres@localhost:54322/postgres"

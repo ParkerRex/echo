@@ -137,15 +137,13 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    env_file:
+      - .env.development
     environment:
-      - ENVIRONMENT=development
+      # Override specific values for Docker environment
       - DATABASE_URL=postgresql://postgres:postgres@supabase-db:5432/postgres
       - SUPABASE_URL=http://supabase-rest:3000
-      - SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
-      - SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
-      - SUPABASE_JWT_SECRET=super-secret-jwt-token-with-at-least-32-characters-long
       - REDIS_URL=redis://redis:6379
-      - STORAGE_BACKEND=local
       - LOCAL_STORAGE_PATH=/app/output_files
     ports:
       - "8000:8000"
@@ -164,9 +162,11 @@ services:
     container_name: echo-web
     depends_on:
       - echo-api
+    env_file:
+      - .env.development
     environment:
+      # Override specific values for Docker environment
       - VITE_SUPABASE_URL=http://localhost:54321
-      - VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
       - VITE_API_URL=http://localhost:8000
     ports:
       - "3000:3000"

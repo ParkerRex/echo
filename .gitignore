@@ -22,6 +22,8 @@
 venv/
 .venv/
 .env
+.env.development
+.env.production
 __pycache__
 
 # production
@@ -80,6 +82,4 @@ node_modules/
 # Task files
 tasks.json
 tasks/ 
-api/.env
-apps/web/.env
 api/config/secrets/*.json

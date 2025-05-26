@@ -113,7 +113,12 @@ class Settings(BaseSettings):
     BASE_DIR: Path = Path(__file__).resolve().parent.parent
 
     model_config = {
-        "env_file": ".env",
+        "env_file": [
+            # Try root environment files first, then fallback to local .env
+            Path(__file__).resolve().parent.parent.parent.parent / ".env",
+            Path(__file__).resolve().parent.parent.parent.parent / ".env.development",
+            ".env",
+        ],
         "env_file_encoding": "utf-8",
         "extra": "ignore",  # Ignore extra fields from .env
     }
