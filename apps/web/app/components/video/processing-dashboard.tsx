@@ -1,30 +1,30 @@
-import { Button } from "~/components/ui/button";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PlusIcon } from "lucide-react";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import { Skeleton } from "~/components/ui/skeleton";
+import { Button } from "~/components/ui/button";
 import {
   Card,
   CardContent,
-  CardHeader,
   CardFooter,
+  CardHeader,
 } from "~/components/ui/card";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import type { Step } from "~/components/ui/progress-steps";
+import { Skeleton } from "~/components/ui/skeleton";
 import {
   getProcessingJobs,
   getSignedUploadUrl,
   notifyUploadComplete,
 } from "~/lib/api";
+import { useJobStatusManager } from "~/lib/useJobStatusManager";
 import type {
-  VideoJobSchema,
   SignedUploadUrlRequest,
   SignedUploadUrlResponse,
   UploadCompleteRequest,
+  VideoJobSchema,
 } from "~/types/api";
-import type { Step } from "~/components/ui/progress-steps";
 import { VideoProgressCard } from "./video-progress-card";
-import { useJobStatusManager } from "~/hooks/useJobStatusManager";
-import { toast } from "sonner";
 
 // Map backend processing stages to frontend steps
 const stageToStepMap: Record<string, number> = {
@@ -266,7 +266,7 @@ export function ProcessingDashboard({ className }: ProcessingDashboardProps) {
             const cardStatus = getProgressCardStatus(job.status);
 
             const simplifiedSteps: Step[] = [];
-            let currentDisplayStepId: string | undefined = undefined;
+            const currentDisplayStepId: string | undefined = undefined;
 
             if (cardStatus === "processing" && job.processing_stages) {
               if (Array.isArray(job.processing_stages)) {

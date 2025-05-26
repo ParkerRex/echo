@@ -10,25 +10,21 @@ dependencies = [
     "fastapi>=0.115.12",
     "uvicorn[standard]>=0.34.2", # [standard] includes websockets and other common needs
     "sqlalchemy>=2.0.40",
-    "asyncpg>=0.29.0",        # For PostgreSQL with SQLAlchemy async
-    "psycopg2-binary",       # For some sync tools or if other libs pull it in
-    "aiosqlite>=0.20.0",     # For SQLite if used in testing/dev
-
+    "asyncpg>=0.29.0", # For PostgreSQL with SQLAlchemy async
+    "psycopg2-binary", # For some sync tools or if other libs pull it in
+    "aiosqlite>=0.20.0", # For SQLite if used in testing/dev
     # Pydantic & Settings
-    "pydantic>=2.11.3",      # Your current Pydantic
+    "pydantic>=2.11.3", # Your current Pydantic
     "pydantic-settings",
     "python-dotenv>=1.1.0",
-
     # API & Web Interaction
     "httpx>=0.28.1",
     "python-multipart>=0.0.20", # For file uploads in FastAPI
     "jinja2>=3.1.6",
-
     # Authentication & Security
     "pyjwt>=2.10.1",
     "python-jose[cryptography]",
     "email-validator>=2.2.0",
-
     # Google Cloud & AI
     "google-cloud-storage==2.10.0",
     "google-generativeai",
@@ -38,27 +34,22 @@ dependencies = [
     "google-auth-httplib2>=0.1.0",
     "google-auth>=2.40.1",
     "google-cloud-secret-manager>=2.16.0",
-
     # Video/Image Processing
     "ffmpeg-python",
     "pillow>=11.2.1",
-
     # Other Utilities
     "redis>=5.2.1",
     "openai>=1.75.0",
-
     # Supabase Pydantic for model generation (runtime for generated models)
-    "supabase-pydantic~=0.19.1", # Using ~= to allow patch updates for 0.19.x
-
     # Cloud Functions (if still deploying parts as Cloud Functions)
     "functions-framework", # If you use Google Cloud Functions
+    "supabase-pydantic>=0.18.3",
 ]
 
 [project.optional-dependencies]
 dev = [
     # Code Generation tools
     "sqlacodegen>=3.0.0rc5",         # For SQLAlchemy ORM models from DB schema
-    "supabase-pydantic~=0.19.1",     # Also in dev for easy CLI access
     "pydantic-to-typescript>=2.0.0", # For generating TS types from Pydantic models
 
     # Linters & Formatters

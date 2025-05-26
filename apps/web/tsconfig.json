@@ -27,10 +27,10 @@
         "./app/*"
       ],
       "@echo/db": [
-        "../../packages/db"
+        "../../packages/supabase"
       ],
       "@echo/db/*": [
-        "../../packages/db/*"
+        "../../packages/supabase/*"
       ]
     }
   }

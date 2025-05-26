@@ -10,18 +10,18 @@
 
 // Import Routes
 
+import { Route as AuthedVideoVideoIdImport } from './routes/$videoId'
 import { Route as rootRoute } from './routes/__root'
-import { Route as SignupImport } from './routes/signup'
-import { Route as SettingsImport } from './routes/settings'
-import { Route as LogoutImport } from './routes/logout'
-import { Route as LoginImport } from './routes/login'
-import { Route as DashboardImport } from './routes/dashboard'
-import { Route as PathlessLayoutImport } from './routes/_pathlessLayout'
 import { Route as AuthedImport } from './routes/_authed'
-import { Route as IndexImport } from './routes/index'
-import { Route as AuthCallbackImport } from './routes/auth/callback'
-import { Route as AuthedVideoVideoIdImport } from './routes/_authed/video/$videoId'
 import { Route as AuthedJobsJobIdImport } from './routes/_authed.jobs.$jobId'
+import { Route as PathlessLayoutImport } from './routes/_pathlessLayout'
+import { Route as AuthCallbackImport } from './routes/auth/callback'
+import { Route as DashboardImport } from './routes/dashboard'
+import { Route as IndexImport } from './routes/index'
+import { Route as LoginImport } from './routes/login'
+import { Route as LogoutImport } from './routes/logout'
+import { Route as SettingsImport } from './routes/settings'
+import { Route as SignupImport } from './routes/signup'
 
 // Create/Update Routes
 

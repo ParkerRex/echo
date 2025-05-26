@@ -1,7 +1,7 @@
-import { useAuth } from "../hooks/useAuth";
-import { GoogleLoginButton } from "./GoogleLoginButton";
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Link, useRouter } from "@tanstack/react-router";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner"; // Assuming sonner is used for toasts as per Phase 5
 import * as z from "zod";
 import { Button } from "~/components/ui/button";
 import {
@@ -13,8 +13,8 @@ import {
   FormMessage,
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
-import { Link, useRouter } from "@tanstack/react-router";
-import { toast } from "sonner"; // Assuming sonner is used for toasts as per Phase 5
+import { useAuth } from "../lib/useAuth";
+import { GoogleLoginButton } from "./GoogleLoginButton";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),

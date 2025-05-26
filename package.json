@@ -3,15 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "db:start": "cd packages/db && supabase start",
-    "db:stop": "cd packages/db && supabase stop --no-backup",
-    "db:reset": "cd packages/db && supabase db reset",
-    "db:push": "cd packages/db && supabase db push",
-    "db:generate-migration": "echo 'Run: cd packages/db && supabase migration new <migration_name>'",
+    "db:start": "cd packages/supabase && supabase start",
+    "db:stop": "cd packages/supabase && supabase stop --no-backup",
+    "db:reset": "cd packages/supabase && supabase db reset",
+    "db:push": "cd packages/supabase && supabase db push",
+    "db:generate-migration": "echo 'Run: cd packages/supabase && supabase migration new <migration_name>'",
 
     "codegen:db-orm-models": "bash apps/core/bin/codegen_models.sh",
     "codegen:db-pydantic-models": "bash apps/core/bin/codegen_pydantic_supabase.sh",
-    "codegen:db-types": "cd packages/db && supabase gen types typescript --project-id atvyovuiqftrksyetnjw --schema public > types/generated.ts",
+    "codegen:db-types": "cd packages/supabase && supabase gen types typescript --project-id atvyovuiqftrksyetnjw --schema public > types/generated.ts",
     "codegen:api-types": "cd apps/core && uv run pydantic-to-typescript --module apps.core.app.db_pydantic_models.supabase_models --output ../../apps/web/app/types/api.ts --json2ts-cmd ../../apps_web/node_modules/.bin/json2ts && cd ../..",
     "codegen:all": "pnpm codegen:db-orm-models && pnpm codegen:db-pydantic-models && pnpm codegen:db-types && pnpm codegen:api-types",
 

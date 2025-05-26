@@ -1,16 +1,19 @@
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { getVideoDetails, updateVideoMetadata } from "../../../lib/api";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { Link, createFileRoute, useParams } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { type ControllerRenderProps, FieldValues, useForm } from "react-hook-form";
+import { toast } from "sonner";
+import * as z from "zod";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from "~/components/ui/card";
-import { Textarea } from "~/components/ui/textarea";
-import { Input } from "~/components/ui/input";
 import {
   Form,
   FormControl,
@@ -19,17 +22,14 @@ import {
   FormLabel,
   FormMessage,
 } from "~/components/ui/form";
-import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { Input } from "~/components/ui/input";
 import { Skeleton } from "~/components/ui/skeleton";
-import { toast } from "sonner";
-import { useForm, ControllerRenderProps, FieldValues } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import { Textarea } from "~/components/ui/textarea";
 import type {
   VideoDetailsResponse,
   VideoMetadataUpdateRequest,
 } from "~/types/api";
-import { useEffect } from "react";
+import { getVideoDetails, updateVideoMetadata } from "../lib/api";
 
 // Placeholder for MediaPlayer component - to be created later
 const MediaPlayer = ({

@@ -1,5 +1,5 @@
-import { useAuth } from "~/hooks/useAuth"; // Adjusted path assuming hooks are in ../hooks
 import { Button } from "~/components/ui/button"; // Assuming shadcn/ui Button is available
+import { useAuth } from "~/lib/useAuth"; // Adjusted path assuming hooks are in ../hooks
 
 export function GoogleLoginButton() {
   const { signInWithGoogle, isLoading, error } = useAuth();

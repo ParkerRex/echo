@@ -14,7 +14,7 @@
 
 **Phase 1: Database Schema Definition & Migration**
 
-*   **Task 1.1: Finalize Table Structures (Conceptual)**
+* - [x] **Task 1.1: Finalize Table Structures (Conceptual)**
     *   **Objective:** Confirm the columns, types, relationships, and constraints for `videos`, `video_jobs`, and `video_metadata` tables.
     *   **Details:**
         *   **`public.videos` Table:**
@@ -51,9 +51,9 @@
             *   `created_at`: `TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL`
             *   `updated_at`: `TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL`
 
-*   **Task 1.2: Create/Update SQL Migration File**
+* - [x] **Task 1.2: Create/Update SQL Migration File**
     *   **Objective:** Write the SQL to create these tables, define the `processing_status_enum` type, set up RLS policies, and create `updated_at` triggers.
-    *   **File to Modify:** `packages/db/migrations/20250514044259_create_videos_table.sql`
+    *   **File to Modify:** `packages/supabase/migrations/20250514044259_create_videos_table.sql`
         *   *(Note: In a production workflow with existing data, you would create a new additive migration. For a development reset, modifying the existing one is acceptable if you intend to reset the DB.)*
     *   **Action:** Replace the entire content of this file with the following SQL. This SQL includes the enum, tables, triggers, RLS, and comments as per best practices.
 
@@ -311,7 +311,7 @@
         COMMIT;
         ```
 
-*   **Task 1.3: Apply Database Changes**
+* - [x] **Task 1.3: Apply Database Changes**
     *   **Objective:** Update your local Supabase instance with the new schema.
     *   **Commands (from project root):**
         1.  Ensure Supabase local development environment is running: `pnpm db:start` (if not already running).
@@ -329,7 +329,7 @@
 
 **Phase 2: Python Backend Code Generation & Model Alignment**
 
-*   **Task 2.1: Update Python Dependencies (If Necessary)**
+* - [x] **Task 2.1: Update Python Dependencies (If Necessary)**
     *   **Objective:** Ensure `pyproject.toml` includes `supabase-pydantic` and other necessary tools, then install/update dependencies.
     *   **File:** `apps/core/pyproject.toml`
     *   **Action:** Verify that `supabase-pydantic~=0.19.1` (or the version you intend to use) is listed under `[project.dependencies]` or `[project.optional-dependencies.dev]`. Also ensure `sqlacodegen` is present for ORM model generation.
@@ -342,7 +342,7 @@
         ```
     *   **Verification:** The command completes successfully. If `uv.lock` is modified, commit it.
 
-*   **Task 2.2: Generate SQLAlchemy ORM Models**
+* - [ ] **Task 2.2: Generate SQLAlchemy ORM Models**
     *   **Objective:** Create initial SQLAlchemy ORM model definitions based on the new database schema.
     *   **Command (from project root):** `pnpm codegen:db-orm-models`
         *   This script (`apps/core/bin/codegen_models.sh`) runs `sqlacodegen` and outputs to `apps/core/app/db/models.py`.
@@ -388,7 +388,7 @@
                 # server_default='PENDING' ensures the DB default is also aligned if SQLAlchemy manages table creation (not the case here as migration does it).
                 ```
 
-*   **Task 2.3: Create/Verify Python Enum for `ProcessingStatus`**
+* - [ ] **Task 2.3: Create/Verify Python Enum for `ProcessingStatus`**
     *   **Objective:** Ensure a Python enum exists that mirrors the `processing_status_enum` in the database.
     *   **File:** `apps/core/models/enums.py`
     *   **Action:** Create or verify the file with the following content:
@@ -403,7 +403,7 @@
         ```
     *   **Verification:** Enum values exactly match those defined in the SQL `CREATE TYPE public.processing_status_enum AS ENUM (...)`.
 
-*   **Task 2.4: Consolidate and Refine SQLAlchemy Models into `apps/core/models/`**
+* - [ ] **Task 2.4: Consolidate and Refine SQLAlchemy Models into `apps/core/models/`**
     *   **Objective:** Move the generated and manually adjusted ORM model definitions from `apps/core/app/db/models.py` into your structured model files within `apps/core/models/`. This makes them the canonical ORM models for your application.
     *   **Source File:** `apps/core/app/db/models.py`
     *   **Target Files:**
@@ -446,7 +446,7 @@
         3.  Once confident, you can delete `apps/core/app/db/models.py` or add it to `.gitignore` as its contents are now managed within `apps/core/models/`. For this guide, assume it's moved and maintained in `apps/core/models/`.
     *   **Verification:** The models in `apps/core/models/` are correctly defined, importable, and reflect the database schema including relationships and the `ProcessingStatus` enum.
 
-*   **Task 2.5: Generate Pydantic Models using `supabase-pydantic`**
+* - [ ] **Task 2.5: Generate Pydantic Models using `supabase-pydantic`**
     *   **Objective:** Create Pydantic V2 models directly from the live Supabase schema. These models can be useful for direct DB interactions or as a reference for your API schemas.
     *   **Command (from project root):** `pnpm codegen:db-pydantic-models`
         *   This script (`apps/core/bin/codegen_pydantic_supabase.sh`) runs `supabase-pydantic`.
@@ -462,7 +462,7 @@
 
 **Phase 3: Python Backend Logic Refactoring**
 
-*   **Task 3.1: Refactor Pydantic API Schemas**
+* - [ ] **Task 3.1: Refactor Pydantic API Schemas**
     *   **Objective:** Update your FastAPI request/response schemas to align with the new database structure (three tables) and the refined SQLAlchemy ORM models. These API schemas will be the source for TypeScript type generation.
     *   **File:** `apps/core/api/schemas/video_processing_schemas.py`
     *   **Action:**
@@ -544,7 +544,7 @@
         5.  The `status` field in `VideoJobResponseSchema` must use your Python enum `apps.core.models.enums.ProcessingStatus`.
     *   **Verification:** API schemas in `apps/core/api/schemas/video_processing_schemas.py` are well-defined, use correct types (especially `ProcessingStatus` and `datetime`), have `from_attributes=True` where ORM instances are returned by services, and are ready for `pydantic-to-typescript`.
 
-*   **Task 3.2: Update Repository Layer (`apps/core/operations/`)**
+* - [ ] **Task 3.2: Update Repository Layer (`apps/core/operations/`)**
     *   **Objective:** Ensure repositories use the correct SQLAlchemy ORM models (from `apps.core.models`) and query the new table structures. All repository methods should now be `async`.
     *   **Files to Update:**
         *   `apps/core/operations/video_repository.py`
@@ -611,7 +611,7 @@
         6.  **Dependency Injection for Repositories:** Ensure repository getter functions (e.g., `get_video_repository`) are updated if necessary, though if they are simple type hints or class instantiations, they might not need changes beyond what FastAPI handles for `Depends`.
     *   **Verification:** Repository methods are `async`, use `AsyncSession`, align with the new ORM models, and database queries are correct for the new schema. Eager loading is implemented where appropriate.
 
-*   **Task 3.3: Update Service Layer (`apps/core/services/`)**
+* - [ ] **Task 3.3: Update Service Layer (`apps/core/services/`)**
     *   **Objective:** Adapt service logic to the new three-model structure and asynchronous repository methods.
     *   **Files to Update:**
         *   `apps/core/services/video_processing_service.py`
@@ -648,7 +648,7 @@
             *   This service should now correctly call `await VideoJobRepository.get_by_user_id_and_statuses(...)`. The returned `VideoJobModel` instances should have their `video` and `video_metadata` relationships populated due to eager loading in the repository.
     *   **Verification:** Service logic correctly orchestrates `async` operations across the new models and repositories. Background tasks manage their own sessions. Data flow between services and repositories is correct.
 
-*   **Task 3.4: Update API Endpoints (`apps/core/api/endpoints/`)**
+* - [ ] **Task 3.4: Update API Endpoints (`apps/core/api/endpoints/`)**
     *   **Objective:** Ensure API endpoints use the correct Pydantic API schemas (from `apps.core.api.schemas.video_processing_schemas`) and make `async` calls to services.
     *   **Files to Update:**
         *   `apps/core/api/endpoints/video_processing_endpoints.py`
@@ -667,7 +667,7 @@
 
 **Phase 4: TypeScript Type Generation & Frontend Alignment**
 
-*   **Task 4.1: Generate TypeScript Types**
+* - [ ] **Task 4.1: Generate TypeScript Types**
     *   **Objective:** Create up-to-date TypeScript interfaces for the frontend based on the Pydantic API schemas.
     *   **Command (from project root):** `pnpm codegen:api-types`
     *   **Script to Verify/Update (in root `package.json`):**
@@ -679,7 +679,7 @@
         *   Ensure `--output` points to `apps/web/app/types/api.ts`.
     *   **Verification:** Open `apps/web/app/types/api.ts`. It should contain TypeScript interfaces like `VideoJobResponseSchema`, `VideoResponseSchema`, `VideoMetadataResponseSchema`, `ProcessingStatus` (as a TypeScript enum or literal union type), etc., matching your Pydantic API schema definitions.
 
-*   **Task 4.2: Update Frontend Code**
+* - [ ] **Task 4.2: Update Frontend Code**
     *   **Objective:** Ensure frontend components, hooks, and API calls use the new TypeScript types and expect data in the new structure.
     *   **Key Files/Areas to Update:**
         *   **API Client Functions:** `apps/web/app/lib/api.ts` - Update fetch functions to use new request/response types.
@@ -701,7 +701,7 @@
 
 **Phase 5: Testing**
 
-*   **Task 5.1: Update Backend Unit & Integration Tests**
+* - [ ] **Task 5.1: Update Backend Unit & Integration Tests**
     *   **Objective:** Ensure all backend tests pass with the new schema, asynchronous logic, and model structures.
     *   **Files to Update:** All test files in `apps/core/tests/`.
         *   `apps/core/tests/unit/operations/`: Update repository tests for async methods and new model interactions.
@@ -711,7 +711,7 @@
     *   **Command (from project root):** `pnpm api:test` (or `cd apps/core && pytest`)
     *   **Verification:** All backend tests pass. Coverage is maintained or improved.
 
-*   **Task 5.2: Frontend Testing (if applicable)**
+* - [ ] **Task 5.2: Frontend Testing (if applicable)**
     *   **Objective:** Ensure frontend tests (unit, integration, E2E) pass with the new types and UI changes.
     *   **Action:** Update any frontend tests in `apps/web/` that interact with video/job data or components displaying this data.
     *   **Verification:** Frontend tests pass.

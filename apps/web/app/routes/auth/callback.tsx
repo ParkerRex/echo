@@ -1,7 +1,7 @@
-import { useEffect } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useAuth } from "~/hooks/useAuth"; // Assuming path to useAuth hook
+import { useEffect } from "react";
 import { toast } from "sonner";
+import { useAuth } from "~/lib/useAuth"; // Assuming path to useAuth hook
 
 export const Route = createFileRoute("/auth/callback")({
   component: AuthCallbackComponent,

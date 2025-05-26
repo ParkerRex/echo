@@ -10,8 +10,7 @@
     "lint": "biome check --write --unsafe",
     "format": "biome format --write --unsafe",
     "check": "biome check --write",
-    "generate:api-types": "cd ../core && uv run pydantic2ts --module api.schemas.video_processing_schemas --output ../web/app/types/api.ts --json2ts-cmd ../web/node_modules/.bin/json2ts && cd ../web",
-    "supabase:types-gen": "supabase gen types typescript --project-id imrjvsygbidsbssycqtt > app/lib/types.gen.ts"
+    "supabase:types-gen": "supabase gen types typescript --project-id atvyovuiqftrksyetnjw > app/lib/types.gen.ts"
   },
   "keywords": [],
   "author": "",
