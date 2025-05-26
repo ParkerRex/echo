@@ -67,12 +67,11 @@ echo/
 
 ### Prerequisites
 
-- **Python 3.10+** with [uv](https://github.com/astral-sh/uv) for package management
-- **Node.js 18+** with [pnpm](https://pnpm.io/) for frontend dependencies
-- **Docker** for running Supabase locally
-- **Supabase CLI** for local development
+- **Docker** and **Docker Compose** for containerized development
+- **Git** for version control
+- **Optional**: Node.js 20+ and Python 3.11+ for local development without Docker
 
-### Initial Setup
+### Quick Start (Docker - Recommended)
 
 1. **Clone and navigate to the project:**
 ```bash
@@ -80,20 +79,80 @@ git clone <repository-url>
 cd echo
 ```
 
-2. **Install Supabase CLI:**
+2. **Start the complete development environment:**
 ```bash
-npm install -g @supabase/cli
+pnpm dev
 ```
 
-3. **Start local Supabase:**
+This single command will:
+- Start all required services (Supabase, Redis, API, Frontend) in Docker containers
+- Apply database migrations automatically
+- Generate all type definitions
+- Set up the complete development environment with hot reloading
+
+3. **Access the application:**
+- 🌐 **Frontend**: http://localhost:3000
+- 🚀 **Backend API**: http://localhost:8000
+- 📊 **API Documentation**: http://localhost:8000/docs
+- 🗄️ **Supabase API**: http://localhost:54321
+- 📧 **Email UI (Inbucket)**: http://localhost:54325
+
+### Development Commands
+
 ```bash
-supabase start
+# Start development environment
+pnpm dev
+
+# Stop all services
+pnpm dev:stop
+
+# Restart development environment
+pnpm dev:restart
+
+# View service status
+pnpm dev:status
+
+# Follow logs from all services
+pnpm dev:logs
+
+# Follow logs from specific service
+pnpm dev:logs echo-api
 ```
 
-4. **Set up environment variables:**
+### Alternative Setup (Local Development)
+
+If you prefer to run services locally without Docker:
+
+1. **Install dependencies:**
 ```bash
-cp .env.example .env
-# Edit .env with your local Supabase credentials
+# Install Node.js dependencies
+pnpm install
+
+# Set up Python environment
+cd apps/core
+uv venv && source .venv/bin/activate
+uv pip install -e ".[dev]"
+cd ../..
+```
+
+2. **Start Supabase locally:**
+```bash
+pnpm db:start
+```
+
+3. **Apply migrations and generate types:**
+```bash
+pnpm db:push
+pnpm types:generate
+```
+
+4. **Start development servers:**
+```bash
+# Terminal 1: Backend API
+pnpm dev:api
+
+# Terminal 2: Frontend
+pnpm dev:web
 ```
 
 ## Backend Development
@@ -185,19 +244,108 @@ pnpm run generate:api-types
 
 This generates TypeScript types in `apps/web/src/types/api.ts` from the Pydantic models in `apps/core/api/schemas/`.
 
+## Type Generation Strategy
+
+Echo uses a comprehensive type generation strategy to maintain type safety across the entire stack. The process follows a dependency chain from database schema to frontend types.
+
+### Type Generation Flow
+
+```
+SQL Schema (Supabase) 
+    ↓
+SQLAlchemy ORM Models (Python)
+    ↓
+Pydantic Models (Python)
+    ↓
+TypeScript Types (Frontend)
+    ↓
+API Client Types (Frontend)
+```
+
+### Automated Type Generation
+
+The unified type generation script handles all type generation with proper dependency ordering:
+
+```bash
+# Generate all types in correct order
+pnpm types:generate
+
+# Generate specific type layers
+pnpm types:orm        # SQLAlchemy models from database
+pnpm types:pydantic   # Pydantic models from database
+pnpm types:typescript # TypeScript types from database
+pnpm types:api        # API client types from Pydantic models
+```
+
+### Type Generation Details
+
+#### 1. SQLAlchemy ORM Models
+- **Source**: PostgreSQL database schema via Supabase
+- **Tool**: `sqlacodegen` 
+- **Output**: `apps/core/models/generated.py`
+- **Command**: `pnpm types:orm`
+
+Generated models provide the data access layer for the Python backend.
+
+#### 2. Pydantic Models  
+- **Source**: PostgreSQL database schema via Supabase
+- **Tool**: `supabase-pydantic`
+- **Output**: `apps/core/models/supabase_pydantic.py`
+- **Command**: `pnpm types:pydantic`
+
+These models are used for API serialization and validation.
+
+#### 3. TypeScript Database Types
+- **Source**: PostgreSQL database schema via Supabase
+- **Tool**: `supabase gen types typescript`
+- **Output**: `packages/supabase/types/database.ts`
+- **Command**: `pnpm types:typescript`
+
+Provides type-safe database access for the frontend Supabase client.
+
+#### 4. API Client Types
+- **Source**: Pydantic models from backend API
+- **Tool**: `pydantic-to-typescript`
+- **Output**: `apps/web/app/types/api.ts`
+- **Command**: `pnpm types:api`
+
+Ensures type safety between frontend and backend API communication.
+
+### Type Generation Best Practices
+
+1. **Always regenerate after schema changes:**
+```bash
+# After database migrations
+pnpm db:push
+pnpm types:generate
+```
+
+2. **Verify type consistency:**
+The generation script includes validation to ensure all files are created successfully.
+
+3. **Development workflow:**
+- Make database schema changes in Supabase migrations
+- Apply migrations with `pnpm db:push`
+- Regenerate all types with `pnpm types:generate`
+- Update API schemas and frontend code as needed
+
+4. **Troubleshooting type generation:**
+- Ensure all services are running (database, API)
+- Check that migrations are applied
+- Verify tool dependencies are installed
+- Review generation script logs for specific errors
+
 ## Database Management
 
 ### Local Database Workflow
 
 ```bash
-# Apply migrations
-pnpm run db:migrate
+# Apply migrations and regenerate types
+pnpm db:push
+pnpm types:generate
 
-# Regenerate ORM models
-pnpm run db:codegen
-
-# Combined refresh
-pnpm run db:refresh
+# Quick database reset (development only)
+pnpm db:reset
 ```
 
 ### Creating Migrations
@@ -366,45 +514,128 @@ pnpm build
 
 ### Docker Deployment
 
+The application includes comprehensive Docker support for both development and production environments.
+
+#### Development Deployment
 ```bash
-# Build and run with Docker Compose
+# Start complete development environment
+pnpm dev
+
+# Or manually with Docker Compose
 docker-compose up --build
 ```
+
+#### Production Deployment
+
+1. **Build production images:**
+```bash
+# Build all services for production
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml build
+```
+
+2. **Deploy with production configuration:**
+```bash
+# Set production environment variables
+export ENVIRONMENT=production
+export DATABASE_URL=<production_db_url>
+export SUPABASE_URL=<production_supabase_url>
+# ... other production variables
+
+# Start production services
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+#### Container Architecture
+
+- **echo-api**: FastAPI backend with hot reloading in development
+- **echo-web**: React frontend with Vite dev server (development) or Nginx (production)
+- **supabase-db**: PostgreSQL database with automatic migration application
+- **supabase-api**: Supabase API server for auth and real-time features
+- **redis**: Caching layer for AI responses and session management
+
+#### Docker Best Practices
+
+- Multi-stage builds for optimized production images
+- Volume mounts for development hot reloading
+- Health checks for service dependency management
+- Proper environment variable handling
+- Automated migration application on startup
 
 ## Troubleshooting
 
 ### Common Issues
 
+#### Docker Environment Issues
+- **Docker not running**: Ensure Docker Desktop is started
+- **Port conflicts**: Check if ports 3000, 8000, 54321, 54322, 6379 are available
+- **Services not starting**: Run `pnpm dev:status` to check service health
+- **Container build failures**: Try `docker-compose down && docker-compose up --build`
+
 #### Database Connection Issues
-- Verify Supabase is running: `supabase status`
-- Check environment variables in `.env`
-- Ensure migrations are applied: `supabase db push`
+- **Local development**: Services should connect automatically via Docker networking
+- **Connection refused**: Ensure Supabase container is healthy (`pnpm dev:status`)
+- **Migration issues**: Check that migrations are applied during startup
+- **Schema out of sync**: Run `pnpm types:generate` to regenerate types
 
 #### Type Generation Issues
-- Ensure backend is running before generating types
-- Check that Pydantic models are properly exported
-- Verify `pydantic-to-typescript` is installed
+- **Generation script fails**: Ensure all services are running (`pnpm dev:status`)
+- **Missing dependencies**: Check that generation tools are installed in containers
+- **File not found errors**: Verify database schema exists and migrations are applied
+- **Permission issues**: Ensure generated files directory is writable
 
 #### Authentication Issues
-- Verify JWT token is valid and not expired
-- Check Supabase project configuration
-- Ensure RLS policies are correctly configured
+- **JWT token invalid**: Check Supabase auth configuration in Docker environment
+- **CORS issues**: Verify frontend and backend are running on expected ports
+- **RLS policies**: Ensure policies are correctly configured in migrations
+
+#### Hot Reloading Issues
+- **Changes not reflected**: Check that volume mounts are working correctly
+- **Frontend not updating**: Verify Vite dev server is running in container
+- **Backend not restarting**: Check uvicorn reload configuration in Docker
+
+#### Performance Issues
+- **Slow startup**: First-time container builds take longer; subsequent starts are faster
+- **High resource usage**: Adjust Docker Desktop resource limits if needed
+- **Network latency**: Use `docker-compose logs` to identify bottlenecks
 
 ### Development Tips
 
-1. **Use the monorepo scripts:**
-   - `pnpm run db:migrate` - Apply database migrations
-   - `pnpm run db:codegen` - Regenerate ORM models
-   - `pnpm run generate:api-types` - Generate TypeScript types
+1. **Use the unified development commands:**
+   - `pnpm dev` - Start complete Docker development environment
+   - `pnpm types:generate` - Regenerate all types after schema changes
+   - `pnpm dev:logs` - Monitor all service logs
+   - `pnpm dev:status` - Check service health
 
-2. **Monitor logs:**
-   - Backend: Check FastAPI logs for API errors
+2. **Monitor logs effectively:**
+   - All services: `pnpm dev:logs`
+   - Specific service: `pnpm dev:logs echo-api`
+   - Backend API: Check FastAPI logs for API errors
    - Frontend: Use browser dev tools for client-side issues
    - Database: Check Supabase dashboard for query issues
 
-3. **Code quality:**
+3. **Docker development workflow:**
+   - Services auto-restart on code changes (hot reloading)
+   - Database persists between container restarts
+   - Use `pnpm dev:restart` for clean environment reset
+   - Access services via localhost ports (see Quick Start section)
+
+4. **Type safety maintenance:**
+   - Always run `pnpm types:generate` after database schema changes
+   - Verify type generation completed successfully
+   - Check that all generated files are properly imported
+
+5. **Code quality:**
    - Follow the cursor rules in `.cursor/rules/`
    - Run tests before committing
    - Use type checking: `mypy` for Python, `tsc` for TypeScript
+   - Leverage Docker for consistent development environment
+
+### Docker Development Benefits
+
+- **Consistent Environment**: Same setup across all developer machines
+- **Service Isolation**: Each service runs in its own container
+- **Hot Reloading**: Code changes automatically trigger rebuilds
+- **Easy Reset**: Quick environment cleanup and restart
+- **Production Parity**: Development closely matches production setup
 
 For additional help, refer to the specific documentation in the `.cursor/rules/` directory for development guidelines and best practices. 

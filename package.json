@@ -3,6 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "dev": "./scripts/dev-start.sh start",
+    "dev:stop": "./scripts/dev-start.sh stop",
+    "dev:restart": "./scripts/dev-start.sh restart",
+    "dev:status": "./scripts/dev-start.sh status",
+    "dev:logs": "./scripts/dev-start.sh logs",
+
+    "types:generate": "./scripts/generate-types.sh all",
+    "types:orm": "./scripts/generate-types.sh orm",
+    "types:pydantic": "./scripts/generate-types.sh pydantic",
+    "types:typescript": "./scripts/generate-types.sh typescript",
+    "types:api": "./scripts/generate-types.sh api",
+
     "db:start": "cd packages/supabase && supabase start",
     "db:stop": "cd packages/supabase && supabase stop --no-backup",
     "db:reset": "cd packages/supabase && supabase db reset",
@@ -11,17 +23,17 @@
 
     "codegen:db-orm-models": "bash apps/core/bin/codegen_models.sh",
     "codegen:db-pydantic-models": "bash apps/core/bin/codegen_pydantic_supabase.sh",
-    "codegen:db-types": "cd packages/supabase && supabase gen types typescript --project-id atvyovuiqftrksyetnjw --schema public > types/generated.ts",
-    "codegen:api-types": "cd apps/core && uv run pydantic-to-typescript --module apps.core.app.db_pydantic_models.supabase_models --output ../../apps/web/app/types/api.ts --json2ts-cmd ../../apps_web/node_modules/.bin/json2ts && cd ../..",
-    "codegen:all": "pnpm codegen:db-orm-models && pnpm codegen:db-pydantic-models && pnpm codegen:db-types && pnpm codegen:api-types",
+    "codegen:db-types": "./scripts/generate-types.sh typescript",
+    "codegen:api-types": "./scripts/generate-types.sh api",
+    "codegen:all": "./scripts/generate-types.sh all",
 
     "setup:python-env": "cd apps/core && uv venv && source .venv/bin/activate && uv pip install -e \".[dev]\" && echo 'Python env setup complete. Remember to activate it in new terminals: source apps/core/.venv/bin/activate' && cd ../..",
-    "db:setup-local": "pnpm db:start && echo 'Waiting for Supabase to start...' && sleep 10 && pnpm db:push && pnpm codegen:db-orm-models && pnpm codegen:db-pydantic-models && pnpm codegen:db-types",
-    "db:refresh-local-schema": "pnpm db:push && pnpm codegen:db-orm-models && pnpm codegen:db-pydantic-models && pnpm codegen:db-types",
+    "db:setup-local": "pnpm db:start && echo 'Waiting for Supabase to start...' && sleep 10 && pnpm db:push && pnpm types:generate",
+    "db:refresh-local-schema": "pnpm db:push && pnpm types:generate",
 
     "dev:web": "pnpm --filter @echo/web dev",
     "dev:api": "bash apps/core/bin/dev.sh",
-    "dev": "concurrently --kill-others-on-fail --names \"WEB,API\" -c \"bgBlue.bold,bgMagenta.bold\" \"pnpm dev:web\" \"pnpm dev:api\"",
+    "dev:legacy": "concurrently --kill-others-on-fail --names \"WEB,API\" -c \"bgBlue.bold,bgMagenta.bold\" \"pnpm dev:web\" \"pnpm dev:api\"",
 
     "api:lint": "bash apps/core/bin/lint.sh",
     "api:format": "bash apps/core/bin/format.sh",
