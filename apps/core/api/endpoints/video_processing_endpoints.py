@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from apps.core.api.schemas.video_processing_schemas import (
-    VideoJobSchema,
+    VideoJobWithDetailsResponseSchema,
     VideoUploadResponseSchema,
 )
 from apps.core.core.config import settings
@@ -108,7 +108,7 @@ async def upload_video(
     check the processing status using the returned job_id.
 
     Returns:
-        VideoUploadResponseSchema: Contains the job_id and initial PENDING status
+        VideoUploadResponseSchema: Contains the video_id, job_id and initial PENDING status
 
     Raises:
         400: If the uploaded file is not a video or is missing metadata
@@ -127,12 +127,16 @@ async def upload_video(
         uploader_user_id=current_user.id,
         background_tasks=background_tasks,
     )
-    return VideoUploadResponseSchema(job_id=job.id, status=job.status)
+    return VideoUploadResponseSchema(
+        video_id=job.video_id,  # type: ignore
+        job_id=job.id,  # type: ignore
+        status=job.status,  # type: ignore
+    )
 
 
 @router.get(
     "/jobs/{job_id}",
-    response_model=VideoJobSchema,
+    response_model=VideoJobWithDetailsResponseSchema,
     summary="Get video processing job details",
 )
 async def get_job_details(
@@ -160,7 +164,7 @@ async def get_job_details(
         job_id (int): The ID of the video processing job to retrieve
 
     Returns:
-        VideoJobSchema: Complete job information with nested video and metadata
+        VideoJobWithDetailsResponseSchema: Complete job information with nested video and metadata
 
     Raises:
         401: If the user is not authenticated

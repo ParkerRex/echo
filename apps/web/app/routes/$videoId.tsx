@@ -82,7 +82,7 @@ const metadataFormSchema = z.object({
 });
 type MetadataFormValues = z.infer<typeof metadataFormSchema>;
 
-export const Route = createFileRoute("/_authed/video/$videoId")({
+export const Route = createFileRoute("/$videoId")({
   component: VideoDetailPage,
 });
 

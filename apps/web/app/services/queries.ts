@@ -7,30 +7,31 @@ import {
   } from "@tanstack/react-query"
   import { getUser } from "./auth.api"
   
-  export const eventQueries = {
-    all: ["events"],
-    list: (filters: EventFilters) =>
-      queryOptions({
-        queryKey: [...eventQueries.all, "list", filters],
-        queryFn: () => getEvents({ data: filters }),
-      }),
-    detail: (eventId: number) =>
-      queryOptions({
-        queryKey: [...eventQueries.all, "detail", eventId],
-        queryFn: () => getEvent({ data: { id: eventId } }),
-        enabled: !Number.isNaN(eventId) && !!eventId,
-      }),
-  }
-  
-  export const useUpsertEventMutation = () => {
-    const queryClient = useQueryClient()
-    return useMutation({
-      mutationFn: (data: Parameters<typeof upsertEvent>[0]) => upsertEvent(data),
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: eventQueries.all })
-      },
-    })
-  }
+  // TODO: Implement event queries when backend is ready
+// export const eventQueries = {
+//   all: ["events"],
+//   list: (filters: EventFilters) =>
+//     queryOptions({
+//       queryKey: [...eventQueries.all, "list", filters],
+//       queryFn: () => getEvents({ data: filters }),
+//     }),
+//   detail: (eventId: number) =>
+//     queryOptions({
+//       queryKey: [...eventQueries.all, "detail", eventId],
+//       queryFn: () => getEvent({ data: { id: eventId } }),
+//       enabled: !Number.isNaN(eventId) && !!eventId,
+//     }),
+// }
+
+// export const useUpsertEventMutation = () => {
+//   const queryClient = useQueryClient()
+//   return useMutation({
+//     mutationFn: (data: Parameters<typeof upsertEvent>[0]) => upsertEvent(data),
+//     onSuccess: () => {
+//       queryClient.invalidateQueries({ queryKey: eventQueries.all })
+//     },
+//   })
+// }
   
 
   

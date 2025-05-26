@@ -6,5 +6,6 @@ interface ImportMeta {
     VITE_SUPABASE_ANON_KEY: string;
     VITE_DEFAULT_USER_EMAIL: string;
     VITE_DEFAULT_USER_PASSWORD: string;
+    VITE_WS_BASE_URL: string;
   };
 }

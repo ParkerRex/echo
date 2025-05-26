@@ -4,7 +4,9 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
-from apps.core.api.schemas.video_processing_schemas import VideoJobSchema
+from apps.core.api.schemas.video_processing_schemas import (
+    VideoJobWithDetailsResponseSchema,
+)
 from apps.core.lib.auth.supabase_auth import AuthenticatedUser, get_current_user
 from apps.core.lib.database.connection import get_async_db_session, get_db_session
 from apps.core.models.enums import ProcessingStatus
@@ -18,7 +20,7 @@ router = APIRouter()
 
 @router.get(
     "/",
-    response_model=List[VideoJobSchema],
+    response_model=List[VideoJobWithDetailsResponseSchema],
     summary="Get User's Processing Jobs",
     description="Retrieve a list of video processing jobs for the authenticated user, filtered by status.",
 )

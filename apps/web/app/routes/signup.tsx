@@ -2,7 +2,7 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router"
 import { Layout } from "~/components/layout"
 import { SignUpForm } from "~/components/auth/sign-up-form"
 
-export const Route = createFileRoute("/sign-up")({
+export const Route = createFileRoute("/signup")({
   component: RouteComponent,
   beforeLoad: async ({ context }) => {
     if (context.authState.isAuthenticated) {

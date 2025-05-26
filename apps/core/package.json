@@ -3,15 +3,22 @@
     "version": "1.0.0",
     "description": "Python API Core Service",
     "private": true,
-    "scripts": {
-      "test": "./bin/test.sh",
-      "dev": "./bin/dev.sh",
-      "setup-env": "./bin/setup.sh",
-      "lint": "./bin/lint.sh",
-      "lint:fix": "./bin/lint-fix.sh",
-      "format": "./bin/format.sh",
-      "typecheck": "./bin/typecheck.sh"
-    },
+      "scripts": {
+    "dev": "./bin/dev.sh",
+    "build": "echo 'Python build: No build step required for FastAPI'",
+    "start": "./bin/start.sh",
+    "test": "./bin/test.sh",
+    "lint": "./bin/lint.sh",
+    "format": "./bin/format.sh",
+    "typecheck": "./bin/typecheck.sh",
+    "check": "./bin/lint.sh && ./bin/typecheck.sh",
+    "clean": "find . -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true",
+    "gen:types": "./bin/codegen_pydantic_supabase.sh",
+    "db:push": "cd ../../packages/supabase && supabase db push",
+    "db:reset": "cd ../../packages/supabase && supabase db reset",
+    "setup-env": "./bin/setup.sh",
+    "lint:fix": "./bin/lint-fix.sh"
+  },
     "keywords": [
       "python",
       "api",

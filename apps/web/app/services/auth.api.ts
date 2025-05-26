@@ -7,7 +7,7 @@ import {
   UserMetaSchema,
 } from "./auth.schema"
 
-export const userMiddleware = createMiddleware({ type: "function" }).server(
+export const userMiddleware = createMiddleware().server(
   async ({ next }) => {
     const supabase = getSupabaseServerClient()
 
@@ -21,7 +21,7 @@ export const userMiddleware = createMiddleware({ type: "function" }).server(
     })
   },
 )
-export const userRequiredMiddleware = createMiddleware({ type: "function" })
+export const userRequiredMiddleware = createMiddleware()
   .middleware([userMiddleware])
   .server(async ({ next, context }) => {
     if (!context.user) {

@@ -10,7 +10,12 @@
     "./types/generated": "./types/generated.ts"
   },
   "scripts": {
-    "lint": "eslint ."
+    "build": "echo 'No build step required for shared package'",
+    "dev": "echo 'No dev step required for shared package'",
+    "test": "echo 'No tests configured yet'",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist .turbo"
   },
   "keywords": [],
   "author": "",

@@ -20,7 +20,7 @@ export function VideoListItem({ video }: VideoListItemProps) {
       </div>
       {video.thumbnail_file_url && (
         <Link
-          to="/video/$videoId"
+          to="/$videoId"
           params={{ videoId: String(video.id) }}
           className="block aspect-video w-full overflow-hidden rounded-md mb-3"
         >
@@ -37,7 +37,7 @@ export function VideoListItem({ video }: VideoListItemProps) {
       </div>
       <div className="mt-3 flex space-x-2">
         <Button variant="outline" size="sm" asChild>
-          <Link to="/video/$videoId" params={{ videoId: String(video.id) }}>
+          <Link to="/$videoId" params={{ videoId: String(video.id) }}>
             View Details
           </Link>
         </Button>

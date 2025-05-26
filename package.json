@@ -2,50 +2,56 @@
   "name": "echo",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.10.0",
   "scripts": {
-    "dev": "./scripts/dev-start.sh start",
-    "dev:stop": "./scripts/dev-start.sh stop",
-    "dev:restart": "./scripts/dev-start.sh restart",
-    "dev:status": "./scripts/dev-start.sh status",
-    "dev:logs": "./scripts/dev-start.sh logs",
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "start": "turbo run start",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "format": "turbo run format",
+    "check": "turbo run check",
+    "typecheck": "turbo run typecheck",
 
-    "types:generate": "./scripts/generate-types.sh all",
-    "types:orm": "./scripts/generate-types.sh orm",
-    "types:pydantic": "./scripts/generate-types.sh pydantic",
-    "types:typescript": "./scripts/generate-types.sh typescript",
-    "types:api": "./scripts/generate-types.sh api",
+    "dev:web": "turbo run dev --filter=@echo/web",
+    "dev:core": "turbo run dev --filter=@echo/core",
+    "dev:legacy": "./scripts/dev-local.sh start",
+
+    "gen:types": "turbo run gen:types",
+    "gen:types:all": "./scripts/generate-types.sh all",
+    "gen:types:supabase": "./scripts/generate-supabase-types.sh",
 
     "db:start": "cd packages/supabase && supabase start",
     "db:stop": "cd packages/supabase && supabase stop --no-backup",
-    "db:reset": "cd packages/supabase && supabase db reset",
-    "db:push": "cd packages/supabase && supabase db push",
+    "db:reset": "turbo run db:reset",
+    "db:push": "turbo run db:push",
     "db:generate-migration": "echo 'Run: cd packages/supabase && supabase migration new <migration_name>'",
-
-    "codegen:db-orm-models": "bash apps/core/bin/codegen_models.sh",
-    "codegen:db-pydantic-models": "bash apps/core/bin/codegen_pydantic_supabase.sh",
-    "codegen:db-types": "./scripts/generate-types.sh typescript",
-    "codegen:api-types": "./scripts/generate-types.sh api",
-    "codegen:all": "./scripts/generate-types.sh all",
+    "db:setup-local": "pnpm db:start && echo 'Waiting for Supabase to start...' && sleep 10 && pnpm db:push && pnpm gen:types",
+    "db:refresh-local-schema": "pnpm db:push && pnpm gen:types",
 
     "setup:python-env": "cd apps/core && uv venv && source .venv/bin/activate && uv pip install -e \".[dev]\" && echo 'Python env setup complete. Remember to activate it in new terminals: source apps/core/.venv/bin/activate' && cd ../..",
-    "db:setup-local": "pnpm db:start && echo 'Waiting for Supabase to start...' && sleep 10 && pnpm db:push && pnpm types:generate",
-    "db:refresh-local-schema": "pnpm db:push && pnpm types:generate",
 
-    "dev:web": "pnpm --filter @echo/web dev",
-    "dev:api": "bash apps/core/bin/dev.sh",
-    "dev:legacy": "concurrently --kill-others-on-fail --names \"WEB,API\" -c \"bgBlue.bold,bgMagenta.bold\" \"pnpm dev:web\" \"pnpm dev:api\"",
+    "clean": "turbo run clean && rm -rf node_modules/.cache",
 
-    "api:lint": "bash apps/core/bin/lint.sh",
-    "api:format": "bash apps/core/bin/format.sh",
-    "api:typecheck": "bash apps/core/bin/typecheck.sh",
-    "api:test": "bash apps/core/bin/test.sh",
-
-    "build": "echo 'Build script needs to be defined'",
-    "clean": "echo 'Clean script needs to be defined'"
+    "_legacy:dev:stop": "./scripts/dev-local.sh stop",
+    "_legacy:dev:restart": "./scripts/dev-local.sh restart",
+    "_legacy:dev:status": "./scripts/dev-local.sh status",
+    "_legacy:dev:docker": "./scripts/dev-start.sh start",
+    "_legacy:dev:docker-stop": "./scripts/dev-start.sh stop",
+    "_legacy:types:orm": "./scripts/generate-types.sh orm",
+    "_legacy:types:pydantic": "./scripts/generate-types.sh pydantic",
+    "_legacy:types:typescript": "./scripts/generate-types.sh typescript",
+    "_legacy:types:api": "./scripts/generate-types.sh api",
+    "_legacy:codegen:db-orm-models": "bash apps/core/bin/codegen_models.sh",
+    "_legacy:codegen:db-pydantic-models": "bash apps/core/bin/codegen_pydantic_supabase.sh",
+    "_legacy:api:lint": "bash apps/core/bin/lint.sh",
+    "_legacy:api:format": "bash apps/core/bin/format.sh",
+    "_legacy:api:typecheck": "bash apps/core/bin/typecheck.sh",
+    "_legacy:api:test": "bash apps/core/bin/test.sh"
   },
-  "dependencies": {},
   "devDependencies": {
     "concurrently": "^9.1.2",
-    "npm-run-all": "^4.1.5"
+    "npm-run-all": "^4.1.5",
+    "turbo": "^2.5.3"
   }
 }

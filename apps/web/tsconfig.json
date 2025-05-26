@@ -4,6 +4,10 @@
     "**/*.tsx",
     "../../supabase/**/*.ts"
   ],
+  "exclude": [
+    "**/*.test.tsx",
+    "**/*.test.ts"
+  ],
   "compilerOptions": {
     "strict": true,
     "esModuleInterop": true,

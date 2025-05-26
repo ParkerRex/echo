@@ -10,7 +10,7 @@ PROJECT_ROOT_DIR="$(cd "$APP_DIR/../.." && pwd)"
 export PYTHONPATH=$PROJECT_ROOT_DIR
 
 echo "Ensuring Python dependencies are in sync..."
-uv pip sync # Assumes uv.lock is present and managed
+uv sync # Sync dependencies from uv.lock
 
 echo "Starting FastAPI server on port 8000..."
 # Run uvicorn using uv to ensure it's from the virtual environment

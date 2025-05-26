@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "@tanstack/react-router";
 import { cn } from "~/lib/utils";
 import {
   NavigationMenu,
@@ -15,38 +16,38 @@ export const Navigation = () => {
     <NavigationMenu>
       <NavigationMenuList>
         <NavigationMenuItem>
-          <NavigationMenuLink
-            className={navigationMenuTriggerStyle()}
+          <Link
             to="/dashboard"
+            className={navigationMenuTriggerStyle()}
           >
             Dashboard
-          </NavigationMenuLink>
+          </Link>
         </NavigationMenuItem>
         <NavigationMenuItem>
           <NavigationMenuTrigger>Account</NavigationMenuTrigger>
           <NavigationMenuContent>
             <ul className="flex flex-col gap-2 p-4 w-[350px]">
-              <NavigationMenuLink to="/settings">
+              <Link to="/settings">
                 <ListItem title="Settings">Manage your account settings.</ListItem>
-              </NavigationMenuLink>
-              <NavigationMenuLink to="/_authed/video">
+              </Link>
+              <Link to="/dashboard">
                 <ListItem title="Videos">
                   Access your video content.
                 </ListItem>
-              </NavigationMenuLink>
-              <NavigationMenuLink to="/logout">
+              </Link>
+              <Link to="/logout">
                 <ListItem title="Logout">Sign out of your account.</ListItem>
-              </NavigationMenuLink>
+              </Link>
             </ul>
           </NavigationMenuContent>
         </NavigationMenuItem>
         <NavigationMenuItem>
-          <NavigationMenuLink
-            className={navigationMenuTriggerStyle()}
+          <Link
             to="/login"
+            className={navigationMenuTriggerStyle()}
           >
             Login
-          </NavigationMenuLink>
+          </Link>
         </NavigationMenuItem>
       </NavigationMenuList>
     </NavigationMenu>

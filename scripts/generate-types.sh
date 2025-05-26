@@ -159,7 +159,7 @@ generate_typescript_types() {
 
 # Function to generate API types from Pydantic to TypeScript
 generate_api_types() {
-    log_info "Generating API TypeScript types from Pydantic models..."
+    log_info "Generating API TypeScript types from Pydantic API schemas..."
     
     local output_dir="$PROJECT_ROOT/apps/web/app/types"
     local output_file="$output_dir/api.ts"
@@ -168,16 +168,8 @@ generate_api_types() {
     
     cd "$PROJECT_ROOT/apps/core"
     
-    # Check if the Pydantic models file exists
-    local pydantic_models="$PROJECT_ROOT/apps/core/app/db_pydantic_models/supabase_models.py"
-    if [ ! -f "$pydantic_models" ]; then
-        log_error "Pydantic models file not found. Run generate_pydantic_models first."
-        return 1
-    fi
-    
-    if ! uv run pydantic-to-typescript \
-        --module app.db_pydantic_models.supabase_models \
-        --output "$output_file"; then
+    # Use our custom API type generation script
+    if ! uv run python bin/generate_api_types.py; then
         log_error "Failed to generate API TypeScript types"
         return 1
     fi
