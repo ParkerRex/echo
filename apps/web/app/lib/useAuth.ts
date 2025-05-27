@@ -77,39 +77,39 @@ export function useAuth(): UseAuthState & UseAuthActions {
 
   const loginWithPassword = useCallback(
     async (credentials: SignInWithPasswordCredentials) => {
-      return handleAuthOperation(() => supabase.auth.signInWithPassword(credentials));
+      return handleAuthOperation(() => supabase().auth.signInWithPassword(credentials));
     },
     [handleAuthOperation]
   );
 
   const signUpWithEmailPassword = useCallback(
     async (credentials: SignUpWithPasswordCredentials) => {
-      return handleAuthOperation(() => supabase.auth.signUp(credentials));
+      return handleAuthOperation(() => supabase().auth.signUp(credentials));
     },
     [handleAuthOperation]
   );
 
   const signOut = useCallback(async () => {
-    return handleAuthOperation(() => supabase.auth.signOut());
+    return handleAuthOperation(() => supabase().auth.signOut());
   }, [handleAuthOperation]);
 
   const signInWithGoogle = useCallback(async (): Promise<OAuthResponse> => {
     setIsLoading(true);
     setError(null);
-    const result = await supabase.auth.signInWithOAuth({
+    const result = await supabase().auth.signInWithOAuth({
         provider: 'google',
         options: {
             redirectTo: `${window.location.origin}/auth/callback`,
         },
     });
-    
+
     if (result.error) {
         setError(result.error);
         setIsLoading(false);
     }
-    return result; 
+    return result;
   }, []);
 
 
   return { user, session, isLoading, error, isInitialized, loginWithPassword, signUpWithEmailPassword, signOut, signInWithGoogle };
-} 
+}

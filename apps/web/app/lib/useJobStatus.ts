@@ -11,7 +11,7 @@ export function useJobStatusManager() {
   const prevUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }: { data: { session: Session | null } }) => {
+    supabase().auth.getSession().then(({ data }: { data: { session: Session | null } }) => {
       setCurrentSession(data.session);
       const currentUserId = data.session?.user?.id ?? null;
       if (currentUserId) {
@@ -22,7 +22,7 @@ export function useJobStatusManager() {
       prevUserIdRef.current = currentUserId;
     });
 
-    const { data: authListenerData } = supabase.auth.onAuthStateChange(
+    const { data: authListenerData } = supabase().auth.onAuthStateChange(
       (_event: AuthChangeEvent, session: Session | null) => {
         setCurrentSession(session);
         const newUserId = session?.user?.id ?? null;

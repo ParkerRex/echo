@@ -48,6 +48,7 @@ export function createRouter() {
       defaultErrorComponent: ErrorComponent,
       defaultNotFoundComponent: () => "Not found!",
       context: { queryClient },
+      scrollRestoration: true,
     }),
     queryClient,
   )

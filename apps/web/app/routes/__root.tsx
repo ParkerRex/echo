@@ -10,6 +10,7 @@ import { Header } from "~/components/header"
 import { Toaster } from "~/components/ui/sonner"
 // @ts-expect-error
 import css from "~/globals.css?url"
+import { seo } from "~/lib/seo"
 import { authQueries } from "~/services/queries"
 
 export const Route = createRootRouteWithContext<{
@@ -31,9 +32,11 @@ export const Route = createRootRouteWithContext<{
         name: "viewport",
         content: "width=device-width, initial-scale=1",
       },
-      {
-        title: "ConfHub!",
-      },
+      ...seo({
+        title: "ConfHub! - Conference Management Made Simple",
+        description: "Streamline your conference management with ConfHub. Track speakers, sessions, and attendees all in one place.",
+        keywords: "conference, management, events, speakers, sessions",
+      }),
     ],
     links: [
       {

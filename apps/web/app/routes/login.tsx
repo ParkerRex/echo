@@ -8,7 +8,7 @@ export const Route = createFileRoute("/login")({
     if (cause === "enter") {
       const {
         data: { session },
-      } = await supabase.auth.getSession();
+      } = await supabase().auth.getSession();
       if (session) {
         throw redirect({
           to: "/dashboard",

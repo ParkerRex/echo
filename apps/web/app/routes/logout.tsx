@@ -2,7 +2,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { getSupabaseServerClient } from "@echo/db/clients";
 
-const logoutFn = createServerFn().handler(async () => {
+const logoutFn = createServerFn({ method: 'POST' }).handler(async () => {
   const supabase = await getSupabaseServerClient();
   const { error } = await supabase.auth.signOut();
 

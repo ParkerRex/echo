@@ -16,7 +16,7 @@ const API_V1_PREFIX = "/api/v1";
 
 // Helper to get Supabase token
 async function getAuthHeaders(): Promise<HeadersInit> {
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { session } } = await supabase().auth.getSession();
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };
