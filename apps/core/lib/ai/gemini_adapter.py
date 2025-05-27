@@ -9,7 +9,7 @@ import json
 import os
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, cast
 
 # Import Google's Generative AI library with error handling
 try:
@@ -85,7 +85,7 @@ class GeminiAdapter(AIAdapterInterface):
             if not response or not hasattr(response, "text"):
                 raise AINoResponseError("Gemini failed to generate a response")
 
-            return response.text
+            return cast(str, response.text)
 
         except Exception as e:
             # Re-raise as AINoResponseError for consistent error handling
@@ -156,11 +156,11 @@ class GeminiAdapter(AIAdapterInterface):
                 "key_points": ["Main point 1", "Main point 2", "Main point 3"],
                 "sentiment": "positive/negative/neutral"
             }
-            
+
             Only provide the JSON object without any additional text or explanation.
-            
+
             Content to analyze:
-            
+
             """
 
             full_prompt = f"{analysis_prompt}\n{content}"
@@ -173,7 +173,7 @@ class GeminiAdapter(AIAdapterInterface):
                 )
 
             # Parse the JSON response
-            result = json.loads(response.text)
+            result = cast(Dict[str, Any], json.loads(response.text))
 
             # Validate essential fields
             required_fields = ["title", "description", "tags", "key_points"]
@@ -222,13 +222,13 @@ class GeminiAdapter(AIAdapterInterface):
                     "end_time": 20.0
                 }
             ]
-            
+
             Only provide the JSON array without any additional text or explanation.
             Assume the transcript starts at 0.0 seconds.
             Estimate reasonable timestamps based on the length of text.
-            
+
             Transcript to segment:
-            
+
             """
 
             full_prompt = f"{segmentation_prompt}\n{transcript}"
@@ -241,7 +241,7 @@ class GeminiAdapter(AIAdapterInterface):
                 )
 
             # Parse the JSON response
-            segments = json.loads(response.text)
+            segments = cast(List[Dict[str, Union[str, float]]], json.loads(response.text))
 
             # Validate segment structure
             for segment in segments:
@@ -293,7 +293,7 @@ class GeminiAdapter(AIAdapterInterface):
             if not response or not hasattr(response, "text"):
                 raise AINoResponseError("Gemini failed to generate a summary")
 
-            summary = response.text
+            summary = cast(str, response.text)
 
             # Trim if necessary
             if max_length and len(summary) > max_length:

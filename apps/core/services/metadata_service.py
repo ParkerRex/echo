@@ -7,7 +7,7 @@ titles, descriptions, tags, and thumbnails.
 
 import logging
 import os
-from typing import Dict, List
+from typing import Dict, List, cast
 
 from apps.core.core.exceptions import MetadataGenerationError
 from apps.core.lib.ai.base_adapter import AIAdapterInterface
@@ -132,7 +132,7 @@ class MetadataService:
             )
 
             # Use AI to summarize content
-            description = self._ai.summarize_content(transcript, max_length)
+            description = cast(str, self._ai.summarize_content(transcript, max_length))
 
             logging.info(f"Generated description ({len(description)} chars)")
             return description
@@ -196,7 +196,7 @@ class MetadataService:
             logging.info(f"Generating thumbnail description at timestamp {timestamp}s")
 
             # Delegate to AI adapter
-            description = self._ai.generate_thumbnail_description(transcript, timestamp)
+            description = cast(str, self._ai.generate_thumbnail_description(transcript, timestamp))
 
             logging.info(f"Generated thumbnail description: {description}")
             return description
@@ -260,7 +260,7 @@ class MetadataService:
         try:
             # This is a wrapper around the AI adapter method to simplify testing
             # and to provide consistent error handling
-            result = self._ai._generate_title_tags(transcript)
+            result = cast(Dict[str, str], self._ai._generate_title_tags(transcript))
 
             # Ensure required keys are present
             if "Description" not in result:

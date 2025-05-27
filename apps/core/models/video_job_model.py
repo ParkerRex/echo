@@ -26,6 +26,7 @@ Usage:
     db.commit()
 """
 
+from typing import Optional
 from sqlalchemy import (
     JSON,
     Column,
@@ -70,7 +71,7 @@ class VideoJobModel(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     video_id = Column(Integer, ForeignKey("videos.id"), nullable=False)
-    status = Column(
+    status: ProcessingStatus = Column(
         Enum(ProcessingStatus), default=ProcessingStatus.PENDING, nullable=False
     )
     processing_stages = Column(JSON, nullable=True)

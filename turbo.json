@@ -36,6 +36,10 @@
       "cache": false,
       "outputs": ["**/*.gen.ts", "**/generated.ts", "**/api.ts"]
     },
+    "gen:types:unified": {
+      "cache": false,
+      "outputs": ["packages/types/src/**/*.ts"]
+    },
     "db:push": {
       "cache": false
     },
@@ -49,4 +53,4 @@
     ".env.production",
     "turbo.json"
   ]
-} 
+}

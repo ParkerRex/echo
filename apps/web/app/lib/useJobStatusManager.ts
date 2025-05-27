@@ -4,14 +4,14 @@ import { useAppWebSocket } from './useAppWebSocket';
 import { supabase } from '@echo/db/clients';
 import type { Session, AuthChangeEvent } from '@supabase/supabase-js';
 // VideoSummary was re-added, VideoJobSchema aliased to VideoJob, WebSocketJobUpdate removed from this import
-import type { VideoJobSchema as VideoJob, ProcessingStatus, VideoSummary } from '../types/api'; 
+import type { VideoJobSchema as VideoJob, ProcessingStatus, VideoSummary } from '@echo/types';
 
 // Define WebSocketJobUpdate locally
 // It represents the expected shape of job update messages from the WebSocket.
 // Ensures job_id is present for targeting cache updates, video_id for lists.
-export type WebSocketJobUpdate = Partial<VideoJob> & { 
-  job_id: number; 
-  video_id?: number; 
+export type WebSocketJobUpdate = Partial<VideoJob> & {
+  job_id: number;
+  video_id?: number;
   // Include any other fields that are guaranteed or essential in a WS message for job updates.
   // For example, if status is always sent for an update:
   // status?: ProcessingStatus;
@@ -73,7 +73,7 @@ export function useJobStatusManager() {
         // If the job details were not already cached, we might not want to create it here,
         // or we might want to fetch it if it's a new job we should know about.
         // For now, only update if existing.
-        return oldData; 
+        return oldData;
       }
     );
 
@@ -106,7 +106,7 @@ export function useJobStatusManager() {
         if (!oldData) return undefined; // If no cache exists, do nothing or consider fetching
 
         const jobExists = oldData.some(job => job.id === wsUpdateData.job_id);
-        
+
         if (jobExists) {
           return oldData.map(job => {
             if (job.id === wsUpdateData.job_id) {
@@ -155,13 +155,13 @@ export function useJobStatusManager() {
   useEffect(() => {
     if (lastJsonMessage) {
         // Validate the structure of the message more carefully
-        if (typeof lastJsonMessage === 'object' && 
-            lastJsonMessage !== null && 
+        if (typeof lastJsonMessage === 'object' &&
+            lastJsonMessage !== null &&
             'job_id' in lastJsonMessage &&
             typeof (lastJsonMessage as any).job_id === 'number' // Ensure job_id is a number
             // Potentially add more checks if other fields are critical for routing/typing
             ) {
-            const updateData = lastJsonMessage as WebSocketJobUpdate; 
+            const updateData = lastJsonMessage as WebSocketJobUpdate;
             handleTypedWebSocketMessage(updateData);
         } else {
             console.warn("JobStatusManager: Received WebSocket message of unexpected shape or missing/invalid job_id:", lastJsonMessage);
@@ -179,4 +179,4 @@ export function useJobStatusManager() {
   }, [isConnected]); // Removed prevUserIdRef.current from deps as it's a ref.
 
   return { isWebSocketConnected: isConnected, currentUserId: prevUserIdRef.current, session: currentSession };
-} 
+}

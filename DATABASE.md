@@ -1,30 +1,32 @@
-# Database Documentation
+# Database Schema Reference
+
+> **Note**: This document provides detailed database schema reference. For development workflows and type generation, see the main [README.md](./README.md).
 
 ## Table of Contents
 
-1. [Overview](#overview)
-2. [Database Schema](#database-schema)
-3. [Migrations](#migrations)
-4. [Row Level Security (RLS)](#row-level-security-rls)
-5. [Database Functions](#database-functions)
-6. [Local Development](#local-development)
-7. [Production Management](#production-management)
+1. [Schema Overview](#schema-overview)
+2. [Core Tables](#core-tables)
+3. [Custom Types](#custom-types)
+4. [Indexes](#indexes)
+5. [Row Level Security](#row-level-security)
+6. [Database Functions](#database-functions)
 
-## Overview
+## Schema Overview
 
-Echo uses PostgreSQL via Supabase for data persistence. The database is designed to support video processing workflows with proper user isolation through Row Level Security (RLS).
+Echo uses PostgreSQL via Supabase with a database-first architecture. The database schema is the single source of truth for all types across the application.
 
 ### Key Features
+
 - **User Isolation**: RLS policies ensure users can only access their own data
 - **Audit Trail**: Automatic `created_at` and `updated_at` timestamps
 - **Referential Integrity**: Foreign key constraints maintain data consistency
 - **Type Safety**: Custom ENUM types for status fields
+- **Type Generation**: Schema drives TypeScript and Python type generation
 
-## Database Schema
-
-### Core Tables
+## Core Tables
 
 #### `public.videos`
+
 Stores information about uploaded video files.
 
 ```sql
@@ -41,6 +43,7 @@ CREATE TABLE public.videos (
 ```
 
 **Columns:**
+
 - `id`: Unique identifier for the video entry
 - `uploader_user_id`: Foreign key to auth.users, identifying the uploader
 - `original_filename`: The original name of the uploaded video file
@@ -51,6 +54,7 @@ CREATE TABLE public.videos (
 - `updated_at`: Timestamp of when the video record was last updated
 
 #### `public.video_jobs`
+
 Tracks the status and progress of video processing tasks.
 
 ```sql
@@ -66,6 +70,7 @@ CREATE TABLE public.video_jobs (
 ```
 
 **Columns:**
+
 - `id`: Unique identifier for the video processing job
 - `video_id`: Foreign key referencing the associated video in public.videos
 - `status`: Current status of the job using the processing_status_enum type
@@ -75,6 +80,7 @@ CREATE TABLE public.video_jobs (
 - `updated_at`: Timestamp of when the job record was last updated
 
 #### `public.video_metadata`
+
 Stores AI-generated metadata for processed videos.
 
 ```sql
@@ -98,6 +104,7 @@ CREATE TABLE public.video_metadata (
 ```
 
 **Columns:**
+
 - `id`: Unique identifier for the metadata record
 - `job_id`: One-to-one foreign key to video_jobs
 - `title`: AI-generated video title
@@ -117,12 +124,13 @@ CREATE TABLE public.video_metadata (
 ### Custom Types
 
 #### `processing_status_enum`
+
 Defines the possible states of a video processing job.
 
 ```sql
 CREATE TYPE public.processing_status_enum AS ENUM (
     'PENDING',
-    'PROCESSING', 
+    'PROCESSING',
     'COMPLETED',
     'FAILED'
 );
@@ -138,70 +146,6 @@ CREATE INDEX idx_video_jobs_status ON public.video_jobs(status);
 CREATE INDEX idx_video_metadata_job_id ON public.video_metadata(job_id);
 ```
 
-## Migrations
-
-### Creating Migrations
-
-1. **Create a new migration file:**
-```bash
-supabase migration new <descriptive_name>
-```
-
-2. **Write your SQL in the generated file:**
-```sql
--- Migration: Add new feature
--- Description: What this migration does
-
-BEGIN;
-
--- Your SQL changes here
-
-COMMIT;
-```
-
-3. **Apply the migration:**
-```bash
-supabase db push
-```
-
-### Migration Best Practices
-
-1. **Always use transactions** - Wrap changes in `BEGIN;` and `COMMIT;`
-2. **Include rollback instructions** - Comment how to undo changes
-3. **Test locally first** - Apply to local database before production
-4. **Use descriptive names** - Make migration purpose clear
-5. **Handle existing data** - Consider data migration for schema changes
-
-### Example Migration
-
-```sql
--- Migration: Add video categories
--- Description: Adds a categories table and links it to videos
--- Rollback: DROP TABLE video_categories; ALTER TABLE videos DROP COLUMN category_id;
-
-BEGIN;
-
--- Create categories table
-CREATE TABLE public.video_categories (
-    id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL UNIQUE,
-    description TEXT,
-    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- Add category reference to videos
-ALTER TABLE public.videos 
-ADD COLUMN category_id INTEGER REFERENCES public.video_categories(id);
-
--- Insert default categories
-INSERT INTO public.video_categories (name, description) VALUES
-    ('Educational', 'Educational content'),
-    ('Entertainment', 'Entertainment content'),
-    ('Tutorial', 'How-to and tutorial content');
-
-COMMIT;
-```
-
 ## Row Level Security (RLS)
 
 RLS ensures users can only access their own data. All tables have RLS enabled with appropriate policies.
@@ -211,23 +155,23 @@ RLS ensures users can only access their own data. All tables have RLS enabled wi
 ```sql
 -- Users can select their own videos
 CREATE POLICY "Users can select their own videos" ON public.videos
-FOR SELECT TO authenticated 
+FOR SELECT TO authenticated
 USING ((SELECT auth.uid()) = uploader_user_id);
 
 -- Users can insert videos for themselves
 CREATE POLICY "Users can insert their own videos" ON public.videos
-FOR INSERT TO authenticated 
+FOR INSERT TO authenticated
 WITH CHECK ((SELECT auth.uid()) = uploader_user_id);
 
 -- Users can update their own videos
 CREATE POLICY "Users can update their own videos" ON public.videos
-FOR UPDATE TO authenticated 
-USING ((SELECT auth.uid()) = uploader_user_id) 
+FOR UPDATE TO authenticated
+USING ((SELECT auth.uid()) = uploader_user_id)
 WITH CHECK ((SELECT auth.uid()) = uploader_user_id);
 
 -- Users can delete their own videos
 CREATE POLICY "Users can delete their own videos" ON public.videos
-FOR DELETE TO authenticated 
+FOR DELETE TO authenticated
 USING ((SELECT auth.uid()) = uploader_user_id);
 ```
 
@@ -236,11 +180,11 @@ USING ((SELECT auth.uid()) = uploader_user_id);
 ```sql
 -- Users can access jobs for their videos
 CREATE POLICY "Users can select jobs for their videos" ON public.video_jobs
-FOR SELECT TO authenticated 
+FOR SELECT TO authenticated
 USING (
     EXISTS (
-        SELECT 1 FROM public.videos v 
-        WHERE v.id = video_jobs.video_id 
+        SELECT 1 FROM public.videos v
+        WHERE v.id = video_jobs.video_id
         AND v.uploader_user_id = (SELECT auth.uid())
     )
 );
@@ -281,7 +225,7 @@ RETURNS TABLE (
     completed_jobs BIGINT,
     failed_jobs BIGINT
 ) LANGUAGE sql SECURITY DEFINER AS $$
-    SELECT 
+    SELECT
         COUNT(DISTINCT v.id) as total_videos,
         COUNT(CASE WHEN vj.status = 'PENDING' THEN 1 END) as pending_jobs,
         COUNT(CASE WHEN vj.status = 'COMPLETED' THEN 1 END) as completed_jobs,
@@ -292,100 +236,6 @@ RETURNS TABLE (
 $$;
 ```
 
-## Local Development
+---
 
-### Setup Local Database
-
-1. **Start Supabase:**
-```bash
-supabase start
-```
-
-2. **Apply migrations:**
-```bash
-supabase db push
-```
-
-3. **Generate types:**
-```bash
-pnpm run db:codegen
-```
-
-### Database Commands
-
-```bash
-# Reset local database
-supabase db reset
-
-# View database status
-supabase status
-
-# Open database in browser
-supabase dashboard
-
-# Generate migration from schema diff
-supabase db diff --schema public
-
-# Seed database with test data
-supabase seed
-```
-
-### Connecting to Local Database
-
-```bash
-# Connect with psql
-psql "postgresql://postgres:postgres@localhost:54322/postgres"
-
-# Or use the connection string from supabase status
-```
-
-## Production Management
-
-### Deployment
-
-1. **Link to production project:**
-```bash
-supabase link --project-ref <project-id>
-```
-
-2. **Deploy migrations:**
-```bash
-supabase db push --linked
-```
-
-3. **Verify deployment:**
-```bash
-supabase db diff --linked
-```
-
-### Monitoring
-
-- **Supabase Dashboard**: Monitor query performance and errors
-- **Database Logs**: Check for slow queries and connection issues
-- **RLS Policies**: Ensure policies are working correctly
-
-### Backup and Recovery
-
-```bash
-# Create backup
-pg_dump "postgresql://[user]:[password]@[host]:[port]/[database]" > backup.sql
-
-# Restore from backup
-psql "postgresql://[user]:[password]@[host]:[port]/[database]" < backup.sql
-```
-
-### Performance Optimization
-
-1. **Monitor slow queries** in Supabase dashboard
-2. **Add indexes** for frequently queried columns
-3. **Optimize RLS policies** to avoid expensive joins
-4. **Use connection pooling** for high-traffic applications
-
-### Security Checklist
-
-- [ ] RLS enabled on all tables
-- [ ] Policies tested for all user scenarios
-- [ ] Service role key secured
-- [ ] Database credentials rotated regularly
-- [ ] Backup strategy in place
-- [ ] Monitoring and alerting configured 
+> **For migration workflows, local development setup, and production deployment**, see the main [README.md](./README.md) which covers the complete database-first development workflow.

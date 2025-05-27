@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { ProcessingDashboard } from "~/components/video/processing-dashboard";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { fetchMyVideos, type PaginationParams } from "~/lib/api";
-import type { VideoSummary } from "~/types/api";
+import type { VideoSummary } from "@echo/types";
 import {
   useInfiniteQuery,
   type InfiniteData,

@@ -17,8 +17,8 @@
     "dev:core": "turbo run dev --filter=@echo/core",
     "dev:api": "./start-api.sh",
 
-    "gen:types": "turbo run gen:types",
-    "gen:types:supabase": "cd packages/supabase && supabase gen types typescript --local > types/database.ts",
+    "gen:types": "./scripts/generate-types.sh",
+    "gen:types:db": "cd packages/supabase && supabase gen types typescript --local > types/database.ts",
 
     "db:start": "cd packages/supabase && supabase start",
     "db:stop": "cd packages/supabase && supabase stop --no-backup",

@@ -1,4 +1,4 @@
-import type { VideoSummary } from "~/types/api";
+import type { VideoSummary } from "@echo/types";
 import { VideoListItem } from "./VideoListItem";
 import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton"; // For loading state

@@ -8,7 +8,7 @@ import type {
   VideoDetailsResponse,
   VideoMetadataUpdateRequest,
   ApiErrorResponse,
-} from '../types/api';
+} from '@echo/types';
 import { supabase } from '@echo/db/clients'; // Import Supabase client
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
@@ -128,7 +128,7 @@ export async function updateVideoMetadata(
 // Note: WebSocket is preferred for real-time updates, but this can be a fallback.
 // Assuming VideoJob type would be defined in types/api.ts similar to VideoDetailsResponse
 // For now, let's assume it returns a similar structure to VideoJob from types/api.ts
-import type { VideoJobSchema as VideoJob } from '../types/api';
+import type { VideoJobSchema as VideoJob } from '@echo/types';
 export async function getJobDetails(jobId: string): Promise<VideoJob> {
   const endpoint = `${API_BASE_URL}${API_V1_PREFIX}/videos/jobs/${jobId}`;
   const headers = await getAuthHeaders();
@@ -145,7 +145,7 @@ export async function getProcessingJobs(statuses?: string[]): Promise<VideoJob[]
   if (statuses && statuses.length > 0) {
     statuses.forEach(status => queryParams.append('status', status));
   }
-  
+
   const endpoint = `${API_BASE_URL}${API_V1_PREFIX}/users/me/jobs${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
   const headers = await getAuthHeaders();
   const res = await fetch(endpoint, {

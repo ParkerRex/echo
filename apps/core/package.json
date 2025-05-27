@@ -10,7 +10,7 @@
     "test": "uv run python -m pytest",
     "lint": "uv run ruff check .",
     "format": "uv run ruff format .",
-    "typecheck": "uv run mypy .",
+    "typecheck": "PYTHONPATH=/Users/parkerrex/Developer/echo uv run mypy .",
     "check": "pnpm lint && pnpm typecheck",
     "clean": "find . -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true",
     "gen:types": "uv run python bin/generate_api_types.py",

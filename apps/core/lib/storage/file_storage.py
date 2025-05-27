@@ -11,23 +11,14 @@ from fastapi import UploadFile
 # Import Google Cloud Storage dependencies with error handling
 # to allow the module to load even if these aren't installed
 try:
-    from google.cloud import storage
-    from google.oauth2 import service_account
+    from google.cloud import storage as gcs_storage
+    from google.oauth2 import service_account as gcs_service_account
 
     GCS_AVAILABLE = True
 except ImportError:
     GCS_AVAILABLE = False
-
-    # Dummy classes for type hints
-    class storage:
-        class Client:
-            pass
-
-    class service_account:
-        class Credentials:
-            @staticmethod
-            def from_service_account_file(path: str) -> Any:
-                pass
+    gcs_storage = None  # type: ignore
+    gcs_service_account = None  # type: ignore
 
 
 from core.config import settings
@@ -95,15 +86,15 @@ class FileStorageService:
                 )
 
             if self.settings.GOOGLE_APPLICATION_CREDENTIALS_PATH:
-                credentials = service_account.Credentials.from_service_account_file(
+                credentials = gcs_service_account.Credentials.from_service_account_file(
                     self.settings.GOOGLE_APPLICATION_CREDENTIALS_PATH
                 )
-                self.gcs_client = storage.Client(
+                self.gcs_client = gcs_storage.Client(
                     credentials=credentials, project=credentials.project_id
                 )
             else:
                 # Use default credentials from environment
-                self.gcs_client = storage.Client()
+                self.gcs_client = gcs_storage.Client()
 
             # Verify bucket exists
             if not self.settings.GCS_BUCKET_NAME:
@@ -285,8 +276,10 @@ class FileStorageService:
         """Convert a relative storage path to a full local path"""
         # Handle absolute paths that might have been stored
         if os.path.isabs(relative_path):
-            return Path(relative_path)
-        return self.local_storage_path / relative_path
+            absolute_path: Path = Path(relative_path)
+            return absolute_path
+        combined_path: Path = self.local_storage_path / relative_path
+        return combined_path
 
     def _parse_gcs_uri(self, gcs_uri: str) -> Tuple[str, str]:
         """Parse a GCS URI (gs://bucket-name/path/to/file) into bucket and blob names"""

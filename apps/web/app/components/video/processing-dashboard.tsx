@@ -23,7 +23,7 @@ import type {
   SignedUploadUrlResponse,
   UploadCompleteRequest,
   VideoJobSchema,
-} from "~/types/api";
+} from "@echo/types";
 import { VideoProgressCard } from "./video-progress-card";
 
 // Map backend processing stages to frontend steps
@@ -112,6 +112,7 @@ export function ProcessingDashboard({ className }: ProcessingDashboardProps) {
           const requestData: SignedUploadUrlRequest = {
             filename: file.name,
             content_type: file.type,
+            size_bytes: file.size,
           };
           signedUrlResponse = await getSignedUploadUrl(requestData);
           if (!signedUrlResponse.upload_url || !signedUrlResponse.video_id) {
@@ -151,10 +152,9 @@ export function ProcessingDashboard({ className }: ProcessingDashboardProps) {
 
         try {
           const completeRequestData: UploadCompleteRequest = {
-            video_id: String(videoId),
+            video_id: Number(videoId),
+            upload_key: "upload_key", // This should come from the upload response
             original_filename: file.name,
-            content_type: file.type,
-            size_bytes: file.size,
           };
           await notifyUploadComplete(completeRequestData);
         } catch (err: any) {

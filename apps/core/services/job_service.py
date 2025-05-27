@@ -46,4 +46,5 @@ async def get_user_jobs_by_statuses(
         statuses=statuses_to_fetch,
         # We can add limit/offset parameters here if needed by the API endpoint later
     )
-    return jobs
+    # Explicitly cast to ensure type safety
+    return list(jobs)

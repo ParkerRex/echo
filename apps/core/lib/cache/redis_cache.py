@@ -41,7 +41,8 @@ class RedisCache:
         Returns:
             Optional[str]: The cached value, or None if not found.
         """
-        return await self._client.get(key)
+        result = await self._client.get(key)
+        return str(result) if result is not None else None
 
     async def set(self, key: str, value: Any, ttl_seconds: int = 3600) -> None:
         """

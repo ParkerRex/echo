@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 // Assuming your job status updates will have a structure.
 // This should align with what the backend sends over WebSocket.
 // Let's use the VideoJob type from our API types for now, or a subset.
-import type { VideoJobSchema as VideoJob, ProcessingStatus } from '../types/api';
+import type { VideoJobSchema as VideoJob, ProcessingStatus } from '@echo/types';
 import { useAuth } from './useAuth'; // Assuming useAuth provides user and session
 
 export interface WebSocketJobUpdate extends Partial<VideoJob> {
@@ -158,4 +158,4 @@ export function useAppWebSocket(options?: UseAppWebSocketOptions): UseAppWebSock
     isConnected: connectionStatus === 'open',
     socketRef,
   };
-} 
+}

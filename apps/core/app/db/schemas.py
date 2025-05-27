@@ -80,10 +80,10 @@ class VideoMetadataSchema(BaseModel):  # Your API representation
     job_id: Optional[int] = None
     title: Optional[str] = None
     description: Optional[str] = None
-    tags: Optional[List[str]] = Field(default_factory=list)
+    tags: Optional[List[str]] = Field(default_factory=lambda: [])
     transcript_text: Optional[str] = None
     transcript_file_url: Optional[str] = None
-    subtitle_files_urls: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    subtitle_files_urls: Optional[Dict[str, Any]] = Field(default_factory=lambda: {})
     thumbnail_file_url: Optional[str] = None
     extracted_video_duration_seconds: Optional[float] = None
     extracted_video_resolution: Optional[str] = None

@@ -35,6 +35,12 @@
       ],
       "@echo/db/*": [
         "../../packages/supabase/*"
+      ],
+      "@echo/types": [
+        "../../packages/types/src"
+      ],
+      "@echo/types/*": [
+        "../../packages/types/src/*"
       ]
     }
   }

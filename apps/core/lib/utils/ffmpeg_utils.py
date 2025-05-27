@@ -11,7 +11,7 @@ Layer: Infrastructure/Lib
 
 import json
 import subprocess
-from typing import Any, Dict
+from typing import Any, Dict, cast
 
 
 class FfmpegUtils:
@@ -113,4 +113,4 @@ class FfmpegUtils:
             raise RuntimeError(
                 f"ffprobe metadata extraction failed: {result.stderr.decode('utf-8')}"
             )
-        return json.loads(result.stdout.decode("utf-8"))
+        return cast(Dict[str, Any], json.loads(result.stdout.decode("utf-8")))

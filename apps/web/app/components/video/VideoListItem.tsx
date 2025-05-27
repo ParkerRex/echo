@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import type { VideoSummary } from "../../types/api";
+import type { VideoSummary } from "@echo/types";
 import { Button } from "../ui/button";
 
 interface VideoListItemProps {

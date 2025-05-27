@@ -28,7 +28,7 @@ import { Textarea } from "~/components/ui/textarea";
 import type {
   VideoDetailsResponse,
   VideoMetadataUpdateRequest,
-} from "~/types/api";
+} from "@echo/types";
 import { getVideoDetails, updateVideoMetadata } from "../lib/api";
 
 // Placeholder for MediaPlayer component - to be created later
@@ -131,7 +131,7 @@ function VideoDetailPage() {
   const onSubmitMetadata = (values: MetadataFormValues) => {
     const updateRequest: VideoMetadataUpdateRequest = {
       title: values.title,
-      description: values.description || null,
+      description: values.description || undefined,
       tags: values.tags
         ? values.tags
             .split(",")

@@ -7,7 +7,7 @@ import type {
   SignedUploadUrlRequest,
   SignedUploadUrlResponse,
   UploadCompleteRequest,
-} from "../../types/api"; // Import types
+} from "@echo/types";
 import { toast } from "sonner"; // Import toast
 
 type UploadStatus = "idle" | "requesting" | "uploading" | "finalizing" | "done" | "error";
@@ -32,6 +32,7 @@ export function VideoUploadDropzone({
       const requestData: SignedUploadUrlRequest = {
         filename: file.name,
         content_type: file.type,
+        size_bytes: file.size,
       };
       signedUrlResponse = await getSignedUploadUrl(requestData);
       if (!signedUrlResponse.upload_url || !signedUrlResponse.video_id) {
@@ -81,11 +82,9 @@ export function VideoUploadDropzone({
     setStatus("finalizing");
     try {
       const completeRequestData: UploadCompleteRequest = {
-        video_id: videoId,
+        video_id: Number(videoId),
+        upload_key: "upload_key", // This should come from the upload response
         original_filename: file.name,
-        content_type: file.type,
-        size_bytes: file.size,
-        // storage_path can be omitted if backend infers it
       };
       await notifyUploadComplete(completeRequestData);
     } catch (err: any) {
@@ -98,7 +97,7 @@ export function VideoUploadDropzone({
 
     setStatus("done");
     setProgress(100);
-    if (onUploadSuccess) onUploadSuccess(videoId); // Pass videoId on success
+    if (onUploadSuccess) onUploadSuccess(String(videoId)); // Pass videoId on success
   }
 
   function onDrop(e: React.DragEvent<HTMLDivElement>) {

@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAppWebSocket } from './useAppWebSocket';
 import { supabase } from '@echo/db/clients';
 import type { Session, AuthChangeEvent } from '@supabase/supabase-js';
-import type { VideoJobSchema as VideoJob, ProcessingStatus, VideoSummary, WebSocketJobUpdate } from '../types/api';
+import type { VideoJobSchema as VideoJob, ProcessingStatus, VideoSummary, WebSocketJobUpdate } from '@echo/types';
 
 export function useJobStatusManager() {
   const queryClient = useQueryClient();
@@ -90,7 +90,7 @@ export function useJobStatusManager() {
   useEffect(() => {
     if (lastJsonMessage) {
         if (typeof lastJsonMessage === 'object' && lastJsonMessage !== null && ('job_id' in lastJsonMessage || 'video_id' in lastJsonMessage)) {
-            const updateData = lastJsonMessage as WebSocketJobUpdate; 
+            const updateData = lastJsonMessage as WebSocketJobUpdate;
             handleTypedWebSocketMessage(updateData);
         } else {
             console.warn("JobStatusManager: Received WebSocket message of unexpected shape:", lastJsonMessage);
@@ -108,4 +108,4 @@ export function useJobStatusManager() {
   }, [isConnected]);
 
   return { isWebSocketConnected: isConnected, currentUserId: prevUserIdRef.current, session: currentSession };
-} 
+}

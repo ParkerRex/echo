@@ -82,6 +82,9 @@ class YouTubeAdapter(PublishingInterface):
         if not self._youtube:
             self._initialize_youtube_client()
 
+        if not self._youtube:
+            raise PublishingError("YouTube API client not initialized")
+
         if not video_file or not os.path.isfile(video_file):
             raise PublishingError(f"Video file does not exist: {video_file}")
 
@@ -222,6 +225,9 @@ class YouTubeAdapter(PublishingInterface):
         if not self._youtube:
             self._initialize_youtube_client()
 
+        if not self._youtube:
+            raise PublishingError("YouTube API client not initialized")
+
         try:
             video_response = (
                 self._youtube.videos()
@@ -283,6 +289,9 @@ class YouTubeAdapter(PublishingInterface):
         if not self._youtube:
             self._initialize_youtube_client()
 
+        if not self._youtube:
+            raise PublishingError("YouTube API client not initialized")
+
         try:
             processing_response = (
                 self._youtube.videos()
@@ -332,6 +341,9 @@ class YouTubeAdapter(PublishingInterface):
         if not self._youtube:
             self._initialize_youtube_client()
 
+        if not self._youtube:
+            raise PublishingError("YouTube API client not initialized")
+
         try:
             self._youtube.videos().delete(id=video_id).execute()
             logger.info(f"Video with ID {video_id} deleted successfully")
@@ -369,6 +381,9 @@ class YouTubeAdapter(PublishingInterface):
         """
         if not self._youtube:
             self._initialize_youtube_client()
+
+        if not self._youtube:
+            raise PublishingError("YouTube API client not initialized")
 
         if not os.path.exists(caption_file):
             raise PublishingError(f"Caption file not found: {caption_file}")
@@ -431,6 +446,9 @@ class YouTubeAdapter(PublishingInterface):
         """
         if not self._youtube:
             self._initialize_youtube_client()
+
+        if not self._youtube:
+            raise PublishingError("YouTube API client not initialized")
 
         try:
             video_response = (
