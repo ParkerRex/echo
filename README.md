@@ -4,15 +4,16 @@
 
 1. [Overview](#overview)
 2. [Quick Start](#quick-start)
-3. [Architecture](#architecture)
-4. [End-to-End Type Safety](#end-to-end-type-safety)
-5. [Development Workflow](#development-workflow)
-6. [Database & Migrations](#database--migrations)
-7. [Supabase Development Rules](#supabase-development-rules)
-8. [Environment Configuration](#environment-configuration)
-9. [Project Structure](#project-structure)
-10. [Development Commands](#development-commands)
-11. [Contributing](#contributing)
+3. [Website](#website)
+4. [Architecture](#architecture)
+5. [End-to-End Type Safety](#end-to-end-type-safety)
+6. [Development Workflow](#development-workflow)
+7. [Database & Migrations](#database--migrations)
+8. [Supabase Development Rules](#supabase-development-rules)
+9. [Environment Configuration](#environment-configuration)
+10. [Project Structure](#project-structure)
+11. [Development Commands](#development-commands)
+12. [Contributing](#contributing)
 
 ## Overview
 
@@ -67,6 +68,55 @@ That's it! This single command starts:
 - TypeScript frontend (port 3000)
 
 Visit `http://localhost:3000` to access the application.
+
+## Website
+
+The Echo web application is built with modern React and TanStack Router, providing a fast and intuitive user experience for AI-powered video metadata generation.
+
+### Frontend Architecture
+
+- **Framework**: React 18 with TanStack Router for type-safe routing
+- **Styling**: Tailwind CSS with shadcn/ui components
+- **State Management**: TanStack Query for server state, React hooks for local state
+- **Authentication**: Supabase Auth with protected routes and user session management
+- **Form Handling**: Unified Auth components with FormData-based submission
+- **Error Handling**: Comprehensive error boundaries and user-friendly error messages
+
+### Key Features
+
+- **🔐 Authentication Flow**: Seamless sign-in/sign-up with email and password
+- **📁 File Upload**: Drag-and-drop video upload with progress tracking
+- **🤖 AI Processing**: Real-time status updates for video analysis jobs
+- **📝 Metadata Editing**: Interactive forms for editing AI-generated content
+- **📱 Responsive Design**: Mobile-first design that works on all devices
+- **⚡ Performance**: Optimized with code splitting and lazy loading
+
+### User Experience
+
+1. **Landing Page** - Clear value proposition and call-to-action
+2. **Authentication** - Simple email/password auth with error handling
+3. **Dashboard** - Overview of uploaded videos and processing status
+4. **Upload Flow** - Intuitive video upload with progress feedback
+5. **Results View** - Clean interface for viewing and editing AI-generated metadata
+6. **Profile Management** - User settings and account management
+
+### Technical Highlights
+
+- **Type Safety**: End-to-end type safety from database to UI components
+- **Error Boundaries**: Graceful error handling with fallback components
+- **Route Protection**: Automatic redirects for unauthenticated users
+- **Form Validation**: Client-side validation with server-side verification
+- **Real-time Updates**: Live status updates for long-running AI processing jobs
+
+### Development Patterns
+
+The website follows modern React patterns adopted from the official TanStack Start + Supabase example:
+
+- **Unified Auth Components**: Single Auth component for both sign-in and sign-up
+- **FormData Handling**: Simple form submission without complex state management
+- **Server Functions**: Type-safe server functions with consistent error handling
+- **Mutation Hooks**: Custom `useMutation` hook for form submissions and API calls
+- **Error Handling**: Hybrid approach with redirects for auth and error components for other failures
 
 ## Architecture
 

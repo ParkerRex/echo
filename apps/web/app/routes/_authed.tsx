@@ -1,5 +1,7 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import type { ErrorComponentProps } from "@tanstack/react-router";
 import { supabase } from "@echo/db/clients";
+import { DefaultCatchBoundary } from "~/components/default-catch-boundary";
 import React from "react";
 
 // Define a simple loading component to be used as the pendingComponent
@@ -15,9 +17,14 @@ function AuthedLayoutPendingComponent() {
 	);
 }
 
+// Error component for non-auth errors in authenticated routes
+function AuthedLayoutErrorComponent({ error }: ErrorComponentProps) {
+	return <DefaultCatchBoundary error={error} />;
+}
+
 export const Route = createFileRoute("/_authed")({
 	beforeLoad: async ({ location }) => {
-		const { data: { session }, error } = await supabase.auth.getSession();
+		const { data: { session }, error } = await supabase().auth.getSession();
 
 		if (error) {
 			console.error("Error getting session in _authed beforeLoad:", error);
@@ -46,9 +53,9 @@ export const Route = createFileRoute("/_authed")({
 	},
 	component: AuthedLayoutComponent,
 	pendingComponent: AuthedLayoutPendingComponent,
-	// Removing the old errorComponent that rendered <Login />
-	// Error handling for auth failure is now a redirect in beforeLoad.
-	// Other errors can be handled by a more generic error component higher up or per-route.
+	errorComponent: AuthedLayoutErrorComponent,
+	// Auth failures are handled by redirects in beforeLoad.
+	// Non-auth errors are handled by the errorComponent above.
 });
 
 function AuthedLayoutComponent() {
@@ -56,7 +63,7 @@ function AuthedLayoutComponent() {
 	// It should provide the Outlet for nested authenticated routes.
 	// You could also include a shared layout for authenticated pages here (e.g., a navbar with user info).
 	// const { user } = Route.useRouteContext(); // Example if context was populated in beforeLoad
-	
+
 	// For now, a simple Outlet.
 	// Components within this layout can use the useAuth() hook to get user/session details.
 	return (

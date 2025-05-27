@@ -38,7 +38,7 @@ export const userRequiredMiddleware = createMiddleware()
     })
   })
 
-export const signUp = createServerFn()
+export const signUp = createServerFn({ method: 'POST' })
   .validator(SignUpSchema)
   .handler(async ({ data }) => {
     const { data: userData, error } =
@@ -50,22 +50,22 @@ export const signUp = createServerFn()
     if (error) {
       switch (error.code) {
         case "email_exists":
-          throw new Error("Email already exists")
+          return { error: "Email already exists" }
         case "weak_password":
-          throw new Error("Your password is too weak")
+          return { error: "Your password is too weak" }
         default:
-          throw new Error(error.message)
+          return { error: error.message }
       }
     }
 
     if (userData.user) {
-      return userData.user.id
+      return { success: true, userId: userData.user.id }
     }
 
-    throw new Error("Something went wrong")
+    return { error: "Something went wrong" }
   })
 
-export const signIn = createServerFn()
+export const signIn = createServerFn({ method: 'POST' })
   .validator(SignInSchema)
   .handler(async ({ data }) => {
     const { error } = await getSupabaseServerClient().auth.signInWithPassword({
@@ -78,7 +78,7 @@ export const signIn = createServerFn()
     }
   })
 
-export const signOut = createServerFn().handler(async () => {
+export const signOut = createServerFn({ method: 'POST' }).handler(async () => {
   await getSupabaseServerClient().auth.signOut()
 })
 
@@ -98,7 +98,7 @@ export const getUser = createServerFn()
     }
   })
 
-export const updateUser = createServerFn()
+export const updateUser = createServerFn({ method: 'POST' })
   .validator(UserMetaSchema)
   .handler(async ({ data }) => {
     const supabase = getSupabaseServerClient()
@@ -108,6 +108,8 @@ export const updateUser = createServerFn()
     })
 
     if (error) {
-      throw new Error(error.message)
+      return { error: error.message }
     }
+
+    return { success: true }
   })
