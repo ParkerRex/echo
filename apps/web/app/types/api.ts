@@ -78,7 +78,7 @@ export interface VideoWithJobsResponse {
   size_bytes: number;
   created_at: string;
   updated_at: string;
-  jobs?: VideoJobResponse[];
+  jobs?: VideoJobResponseSchema[];
 }
 
 export interface VideoJobWithDetailsResponse {
@@ -89,8 +89,8 @@ export interface VideoJobWithDetailsResponse {
   error_message?: string | null;
   created_at: string;
   updated_at: string;
-  video: VideoResponse;
-  video_metadata?: VideoMetadataResponse | null;
+  video: VideoResponseSchema;
+  video_metadata?: VideoMetadataResponseSchema | null;
 }
 
 export interface VideoMetadataUpdateRequest {
@@ -150,8 +150,8 @@ export interface VideoJob {
   error_message?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
-  video?: Video | null;
-  metadata?: VideoMetadata | null;
+  video?: VideoSchema | null;
+  metadata?: VideoMetadataSchema | null;
 }
 
 export interface VideoDetailsResponse {
@@ -164,38 +164,6 @@ export interface VideoDetailsResponse {
   error_message?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
-  video?: Video | null;
-  metadata?: VideoMetadata | null;
+  video?: VideoSchema | null;
+  metadata?: VideoMetadataSchema | null;
 }
-
-// Additional types needed by the frontend
-export interface SignedUploadUrlRequest {
-  filename: string;
-  content_type: string;
-}
-
-export interface UploadCompleteRequest {
-  video_id: string;
-  original_filename: string;
-  content_type: string;
-  size_bytes: number;
-}
-
-export interface ApiErrorResponse {
-  error: string;
-  message: string;
-  status_code: number;
-  detail?: string;
-}
-
-export interface WebSocketJobUpdate {
-  job_id: number;
-  status: ProcessingStatus;
-  progress?: number;
-  message?: string;
-  video_id?: number;
-  title?: string;
-}
-
-// Legacy alias for compatibility
-export type VideoJobSchema = VideoJob;
