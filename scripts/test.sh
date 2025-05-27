@@ -30,46 +30,24 @@ print_warning() {
 
 print_status "🧪 Starting Echo test suite..."
 
-# Test backend
-print_status "🐍 Running Python backend tests..."
-cd apps/core
-if [ -d ".venv" ]; then
-    source .venv/bin/activate
-fi
-
-./bin/test.sh
-cd ../..
-print_success "Python backend tests passed"
-
-# Test frontend (when tests are available)
-print_status "⚛️  Checking frontend..."
-cd apps/web
-if [ -f "package.json" ] && grep -q '"test"' package.json; then
-    pnpm test
-    print_success "Frontend tests passed"
-else
-    print_warning "No frontend tests configured yet"
-fi
-cd ../..
+# Run all tests using Turbo
+print_status "🚀 Running all tests with Turbo..."
+pnpm test
+print_success "All tests completed via Turbo"
 
 # Run type checking
 print_status "📝 Running type checks..."
-cd apps/web
 pnpm typecheck
-cd ../..
 print_success "Type checks passed"
 
-cd apps/core
-if [ -d ".venv" ]; then
-    source .venv/bin/activate
-fi
-./bin/typecheck.sh
-cd ../..
-print_success "Python type checks passed"
+# Run linting
+print_status "🔍 Running linting..."
+pnpm lint
+print_success "Linting passed"
 
-print_success "🎉 All tests completed successfully!"
+print_success "🎉 All tests and checks completed successfully!"
 echo ""
 echo -e "${GREEN}Test Results:${NC}"
-echo -e "  ${GREEN}•${NC} Python Backend: ✅ Passed"
-echo -e "  ${GREEN}•${NC} Frontend: ✅ Passed"
-echo -e "  ${GREEN}•${NC} Type Checking: ✅ Passed" 
+echo -e "  ${GREEN}•${NC} All Tests: ✅ Passed"
+echo -e "  ${GREEN}•${NC} Type Checking: ✅ Passed"
+echo -e "  ${GREEN}•${NC} Linting: ✅ Passed" 

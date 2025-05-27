@@ -35,19 +35,15 @@ print_error() {
 cleanup() {
     print_warning "Shutting down development environment..."
     
-    if [ ! -z "$BACKEND_PID" ]; then
-        print_status "Stopping backend (PID: $BACKEND_PID)..."
-        kill $BACKEND_PID 2>/dev/null || true
-    fi
-    
-    if [ ! -z "$FRONTEND_PID" ]; then
-        print_status "Stopping frontend (PID: $FRONTEND_PID)..."
-        kill $FRONTEND_PID 2>/dev/null || true
+    if [ ! -z "$TURBO_PID" ]; then
+        print_status "Stopping Turbo dev processes (PID: $TURBO_PID)..."
+        kill $TURBO_PID 2>/dev/null || true
     fi
     
     # Kill any remaining processes
     pkill -f "uvicorn main:app" 2>/dev/null || true
     pkill -f "vinxi dev" 2>/dev/null || true
+    pkill -f "turbo run dev" 2>/dev/null || true
     
     print_success "Development environment stopped."
     exit 0
@@ -71,27 +67,16 @@ fi
 # Wait a moment for Supabase to be ready
 sleep 2
 
-# Start backend in background
-print_status "🐍 Starting Python FastAPI backend..."
-cd apps/core
-bash bin/dev.sh &
-BACKEND_PID=$!
-cd ../..
-
-print_success "Backend started (PID: $BACKEND_PID) - http://localhost:8000"
-
-# Wait for backend to start
-print_status "⏳ Waiting for backend to be ready..."
-sleep 5
-
-# Start frontend in background
-print_status "⚛️  Starting TypeScript frontend..."
-cd apps/web
+# Start all services using Turbo
+print_status "🚀 Starting all services with Turbo..."
 pnpm dev &
-FRONTEND_PID=$!
-cd ../..
+TURBO_PID=$!
 
-print_success "Frontend started (PID: $FRONTEND_PID) - http://localhost:3000"
+print_success "All services started via Turbo (PID: $TURBO_PID)"
+
+# Wait for services to start
+print_status "⏳ Waiting for services to be ready..."
+sleep 8
 
 # Display status
 echo ""
@@ -103,12 +88,12 @@ echo -e "  ${GREEN}•${NC} API Docs:       http://localhost:8000/docs"
 echo -e "  ${GREEN}•${NC} Frontend:       http://localhost:3000"
 echo -e "  ${GREEN}•${NC} Supabase:       http://localhost:54321"
 echo ""
-echo -e "${CYAN}Process IDs:${NC}"
-echo -e "  ${GREEN}•${NC} Backend PID:    $BACKEND_PID"
-echo -e "  ${GREEN}•${NC} Frontend PID:   $FRONTEND_PID"
+echo -e "${CYAN}Process Management:${NC}"
+echo -e "  ${GREEN}•${NC} Turbo PID:      $TURBO_PID"
+echo -e "  ${GREEN}•${NC} All services managed by Turbo"
 echo ""
 echo -e "${YELLOW}Press Ctrl+C to stop all services${NC}"
 echo ""
 
-# Wait for both processes
-wait $BACKEND_PID $FRONTEND_PID 
+# Wait for Turbo process
+wait $TURBO_PID 

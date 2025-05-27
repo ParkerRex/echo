@@ -29,26 +29,21 @@ cp .env.example .env
 # Edit .env with your configuration
 ```
 
-2. **Start local Supabase:**
+2. **Install dependencies:**
 ```bash
-supabase start
-```
-
-3. **Setup backend:**
-```bash
-cd apps/core
-uv venv && source .venv/bin/activate
-uv pip install -r pyproject.toml
-alembic upgrade head
-uvicorn api.main:app --reload
-```
-
-4. **Setup frontend:**
-```bash
-cd apps/web
 pnpm install
+pnpm setup:python-env
+```
+
+3. **Start development environment:**
+```bash
 pnpm dev
 ```
+
+That's it! This single command starts:
+- Local Supabase database
+- Python FastAPI backend (port 8000)
+- TypeScript frontend (port 3000)
 
 Visit `http://localhost:3000` to access the application.
 
@@ -91,17 +86,29 @@ For detailed information, see our comprehensive documentation:
 ## Development Commands
 
 ```bash
+# Essential commands
+pnpm dev                    # Start entire development environment
+pnpm build                  # Build all applications
+pnpm test                   # Run all tests and quality checks
+
 # Database operations
-pnpm run db:migrate     # Apply migrations
-pnpm run db:codegen     # Regenerate ORM models
-pnpm run db:refresh     # Combined migrate + codegen
+pnpm db:start              # Start Supabase
+pnpm db:stop               # Stop Supabase
+pnpm db:push               # Push schema changes
+pnpm db:reset              # Reset database
 
 # Type generation
-pnpm run generate:api-types  # Generate TypeScript types from Pydantic models
+pnpm gen:types             # Generate all types
+pnpm gen:types:supabase    # Generate Supabase types only
 
-# Testing
-cd apps/core && pytest      # Backend tests
-cd apps/web && pnpm test     # Frontend tests
+# Quality checks
+pnpm typecheck             # Type check all applications
+pnpm lint                  # Lint all applications
+pnpm format                # Format all applications
+
+# Targeted development
+pnpm dev:web               # Frontend only
+pnpm dev:core              # Backend only
 ```
 
 ## Project Structure

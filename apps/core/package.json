@@ -4,20 +4,18 @@
     "description": "Python API Core Service",
     "private": true,
       "scripts": {
-    "dev": "./bin/dev.sh",
+    "dev": "uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000",
     "build": "echo 'Python build: No build step required for FastAPI'",
     "start": "./bin/start.sh",
-    "test": "./bin/test.sh",
-    "lint": "./bin/lint.sh",
-    "format": "./bin/format.sh",
-    "typecheck": "./bin/typecheck.sh",
-    "check": "./bin/lint.sh && ./bin/typecheck.sh",
+    "test": "uv run python -m pytest",
+    "lint": "uv run ruff check .",
+    "format": "uv run ruff format .",
+    "typecheck": "uv run mypy .",
+    "check": "pnpm lint && pnpm typecheck",
     "clean": "find . -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true",
-    "gen:types": "./bin/codegen_pydantic_supabase.sh",
+    "gen:types": "uv run python bin/generate_api_types.py",
     "db:push": "cd ../../packages/supabase && supabase db push",
-    "db:reset": "cd ../../packages/supabase && supabase db reset",
-    "setup-env": "./bin/setup.sh",
-    "lint:fix": "./bin/lint-fix.sh"
+    "db:reset": "cd ../../packages/supabase && supabase db reset"
   },
     "keywords": [
       "python",

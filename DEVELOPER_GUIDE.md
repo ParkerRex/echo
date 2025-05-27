@@ -85,9 +85,9 @@ pnpm dev
 ```
 
 This single command will:
-- Start all required services (Supabase, Redis, API, Frontend) in Docker containers
-- Apply database migrations automatically
-- Generate all type definitions
+- Start local Supabase database
+- Start Python FastAPI backend (port 8000)
+- Start TypeScript frontend (port 3000)
 - Set up the complete development environment with hot reloading
 
 3. **Access the application:**
@@ -100,23 +100,29 @@ This single command will:
 ### Development Commands
 
 ```bash
-# Start development environment
-pnpm dev
+# Essential commands
+pnpm dev                    # Start entire development environment
+pnpm build                  # Build all applications
+pnpm test                   # Run all tests and quality checks
 
-# Stop all services
-pnpm dev:stop
+# Database operations
+pnpm db:start              # Start Supabase
+pnpm db:stop               # Stop Supabase
+pnpm db:push               # Push schema changes
+pnpm db:reset              # Reset database
 
-# Restart development environment
-pnpm dev:restart
+# Type generation
+pnpm gen:types             # Generate all types
+pnpm gen:types:supabase    # Generate Supabase types only
 
-# View service status
-pnpm dev:status
+# Quality checks
+pnpm typecheck             # Type check all applications
+pnpm lint                  # Lint all applications
+pnpm format                # Format all applications
 
-# Follow logs from all services
-pnpm dev:logs
-
-# Follow logs from specific service
-pnpm dev:logs echo-api
+# Targeted development
+pnpm dev:web               # Frontend only
+pnpm dev:core              # Backend only
 ```
 
 ### Alternative Setup (Local Development)

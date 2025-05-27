@@ -28,28 +28,19 @@ print_status "🏗️  Starting Echo build process..."
 
 # Generate types first
 print_status "📝 Generating types..."
-./scripts/generate-supabase-types.sh
+pnpm gen:types:supabase
 print_success "Types generated successfully"
 
-# Build frontend
-print_status "⚛️  Building frontend..."
-cd apps/web
+# Build all applications using Turbo
+print_status "🚀 Building all applications with Turbo..."
 pnpm build
-cd ../..
-print_success "Frontend built successfully"
+print_success "All applications built successfully"
 
-# Python doesn't need a build step, but we can run checks
-print_status "🐍 Checking Python backend..."
-cd apps/core
-if [ -d ".venv" ]; then
-    source .venv/bin/activate
-fi
-
-# Run type checking and linting
-./bin/typecheck.sh
-./bin/lint.sh
-cd ../..
-print_success "Python backend checks passed"
+# Run additional checks
+print_status "🔍 Running quality checks..."
+pnpm typecheck
+pnpm lint
+print_success "Quality checks passed"
 
 print_success "🎉 Build completed successfully!"
 echo ""

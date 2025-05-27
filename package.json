@@ -15,11 +15,9 @@
 
     "dev:web": "turbo run dev --filter=@echo/web",
     "dev:core": "turbo run dev --filter=@echo/core",
-    "dev:legacy": "./scripts/dev-local.sh start",
 
     "gen:types": "turbo run gen:types",
-    "gen:types:all": "./scripts/generate-types.sh all",
-    "gen:types:supabase": "./scripts/generate-supabase-types.sh",
+    "gen:types:supabase": "cd packages/supabase && supabase gen types typescript --local > types/generated.ts",
 
     "db:start": "cd packages/supabase && supabase start",
     "db:stop": "cd packages/supabase && supabase stop --no-backup",
@@ -31,23 +29,7 @@
 
     "setup:python-env": "cd apps/core && uv venv && source .venv/bin/activate && uv pip install -e \".[dev]\" && echo 'Python env setup complete. Remember to activate it in new terminals: source apps/core/.venv/bin/activate' && cd ../..",
 
-    "clean": "turbo run clean && rm -rf node_modules/.cache",
-
-    "_legacy:dev:stop": "./scripts/dev-local.sh stop",
-    "_legacy:dev:restart": "./scripts/dev-local.sh restart",
-    "_legacy:dev:status": "./scripts/dev-local.sh status",
-    "_legacy:dev:docker": "./scripts/dev-start.sh start",
-    "_legacy:dev:docker-stop": "./scripts/dev-start.sh stop",
-    "_legacy:types:orm": "./scripts/generate-types.sh orm",
-    "_legacy:types:pydantic": "./scripts/generate-types.sh pydantic",
-    "_legacy:types:typescript": "./scripts/generate-types.sh typescript",
-    "_legacy:types:api": "./scripts/generate-types.sh api",
-    "_legacy:codegen:db-orm-models": "bash apps/core/bin/codegen_models.sh",
-    "_legacy:codegen:db-pydantic-models": "bash apps/core/bin/codegen_pydantic_supabase.sh",
-    "_legacy:api:lint": "bash apps/core/bin/lint.sh",
-    "_legacy:api:format": "bash apps/core/bin/format.sh",
-    "_legacy:api:typecheck": "bash apps/core/bin/typecheck.sh",
-    "_legacy:api:test": "bash apps/core/bin/test.sh"
+    "clean": "turbo run clean && rm -rf node_modules/.cache"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
