@@ -25,6 +25,8 @@ dependencies = [
     "pyjwt>=2.10.1",
     "python-jose[cryptography]",
     "email-validator>=2.2.0",
+    # Supabase (Official Python Client)
+    "supabase>=2.10.0",
     # Google Cloud & AI
     "google-cloud-storage==2.10.0",
     "google-generativeai",
@@ -40,10 +42,8 @@ dependencies = [
     # Other Utilities
     "redis>=5.2.1",
     "openai>=1.75.0",
-    # Supabase Pydantic for model generation (runtime for generated models)
     # Cloud Functions (if still deploying parts as Cloud Functions)
     "functions-framework", # If you use Google Cloud Functions
-    "supabase-pydantic>=0.18.3",
 ]
 
 [project.optional-dependencies]

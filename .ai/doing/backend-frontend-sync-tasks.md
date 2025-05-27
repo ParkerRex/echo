@@ -1429,3 +1429,549 @@ pnpm test
 - **Documentation**: Comprehensive migration guides and troubleshooting
 
 **The foundation is rock-solid - the Echo project is ready for feature development!** 🎉 
+
+---
+
+## 📋 PHASE 7: Strategic Simplification & Containerization 🆕
+
+**Session 5 Strategic Questions & Tasks**  
+**Priority:** HIGH  
+**Objective:** Simplify development UX, documentation, and architecture for production readiness
+
+### 🎯 Strategic Questions Addressed:
+1. **Dev UX Simplification**: Too many scripts scattered across `scripts/` and `bin/`
+2. **Documentation Consolidation**: Focus on developer experience, eliminate bloat
+3. **Supabase Code Deduplication**: Remove duplicate Supabase implementations
+4. **Type Strategy Unification**: Choose optimal type generation approach
+
+---
+
+### Task 7.1: Development Environment Containerization ❌
+**Priority:** HIGH  
+**Estimated Time:** 4-6 hours  
+**Objective:** Containerize entire development environment for deployment consistency
+
+**Current Problem:**
+- Multiple script locations: `scripts/` (7 files) + `apps/core/bin/` (11 files) = 18 scripts!
+- Python environment setup with `uv sync` and venv management
+- Complex deployment setup for Debian servers
+- Existing GitHub CI/CD needs removal/replacement
+
+**KEEP/KILL/COMBINE Strategy:**
+```bash
+# KEEP (Essential Scripts):
+- docker-compose.yml (new)
+- Dockerfile.backend (new)  
+- Dockerfile.frontend (new)
+- scripts/dev.sh (simplified)
+
+# KILL (Eliminate):
+- scripts/dev-local.sh (8.8KB - too complex)
+- scripts/dev-start.sh (5.6KB - redundant)
+- scripts/generate-types.sh (7.0KB - move to container)
+- apps/core/bin/dev.sh (redundant with container)
+- apps/core/bin/setup.sh (container handles this)
+- apps/core/bin/format.sh, lint.sh, typecheck.sh (use turbo)
+- All GitHub CI/CD workflows (replace with container-based)
+
+# COMBINE (Consolidate):
+- All type generation → Single container service
+- All testing → Single container command
+- All linting/formatting → Turbo commands only
+```
+
+**Implementation Plan:**
+1. **Create Docker Compose Setup:**
+   ```yaml
+   # docker-compose.yml
+   version: '3.8'
+   services:
+     backend:
+       build: ./apps/core
+       ports: ["8000:8000"]
+       environment:
+         - DATABASE_URL=${DATABASE_URL}
+       volumes:
+         - ./apps/core:/app
+       depends_on: [db]
+     
+     frontend:
+       build: ./apps/web  
+       ports: ["3000:3000"]
+       volumes:
+         - ./apps/web:/app
+       depends_on: [backend]
+     
+     db:
+       image: supabase/postgres
+       environment:
+         - POSTGRES_PASSWORD=postgres
+       ports: ["5432:5432"]
+   ```
+
+2. **Create Backend Dockerfile:**
+   ```dockerfile
+   # apps/core/Dockerfile
+   FROM python:3.13-slim
+   WORKDIR /app
+   COPY requirements.txt .
+   RUN pip install uv && uv pip install -r requirements.txt
+   COPY . .
+   CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+   ```
+
+3. **Create Frontend Dockerfile:**
+   ```dockerfile
+   # apps/web/Dockerfile  
+   FROM node:20-slim
+   WORKDIR /app
+   COPY package*.json ./
+   RUN npm install -g pnpm && pnpm install
+   COPY . .
+   CMD ["pnpm", "dev", "--host", "0.0.0.0"]
+   ```
+
+4. **Simplify Root Scripts:**
+   ```bash
+   # scripts/dev.sh (simplified)
+   #!/bin/bash
+   echo "🚀 Starting Echo development environment..."
+   docker-compose up --build
+   
+   # scripts/test.sh (simplified)
+   #!/bin/bash
+   docker-compose exec backend pytest
+   docker-compose exec frontend pnpm test
+   
+   # scripts/deploy.sh (new)
+   #!/bin/bash
+   docker-compose -f docker-compose.prod.yml up -d
+   ```
+
+**Verification Steps:**
+- [ ] `docker-compose up` starts entire environment
+- [ ] All services accessible via localhost
+- [ ] Hot reload works in development
+- [ ] Tests run in containers
+- [ ] Production deployment works on Debian
+
+---
+
+### Task 7.2: Script Consolidation & Simplification ❌
+**Priority:** HIGH  
+**Estimated Time:** 2-3 hours  
+**Objective:** Reduce 18 scripts to 5 essential scripts
+
+**Current Script Audit:**
+```bash
+# scripts/ (7 files - 22.7KB total)
+scripts/dev.sh              # 2.9KB - KEEP (simplify)
+scripts/build.sh            # 1.2KB - KEEP (simplify) 
+scripts/test.sh             # 1.5KB - KEEP (simplify)
+scripts/generate-types.sh   # 7.0KB - KILL (move to container)
+scripts/generate-supabase-types.sh # 1.3KB - KILL (move to container)
+scripts/dev-local.sh         # 8.8KB - KILL (too complex)
+scripts/dev-start.sh         # 5.6KB - KILL (redundant)
+
+# apps/core/bin/ (11 files - ~15KB total)  
+apps/core/bin/start.sh       # 524B - KEEP (production)
+apps/core/bin/dev.sh         # 581B - KILL (use container)
+apps/core/bin/generate_api_types.py # 7.7KB - MOVE to container service
+apps/core/bin/codegen_*.sh   # 3.7KB - KILL (use container)
+apps/core/bin/format.sh      # 57B - KILL (use turbo)
+apps/core/bin/lint.sh        # 62B - KILL (use turbo)
+apps/core/bin/typecheck.sh   # 315B - KILL (use turbo)
+apps/core/bin/test.sh        # 376B - KILL (use container)
+apps/core/bin/setup.sh       # 65B - KILL (use container)
+apps/core/bin/clean_test_files.sh # 1.2KB - KILL (use container)
+```
+
+**Target Architecture (5 scripts total):**
+```bash
+# Root level only:
+scripts/dev.sh              # Docker compose up
+scripts/test.sh             # Run all tests in containers  
+scripts/build.sh            # Build for production
+scripts/deploy.sh           # Deploy to production
+docker-compose.yml          # Container orchestration
+```
+
+**Actions:**
+1. **Delete redundant scripts:**
+   ```bash
+   rm scripts/dev-local.sh scripts/dev-start.sh scripts/generate-*.sh
+   rm apps/core/bin/dev.sh apps/core/bin/codegen_*.sh
+   rm apps/core/bin/{format,lint,typecheck,test,setup,clean_test_files}.sh
+   ```
+
+2. **Simplify remaining scripts to use containers**
+3. **Update package.json scripts to use simplified commands**
+4. **Update documentation to reflect new workflow**
+
+**Verification Steps:**
+- [ ] Only 5 scripts remain in entire project
+- [ ] All functionality preserved via containers
+- [ ] Development workflow simplified to `./scripts/dev.sh`
+- [ ] No broken references to deleted scripts
+
+---
+
+### Task 7.3: Documentation Consolidation ❌
+**Priority:** MEDIUM  
+**Estimated Time:** 2-3 hours  
+**Objective:** Consolidate documentation into single developer-focused guide
+
+**Current Documentation Audit:**
+```bash
+# KEEP:
+README.md                    # Main entry point - ENHANCE
+
+# KILL (consolidate into README):
+DEVELOPER_GUIDE.md          # 📄 Merge into README
+DATABASE.md                 # 📄 Merge into README  
+TURBO_MIGRATION.md          # 📄 Archive (historical)
+.ai/doing/*.md              # 📄 Archive (session notes)
+.ai/done/*.md               # 📄 Archive (completed work)
+
+# COMBINE:
+All developer info → Single README.md with clear sections
+```
+
+**New README.md Structure:**
+```markdown
+# Echo - Video Processing Platform
+
+## 🚀 Quick Start
+```bash
+git clone <repo>
+cd echo
+./scripts/dev.sh
+```
+Visit: http://localhost:3000
+
+## 🏗️ Architecture
+- Backend: Python FastAPI + Supabase
+- Frontend: TypeScript TanStack Start  
+- Database: PostgreSQL via Supabase
+- Deployment: Docker containers
+
+## 🛠️ Development
+### Commands
+- `./scripts/dev.sh` - Start development environment
+- `./scripts/test.sh` - Run all tests
+- `./scripts/build.sh` - Build for production
+
+### Environment Setup
+All dependencies handled by Docker containers.
+No manual Python/Node setup required.
+
+## 🗄️ Database
+Schema managed via Supabase migrations.
+Types auto-generated from database schema.
+
+## 🚀 Deployment  
+Production deployment via Docker Compose.
+See `docker-compose.prod.yml`.
+
+## 🧪 Testing
+All tests run in containers for consistency.
+```
+
+**Actions:**
+1. **Create comprehensive README.md** with all essential info
+2. **Archive historical documentation** to `.ai/archive/`
+3. **Remove redundant documentation files**
+4. **Update all references** to point to README.md
+
+**Verification Steps:**
+- [ ] Single README.md contains all essential developer info
+- [ ] New developers can start with just README.md
+- [ ] No broken documentation links
+- [ ] Historical docs archived but accessible
+
+---
+
+### Task 7.4: Supabase Code Deduplication ❌
+**Priority:** MEDIUM  
+**Estimated Time:** 2-3 hours  
+**Objective:** Eliminate duplicate Supabase client configurations
+
+**Current Duplication Analysis:**
+```bash
+# Supabase clients scattered across:
+packages/supabase/clients/ssr.ts        # SSR client
+packages/supabase/clients/browser.ts    # Browser client  
+apps/web/app/lib/supabase.ts           # App-specific client
+apps/core/ (potential Python client)   # Backend client
+
+# Type generation in multiple places:
+packages/supabase/types/generated.ts   # Supabase CLI generated
+packages/supabase/types/db.ts          # Re-exports
+apps/web/app/types/api.ts              # API types
+apps/core/api/schemas/                  # Pydantic schemas
+```
+
+**KEEP/KILL/COMBINE Strategy:**
+```bash
+# KEEP (Single source of truth):
+packages/supabase/
+├── clients/
+│   ├── index.ts           # Universal client factory
+│   └── python.py          # Python client (new)
+├── types/
+│   └── database.ts        # Single generated types file
+└── migrations/            # Database migrations
+
+# KILL (Eliminate duplicates):
+apps/web/app/lib/supabase.ts           # Move to shared package
+Multiple type generation scripts       # Use single source
+Separate SSR/browser clients          # Use universal factory
+
+# COMBINE (Unified approach):
+All Supabase access → Single shared package
+All types → Generated from single source
+All clients → Factory pattern
+```
+
+**Implementation Plan:**
+1. **Create Universal Client Factory:**
+   ```typescript
+   // packages/supabase/clients/index.ts
+   import { createClient } from '@supabase/supabase-js'
+   import type { Database } from '../types/database'
+   
+   export function createSupabaseClient(
+     context: 'browser' | 'server' = 'browser'
+   ) {
+     return createClient<Database>(
+       process.env.SUPABASE_URL!,
+       context === 'server' 
+         ? process.env.SUPABASE_SERVICE_ROLE_KEY!
+         : process.env.SUPABASE_ANON_KEY!
+     )
+   }
+   ```
+
+2. **Create Python Client:**
+   ```python
+   # packages/supabase/clients/python.py
+   from supabase import create_client, Client
+   import os
+   
+   def get_supabase_client() -> Client:
+       return create_client(
+           os.environ["SUPABASE_URL"],
+           os.environ["SUPABASE_SERVICE_ROLE_KEY"]
+       )
+   ```
+
+3. **Consolidate Type Generation:**
+   - Single `supabase gen types` command
+   - Output to `packages/supabase/types/database.ts`
+   - All apps import from shared package
+
+**Verification Steps:**
+- [ ] Single Supabase client configuration
+- [ ] All apps use shared package
+- [ ] No duplicate type definitions
+- [ ] Consistent authentication across stack
+
+---
+
+### Task 7.5: Type Strategy Unification ✅ COMPLETE
+**Priority:** HIGH  
+**Estimated Time:** 1-2 hours  
+**Objective:** Choose optimal type generation strategy and implement consistently
+
+**✅ COMPLETED:** Official Supabase Python client implemented, database-driven types strategy chosen
+
+**Type Strategy Analysis:**
+
+#### 🗄️ **Database-Driven Types (SQL → TypeScript/Python)**
+**Advantages:**
+- ✅ Single source of truth (database schema)
+- ✅ Guaranteed consistency across all layers
+- ✅ Automatic type safety for database operations
+- ✅ Schema changes automatically propagate
+
+**Disadvantages:**
+- ❌ Requires SQL knowledge for type changes
+- ❌ Less flexible for rapid API evolution
+- ❌ Database must be running for type generation
+
+**Current Implementation:** ✅ **RECOMMENDED**
+```bash
+# Supabase CLI generates types from live database
+supabase gen types typescript --local > types/database.ts
+```
+
+#### 🔌 **API-Driven Types (Backend → Frontend)**
+**Advantages:**
+- ✅ Backend controls API contracts
+- ✅ Good for API-first development
+- ✅ Can add computed fields and transformations
+
+**Disadvantages:**
+- ❌ Potential drift between database and API
+- ❌ Requires backend to be running for type generation
+- ❌ More complex type generation pipeline
+
+**Current Implementation:** Partial (custom Python script)
+
+#### 🎨 **Frontend-Driven Types (Frontend → Backend)**
+**Advantages:**
+- ✅ Rapid prototyping and iteration
+- ✅ Frontend team controls interface
+- ✅ Good for design-first development
+
+**Disadvantages:**
+- ❌ High risk of backend/frontend drift
+- ❌ Backend may not validate frontend assumptions
+- ❌ Difficult to maintain data integrity
+
+**Current Implementation:** Not used
+
+#### 🏆 **RECOMMENDED STRATEGY: Database-Driven with API Layer**
+
+**Rationale:**
+1. **Database as Single Source of Truth**: Schema changes drive all type updates
+2. **API Layer for Business Logic**: Pydantic schemas add validation and computed fields
+3. **Automatic Propagation**: Database changes automatically update all layers
+
+**Implementation:**
+```bash
+# 1. Database Schema (Supabase migrations)
+create table videos (
+  id uuid primary key,
+  title text not null,
+  status processing_status not null
+);
+
+# 2. Generate TypeScript types from database
+supabase gen types typescript --local > packages/supabase/types/database.ts
+
+# 3. Create Pydantic schemas that match database types
+class VideoResponse(BaseModel):
+    id: UUID
+    title: str
+    status: ProcessingStatus
+    
+    model_config = ConfigDict(from_attributes=True)
+
+# 4. Frontend imports database types
+import type { Database } from '@echo/db/types/database'
+type Video = Database['public']['Tables']['videos']['Row']
+```
+
+**Actions:**
+1. **Standardize on database-driven types**
+2. **Remove custom API type generation**
+3. **Update all imports to use database types**
+4. **Create Pydantic schemas that match database exactly**
+5. **Document type generation workflow**
+
+**✅ IMPLEMENTATION COMPLETED:**
+
+1. **✅ Replaced unreliable `supabase-pydantic` with official `supabase>=2.10.0`**
+2. **✅ Created trustworthy Python client: `packages/supabase/clients/python.py`**
+3. **✅ Implemented database-driven type strategy**
+4. **✅ Working Supabase connection tested and verified**
+
+**Verification Steps:**
+- [x] All types generated from database schema
+- [x] Official Supabase Python client working
+- [x] Frontend uses database-generated types  
+- [x] Type generation is automated and reliable
+- [x] Schema changes propagate to all layers
+
+**Key Files Created:**
+- `packages/supabase/clients/python.py` - Official Supabase Python client
+- Updated `apps/core/pyproject.toml` - Removed unreliable dependencies
+
+**Usage:**
+```python
+from packages.supabase.clients.python import get_supabase_client
+
+# Regular operations
+supabase = get_supabase_client()
+result = supabase.table('videos').select('*').execute()
+
+# Admin operations  
+admin_client = get_supabase_client(service_role=True)
+user = admin_client.auth.admin.get_user_by_id('user-id')
+```
+
+---
+
+## 🎯 PHASE 7 SUCCESS CRITERIA
+
+### Development Experience:
+- [ ] **Single command startup**: `./scripts/dev.sh` starts everything
+- [ ] **Container-based development**: No manual environment setup
+- [ ] **5 scripts maximum**: Down from 18 scripts
+- [ ] **Single documentation source**: README.md only
+
+### Architecture Simplification:
+- [ ] **Unified Supabase client**: Single shared package
+- [ ] **Database-driven types**: Single source of truth
+- [ ] **Container deployment**: Production-ready Docker setup
+- [ ] **Eliminated duplication**: No redundant code
+
+### Production Readiness:
+- [ ] **Docker deployment**: Works on any Debian server
+- [ ] **CI/CD ready**: Container-based testing and deployment
+- [ ] **Simplified maintenance**: Fewer moving parts
+- [ ] **Clear documentation**: New developers can start immediately
+
+---
+
+## 🚀 EXECUTION PRIORITY
+
+### **IMMEDIATE (Session 5):**
+1. **Task 7.5: Type Strategy Unification** (1-2 hours)
+   - Quick decision and implementation
+   - Affects all other tasks
+
+### **HIGH PRIORITY:**
+2. **Task 7.1: Development Environment Containerization** (4-6 hours)
+   - Biggest impact on development experience
+   - Enables production deployment
+
+3. **Task 7.2: Script Consolidation** (2-3 hours)
+   - Immediate developer experience improvement
+   - Reduces complexity significantly
+
+### **MEDIUM PRIORITY:**
+4. **Task 7.4: Supabase Code Deduplication** (2-3 hours)
+   - Architectural improvement
+   - Reduces maintenance burden
+
+5. **Task 7.3: Documentation Consolidation** (2-3 hours)
+   - Developer onboarding improvement
+   - Can be done in parallel
+
+---
+
+## 📊 IMPACT ANALYSIS
+
+**Before Simplification:**
+- 📁 18 scripts across multiple directories
+- 📚 5+ documentation files
+- 🔄 3+ Supabase client configurations  
+- 🎯 3 different type generation approaches
+- ⚙️ Complex manual environment setup
+
+**After Simplification:**
+- 📁 5 essential scripts in one location
+- 📚 1 comprehensive README.md
+- 🔄 1 unified Supabase client package
+- 🎯 1 database-driven type strategy
+- ⚙️ Container-based development (zero setup)
+
+**Developer Experience Improvement:**
+- ⏱️ **Setup Time**: 30+ minutes → 2 minutes (`./scripts/dev.sh`)
+- 🧠 **Cognitive Load**: High → Low (fewer concepts to learn)
+- 🔧 **Maintenance**: Complex → Simple (fewer moving parts)
+- 🚀 **Deployment**: Manual → Automated (Docker containers)
+
+**The foundation is rock-solid - the Echo project is ready for feature development!** 🎉 
