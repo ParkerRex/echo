@@ -1,3 +1,2 @@
-export * from "./clients/browser";
-export * from "./clients/ssr";
+export * from "./clients";
 export * from "./types/db";

@@ -5,9 +5,10 @@
   "main": "./index.ts",
   "exports": {
     ".": "./index.ts",
-    "./clients/browser": "./clients/browser.ts",
-    "./clients/ssr": "./clients/ssr.ts",
-    "./types/generated": "./types/generated.ts"
+    "./clients": "./clients/index.ts",
+    "./clients/python": "./clients/python.py",
+    "./types": "./types/db.ts",
+    "./types/database": "./types/database.ts"
   },
   "scripts": {
     "build": "echo 'No build step required for shared package'",
@@ -15,7 +16,8 @@
     "test": "echo 'No tests configured yet'",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist .turbo"
+    "clean": "rm -rf dist .turbo",
+    "gen:types": "supabase gen types typescript --local > types/database.ts"
   },
   "keywords": [],
   "author": "",

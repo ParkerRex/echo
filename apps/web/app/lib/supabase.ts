@@ -1,25 +1,16 @@
-import { createBrowserClient, createServerClient } from "@supabase/ssr"
-import type { Database } from "@echo/db/types/db"
+// Re-export everything from the universal client factory
+export {
+  supabase,
+  supabaseBrowser,
+  supabaseServer,
+  getSupabase,
+  getSupabaseServerClient,
+  createSupabaseClient,
+  type Database
+} from "@echo/db/clients"
 
-// Browser client for client-side operations
-export const supabase = createBrowserClient<Database>(
-  import.meta.env.VITE_SUPABASE_URL!,
-  import.meta.env.VITE_SUPABASE_ANON_KEY!
-)
+// Import for legacy alias
+import { getSupabaseServerClient } from "@echo/db/clients"
 
-// Server client for server functions (simplified version)
-export const getSupabaseServerClient = () =>
-  createServerClient<Database>(
-    process.env.SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL!,
-    process.env.SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get: () => null,
-        set: () => {},
-        remove: () => {},
-      }
-    }
-  )
-
-// Re-export for convenience
-export { getSupabase, getSupabaseServerClient as getSupabaseSSR } from "@echo/db/clients/ssr" 
+// Legacy aliases for backward compatibility
+export const getSupabaseSSR = getSupabaseServerClient 

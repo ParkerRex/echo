@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { Login } from "~/components/login";
-import { supabase } from "@echo/db/clients/browser"; // Import supabase client
+import { supabase } from "@echo/db/clients"; // Import supabase client
 
 export const Route = createFileRoute("/login")({
   beforeLoad: async ({ cause }) => {

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppWebSocket } from './useAppWebSocket';
-import { supabase } from '@echo/db';
+import { supabase } from '@echo/db/clients';
 import type { Session, AuthChangeEvent } from '@supabase/supabase-js';
 import type { VideoJobSchema as VideoJob, ProcessingStatus, VideoSummary, WebSocketJobUpdate } from '../types/api';
 

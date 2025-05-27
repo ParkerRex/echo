@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppWebSocket } from './useAppWebSocket';
-import { supabase } from '@echo/db';
+import { supabase } from '@echo/db/clients';
 import type { Session, AuthChangeEvent } from '@supabase/supabase-js';
 // VideoSummary was re-added, VideoJobSchema aliased to VideoJob, WebSocketJobUpdate removed from this import
 import type { VideoJobSchema as VideoJob, ProcessingStatus, VideoSummary } from '../types/api'; 

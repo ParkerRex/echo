@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@echo/db/clients/browser';
+import { supabase } from '@echo/db/clients';
 import type { AuthError, Session, User, SignInWithPasswordCredentials, SignUpWithPasswordCredentials, AuthChangeEvent, OAuthResponse, UserResponse } from '@supabase/supabase-js';
 
 interface UseAuthState {
