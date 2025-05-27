@@ -8,10 +8,11 @@
 4. [End-to-End Type Safety](#end-to-end-type-safety)
 5. [Development Workflow](#development-workflow)
 6. [Database & Migrations](#database--migrations)
-7. [Environment Configuration](#environment-configuration)
-8. [Project Structure](#project-structure)
-9. [Development Commands](#development-commands)
-10. [Contributing](#contributing)
+7. [Supabase Development Rules](#supabase-development-rules)
+8. [Environment Configuration](#environment-configuration)
+9. [Project Structure](#project-structure)
+10. [Development Commands](#development-commands)
+11. [Contributing](#contributing)
 
 ## Overview
 
@@ -242,6 +243,7 @@ pnpm test
 - **Linting**: Use provided ESLint and Ruff configurations
 - **Testing**: Write tests for new functionality
 - **Documentation**: Update docs when adding new features
+- **Supabase Rules**: Follow guidelines in `.cursor/rules/sb-*.mdc` for database development
 
 ## Database & Migrations
 
@@ -302,6 +304,10 @@ pnpm gen:types:db
 - **Use descriptive names** - Make migration purpose clear
 - **Handle existing data** - Consider data migration for schema changes
 
+### Development Rules Reference
+
+Echo follows strict Supabase development guidelines documented in `.cursor/rules/sb-*.mdc`. See [Supabase Development Rules](#supabase-development-rules) section for details.
+
 ### Row Level Security (RLS)
 
 All tables use RLS to ensure users can only access their own data:
@@ -322,6 +328,133 @@ USING ((SELECT auth.uid()) = uploader_user_id);
 | `pnpm db:push`      | Apply migrations to database  |
 | `pnpm db:reset`     | Reset database to clean state |
 | `pnpm gen:types:db` | Generate types from schema    |
+
+## Supabase Development Rules
+
+Echo follows strict guidelines for Supabase development to ensure security, performance, and consistency. These rules are enforced through our development tooling in `.cursor/rules/`.
+
+### Migration Guidelines (`.cursor/rules/sb-create-migration.mdc`)
+
+#### **File Naming Convention**
+
+- Use format: `YYYYMMDDHHmmss_short_description.sql`
+- Example: `20240906123045_create_profiles.sql`
+
+#### **SQL Standards**
+
+- Write all SQL in lowercase
+- Include thorough comments explaining purpose and behavior
+- Add copious comments for destructive operations
+- Include header comment with metadata about the migration
+
+#### **Security Requirements**
+
+- **Always enable RLS** on new tables (even for public access)
+- Create granular policies (separate for SELECT, INSERT, UPDATE, DELETE)
+- Specify roles explicitly (`authenticated`, `anon`) for each policy
+- Include comments explaining rationale for each security policy
+
+### RLS Policy Guidelines (`.cursor/rules/sb-create-rls-policies.mdc`)
+
+#### **Policy Structure**
+
+- **Separate policies** for each operation (SELECT, INSERT, UPDATE, DELETE)
+- **Never use `FOR ALL`** - create individual policies instead
+- **Role specification** - Always use `TO authenticated` or `TO anon`
+- **Descriptive names** - Use clear, detailed policy names in double quotes
+
+#### **Performance Optimization**
+
+- Use `(select auth.uid())` pattern instead of `auth.uid()` directly
+- Add indexes on columns used in policy conditions
+- Minimize joins in policy expressions
+- Prefer `PERMISSIVE` over `RESTRICTIVE` policies
+
+#### **Policy Syntax Rules**
+
+- SELECT policies: Use `USING` clause only
+- INSERT policies: Use `WITH CHECK` clause only
+- UPDATE policies: Use both `USING` and `WITH CHECK`
+- DELETE policies: Use `USING` clause only
+
+### Database Function Guidelines (`.cursor/rules/sb-create-database-functions.mdc`)
+
+#### **Security Defaults**
+
+- **Default to `SECURITY INVOKER`** for safer access control
+- Use `SECURITY DEFINER` only when explicitly required
+- Always set `search_path = ''` to avoid security risks
+- Use fully qualified names (e.g., `public.table_name`)
+
+#### **Function Quality**
+
+- Use explicit input/output types
+- Prefer `IMMUTABLE` or `STABLE` over `VOLATILE` when possible
+- Include proper error handling with meaningful exceptions
+- Minimize side effects - prefer functions that return results
+
+### Example: Complete Migration Following All Rules
+
+```sql
+-- Migration: Add video categories
+-- Description: Creates categories table with proper RLS policies and indexes
+-- Affected: videos table (adds category_id foreign key)
+-- Rollback: DROP TABLE public.video_categories; ALTER TABLE public.videos DROP COLUMN category_id;
+
+BEGIN;
+
+-- create categories table
+CREATE TABLE public.video_categories (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    description TEXT,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- enable rls (required for all tables)
+ALTER TABLE public.video_categories ENABLE ROW LEVEL SECURITY;
+
+-- separate policies for each operation and role
+CREATE POLICY "Categories are viewable by everyone" ON public.video_categories
+FOR SELECT TO authenticated, anon
+USING (true);
+
+CREATE POLICY "Categories can be created by authenticated users" ON public.video_categories
+FOR INSERT TO authenticated
+WITH CHECK (true);
+
+CREATE POLICY "Categories can be updated by authenticated users" ON public.video_categories
+FOR UPDATE TO authenticated
+USING (true)
+WITH CHECK (true);
+
+CREATE POLICY "Categories can be deleted by authenticated users" ON public.video_categories
+FOR DELETE TO authenticated
+USING (true);
+
+-- add foreign key to videos
+ALTER TABLE public.videos
+ADD COLUMN category_id INTEGER REFERENCES public.video_categories(id);
+
+-- add index for performance (required for foreign keys used in policies)
+CREATE INDEX idx_videos_category_id ON public.videos(category_id);
+
+-- insert default categories
+INSERT INTO public.video_categories (name, description) VALUES
+    ('educational', 'educational content'),
+    ('entertainment', 'entertainment content'),
+    ('tutorial', 'how-to and tutorial content');
+
+COMMIT;
+```
+
+### Rule Enforcement
+
+These rules are automatically enforced through:
+
+- **Cursor IDE rules** - Provide guidance during development
+- **Code review** - Manual verification of adherence to guidelines
+- **Migration validation** - Check structure and security before deployment
 
 ## Environment Configuration
 
@@ -443,8 +576,9 @@ echo/
 
 1. **Database First** - Always start with database schema design
 2. **Type Safety** - All code must pass type checking
-3. **Testing** - Write tests for new functionality
-4. **Documentation** - Update docs when adding features
+3. **Supabase Rules** - Follow guidelines in `.cursor/rules/sb-*.mdc` for all database work
+4. **Testing** - Write tests for new functionality
+5. **Documentation** - Update docs when adding features
 
 ### Pull Request Process
 
