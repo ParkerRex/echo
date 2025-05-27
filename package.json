@@ -18,7 +18,7 @@
     "dev:api": "./start-api.sh",
 
     "gen:types": "turbo run gen:types",
-    "gen:types:supabase": "cd packages/supabase && supabase gen types typescript --local > types/generated.ts",
+    "gen:types:supabase": "cd packages/supabase && supabase gen types typescript --local > types/database.ts",
 
     "db:start": "cd packages/supabase && supabase start",
     "db:stop": "cd packages/supabase && supabase stop --no-backup",
@@ -28,7 +28,7 @@
     "db:setup-local": "pnpm db:start && echo 'Waiting for Supabase to start...' && sleep 10 && pnpm db:push && pnpm gen:types",
     "db:refresh-local-schema": "pnpm db:push && pnpm gen:types",
 
-    "setup:python-env": "cd apps/core && uv venv && source .venv/bin/activate && uv pip install -e \".[dev]\" && echo 'Python env setup complete. Remember to activate it in new terminals: source apps/core/.venv/bin/activate' && cd ../..",
+    "setup:python-env": "cd apps/core && uv sync --dev && echo 'Python env setup complete with UV!' && cd ../..",
 
     "clean": "turbo run clean && rm -rf node_modules/.cache"
   },

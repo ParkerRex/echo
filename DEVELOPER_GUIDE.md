@@ -19,6 +19,7 @@
 Echo is an AI-powered YouTube video metadata generator that helps users automatically generate titles, subtitles, chapters, and descriptions using Google Gemini.
 
 ### Tech Stack
+
 - **Backend**: FastAPI with Python 3.10+
 - **Frontend**: React with TanStack Router
 - **Database**: PostgreSQL via Supabase
@@ -75,23 +76,27 @@ echo/
 ### Quick Start (Docker - Recommended)
 
 1. **Clone and navigate to the project:**
+
 ```bash
 git clone <repository-url>
 cd echo
 ```
 
 2. **Start the complete development environment:**
+
 ```bash
 pnpm dev
 ```
 
 This single command will:
+
 - Start local Supabase database
 - Start Python FastAPI backend (port 8000)
 - Start TypeScript frontend (port 3000)
 - Set up the complete development environment with hot reloading
 
 3. **Access the application:**
+
 - 🌐 **Frontend**: http://localhost:3000
 - 🚀 **Backend API**: http://localhost:8000
 - 📊 **API Documentation**: http://localhost:8000/docs
@@ -132,29 +137,32 @@ pnpm dev:api               # API only (simple startup)
 If you prefer to run services locally without Docker:
 
 1. **Install dependencies:**
+
 ```bash
 # Install Node.js dependencies
 pnpm install
 
-# Set up Python environment
+# Set up Python environment (UV handles this automatically)
 cd apps/core
-uv venv && source .venv/bin/activate
-uv pip install -e ".[dev]"
+uv sync --dev  # Creates venv and installs dependencies automatically
 cd ../..
 ```
 
 2. **Start Supabase locally:**
+
 ```bash
 pnpm db:start
 ```
 
 3. **Apply migrations and generate types:**
+
 ```bash
 pnpm db:push
 pnpm types:generate
 ```
 
 4. **Start development servers:**
+
 ```bash
 # Terminal 1: Backend API
 pnpm dev:api
@@ -200,6 +208,7 @@ pnpm dev:core
 ### Troubleshooting API Startup
 
 If you get import errors:
+
 1. Make sure you're running from the project root
 2. The script automatically sets `PYTHONPATH` correctly
 3. Virtual environment is created automatically with all dependencies
@@ -207,6 +216,7 @@ If you get import errors:
 ### No More Clusterfuck
 
 This replaces all the complex startup scripts with one simple, reliable approach:
+
 - No manual virtual environment activation needed
 - No complex PYTHONPATH management
 - No dependency on other services
@@ -217,29 +227,25 @@ This replaces all the complex startup scripts with one simple, reliable approach
 ### Setup
 
 1. **Navigate to core app:**
+
 ```bash
 cd apps/core
 ```
 
-2. **Create and activate virtual environment:**
+2. **Set up environment and install dependencies:**
+
 ```bash
-uv venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+uv sync --dev  # Creates venv and installs all dependencies automatically
 ```
 
-3. **Install dependencies:**
-```bash
-uv pip install -r pyproject.toml
-```
+3. **Start the API server:**
 
-4. **Apply database migrations:**
 ```bash
-alembic upgrade head
-```
+# Use the simple startup script
+./start-api.sh
 
-5. **Start the API server:**
-```bash
-uvicorn api.main:app --reload
+# Or use the pnpm command
+pnpm dev:api
 ```
 
 The API will be available at `http://localhost:8000`.
@@ -266,16 +272,19 @@ The API will be available at `http://localhost:8000`.
 ### Setup
 
 1. **Navigate to web app:**
+
 ```bash
 cd apps/web
 ```
 
 2. **Install dependencies:**
+
 ```bash
 pnpm install
 ```
 
 3. **Start development server:**
+
 ```bash
 pnpm dev
 ```
@@ -308,7 +317,7 @@ Echo uses a comprehensive type generation strategy to maintain type safety acros
 ### Type Generation Flow
 
 ```
-SQL Schema (Supabase) 
+SQL Schema (Supabase)
     ↓
 SQLAlchemy ORM Models (Python)
     ↓
@@ -337,14 +346,16 @@ pnpm types:api        # API client types from Pydantic models
 ### Type Generation Details
 
 #### 1. SQLAlchemy ORM Models
+
 - **Source**: PostgreSQL database schema via Supabase
-- **Tool**: `sqlacodegen` 
+- **Tool**: `sqlacodegen`
 - **Output**: `apps/core/models/generated.py`
 - **Command**: `pnpm types:orm`
 
 Generated models provide the data access layer for the Python backend.
 
-#### 2. Pydantic Models  
+#### 2. Pydantic Models
+
 - **Source**: PostgreSQL database schema via Supabase
 - **Tool**: `supabase-pydantic`
 - **Output**: `apps/core/models/supabase_pydantic.py`
@@ -353,6 +364,7 @@ Generated models provide the data access layer for the Python backend.
 These models are used for API serialization and validation.
 
 #### 3. TypeScript Database Types
+
 - **Source**: PostgreSQL database schema via Supabase
 - **Tool**: `supabase gen types typescript`
 - **Output**: `packages/supabase/types/database.ts`
@@ -361,6 +373,7 @@ These models are used for API serialization and validation.
 Provides type-safe database access for the frontend Supabase client.
 
 #### 4. API Client Types
+
 - **Source**: Pydantic models from backend API
 - **Tool**: `pydantic-to-typescript`
 - **Output**: `apps/web/app/types/api.ts`
@@ -371,6 +384,7 @@ Ensures type safety between frontend and backend API communication.
 ### Type Generation Best Practices
 
 1. **Always regenerate after schema changes:**
+
 ```bash
 # After database migrations
 pnpm db:push
@@ -378,15 +392,17 @@ pnpm types:generate
 ```
 
 2. **Verify type consistency:**
-The generation script includes validation to ensure all files are created successfully.
+   The generation script includes validation to ensure all files are created successfully.
 
 3. **Development workflow:**
+
 - Make database schema changes in Supabase migrations
 - Apply migrations with `pnpm db:push`
 - Regenerate all types with `pnpm types:generate`
 - Update API schemas and frontend code as needed
 
 4. **Troubleshooting type generation:**
+
 - Ensure all services are running (database, API)
 - Check that migrations are applied
 - Verify tool dependencies are installed
@@ -408,6 +424,7 @@ pnpm db:reset
 ### Creating Migrations
 
 1. **Create new migration:**
+
 ```bash
 supabase migration new <migration_name>
 ```
@@ -415,6 +432,7 @@ supabase migration new <migration_name>
 2. **Write SQL in the generated file**
 
 3. **Apply migration:**
+
 ```bash
 supabase db push
 ```
@@ -440,6 +458,7 @@ Authorization: Bearer <jwt_token>
 ### Core Endpoints
 
 #### Upload Video
+
 ```http
 POST /api/v1/videos/upload
 Content-Type: multipart/form-data
@@ -448,6 +467,7 @@ file: <video_file>
 ```
 
 **Response:**
+
 ```json
 {
   "job_id": 123,
@@ -456,11 +476,13 @@ file: <video_file>
 ```
 
 #### Get Job Status
+
 ```http
 GET /api/v1/videos/jobs/{job_id}
 ```
 
 **Response:**
+
 ```json
 {
   "id": 123,
@@ -549,6 +571,7 @@ pnpm test:e2e
 ### Production Environment
 
 1. **Set environment variables:**
+
 ```bash
 export ENVIRONMENT=production
 export DATABASE_URL=<production_db_url>
@@ -557,12 +580,14 @@ export SUPABASE_URL=<production_supabase_url>
 ```
 
 2. **Deploy backend:**
+
 ```bash
 cd apps/core
 # Build and deploy using your preferred method (Docker, Cloud Run, etc.)
 ```
 
 3. **Deploy frontend:**
+
 ```bash
 cd apps/web
 pnpm build
@@ -574,6 +599,7 @@ pnpm build
 The application includes comprehensive Docker support for both development and production environments.
 
 #### Development Deployment
+
 ```bash
 # Start complete development environment
 pnpm dev
@@ -585,12 +611,14 @@ docker-compose up --build
 #### Production Deployment
 
 1. **Build production images:**
+
 ```bash
 # Build all services for production
 docker-compose -f docker-compose.yml -f docker-compose.prod.yml build
 ```
 
 2. **Deploy with production configuration:**
+
 ```bash
 # Set production environment variables
 export ENVIRONMENT=production
@@ -623,34 +651,40 @@ docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ### Common Issues
 
 #### Docker Environment Issues
+
 - **Docker not running**: Ensure Docker Desktop is started
 - **Port conflicts**: Check if ports 3000, 8000, 54321, 54322, 6379 are available
 - **Services not starting**: Run `pnpm dev:status` to check service health
 - **Container build failures**: Try `docker-compose down && docker-compose up --build`
 
 #### Database Connection Issues
+
 - **Local development**: Services should connect automatically via Docker networking
 - **Connection refused**: Ensure Supabase container is healthy (`pnpm dev:status`)
 - **Migration issues**: Check that migrations are applied during startup
 - **Schema out of sync**: Run `pnpm types:generate` to regenerate types
 
 #### Type Generation Issues
+
 - **Generation script fails**: Ensure all services are running (`pnpm dev:status`)
 - **Missing dependencies**: Check that generation tools are installed in containers
 - **File not found errors**: Verify database schema exists and migrations are applied
 - **Permission issues**: Ensure generated files directory is writable
 
 #### Authentication Issues
+
 - **JWT token invalid**: Check Supabase auth configuration in Docker environment
 - **CORS issues**: Verify frontend and backend are running on expected ports
 - **RLS policies**: Ensure policies are correctly configured in migrations
 
 #### Hot Reloading Issues
+
 - **Changes not reflected**: Check that volume mounts are working correctly
 - **Frontend not updating**: Verify Vite dev server is running in container
 - **Backend not restarting**: Check uvicorn reload configuration in Docker
 
 #### Performance Issues
+
 - **Slow startup**: First-time container builds take longer; subsequent starts are faster
 - **High resource usage**: Adjust Docker Desktop resource limits if needed
 - **Network latency**: Use `docker-compose logs` to identify bottlenecks
@@ -658,12 +692,14 @@ docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ### Development Tips
 
 1. **Use the unified development commands:**
+
    - `pnpm dev` - Start complete Docker development environment
    - `pnpm types:generate` - Regenerate all types after schema changes
    - `pnpm dev:logs` - Monitor all service logs
    - `pnpm dev:status` - Check service health
 
 2. **Monitor logs effectively:**
+
    - All services: `pnpm dev:logs`
    - Specific service: `pnpm dev:logs echo-api`
    - Backend API: Check FastAPI logs for API errors
@@ -671,12 +707,14 @@ docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
    - Database: Check Supabase dashboard for query issues
 
 3. **Docker development workflow:**
+
    - Services auto-restart on code changes (hot reloading)
    - Database persists between container restarts
    - Use `pnpm dev:restart` for clean environment reset
    - Access services via localhost ports (see Quick Start section)
 
 4. **Type safety maintenance:**
+
    - Always run `pnpm types:generate` after database schema changes
    - Verify type generation completed successfully
    - Check that all generated files are properly imported
@@ -695,4 +733,4 @@ docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 - **Easy Reset**: Quick environment cleanup and restart
 - **Production Parity**: Development closely matches production setup
 
-For additional help, refer to the specific documentation in the `.cursor/rules/` directory for development guidelines and best practices. 
+For additional help, refer to the specific documentation in the `.cursor/rules/` directory for development guidelines and best practices.

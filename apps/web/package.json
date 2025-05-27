@@ -13,10 +13,9 @@
     "check": "biome check --write",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf .vinxi dist .output",
-    "gen:types": "supabase gen types typescript --project-id atvyovuiqftrksyetnjw > app/lib/types.gen.ts",
+    "gen:types": "cd ../.. && pnpm gen:types:supabase",
     "db:push": "cd ../../packages/supabase && supabase db push",
-    "db:reset": "cd ../../packages/supabase && supabase db reset",
-    "supabase:types-gen": "supabase gen types typescript --project-id atvyovuiqftrksyetnjw > app/lib/types.gen.ts"
+    "db:reset": "cd ../../packages/supabase && supabase db reset"
   },
   "keywords": [],
   "author": "",

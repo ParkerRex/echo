@@ -1,3 +1,6 @@
-import type { Tables } from "./lib/types.gen"
+import type { Tables } from "@echo/db/types"
 
-export type Event = Tables<"events">
+// Video processing types from the shared database schema
+export type Video = Tables<"videos">
+export type VideoJob = Tables<"video_jobs">
+export type VideoMetadata = Tables<"video_metadata">

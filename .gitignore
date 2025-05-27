@@ -21,10 +21,13 @@
 # python
 venv/
 .venv/
+**/venv/
+**/.venv/
 .env
 .env.development
 .env.production
 __pycache__
+**/__pycache__/
 
 # production
 /build
@@ -84,5 +87,5 @@ node_modules/
 # OS specific
 # Task files
 tasks.json
-tasks/ 
+tasks/
 api/config/secrets/*.json
