@@ -33,9 +33,9 @@ export const Route = createRootRouteWithContext<{
         content: "width=device-width, initial-scale=1",
       },
       ...seo({
-        title: "ConfHub! - Conference Management Made Simple",
-        description: "Streamline your conference management with ConfHub. Track speakers, sessions, and attendees all in one place.",
-        keywords: "conference, management, events, speakers, sessions",
+        title: "Echo - AI YouTube Video Metadata Generator",
+        description: "Automatically generate titles, descriptions, chapters, and transcripts for YouTube videos using Google Gemini AI",
+        keywords: "YouTube metadata, AI video processing, content creation, video automation",
       }),
     ],
     links: [

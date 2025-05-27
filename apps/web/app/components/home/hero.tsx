@@ -16,18 +16,17 @@ export default function Hero({}: Props) {
 			<div className="flex flex-col items-center text-center py-16">
 				{/* Title Section */}
 				<div className="flex items-center justify-center bg-[var(--accent-blue)] text-white h-24 w-24 rounded-full mb-6">
-					<span className="text-2xl font-bold">VIDEO</span>
+					<span className="text-2xl font-bold">ECHO</span>
 				</div>
 
 				{/* Main Heading */}
 				<h1 className="text-7xl text-[var(--accent-blue)] lg:text-6xl md:text-5xl sm:text-4xl">
-					VIDEO AI PIPELINE
+					AI YOUTUBE METADATA GENERATOR
 				</h1>
 
 				{/* Tagline */}
 				<p className="text-xl text-[var(--foreground)] mt-4 md:text-lg sm:text-base max-w-2xl">
-					Automate your video publishing workflow with AI-powered metadata
-					generation and YouTube integration
+					Save 2+ hours per video with AI-generated titles, descriptions, chapters, and thumbnails for YouTube creators
 				</p>
 
 				{/* Feature Icons as Text */}
@@ -139,44 +138,109 @@ export default function Hero({}: Props) {
 				{/* Key Benefits Section */}
 				<div className="w-full max-w-2xl mt-16">
 					<h2 className="font-bold text-3xl text-[var(--accent-blue)] md:text-2xl sm:text-xl mb-6">
-						KEY BENEFITS
+						WHY CONTENT CREATORS CHOOSE ECHO
 					</h2>
 					<ul className="grid grid-cols-2 gap-4 text-base text-[var(--foreground)]">
 						<li className="flex items-center gap-2">
-							<span className="text-[var(--accent-blue)]">✓</span> Save hours on
-							video publishing
+							<span className="text-[var(--accent-blue)]">✓</span> Save 2+ hours per video
 						</li>
 						<li className="flex items-center gap-2">
-							<span className="text-[var(--accent-blue)]">✓</span> Consistent,
-							high-quality metadata
+							<span className="text-[var(--accent-blue)]">✓</span> Generate 10 thumbnails instantly
 						</li>
 						<li className="flex items-center gap-2">
-							<span className="text-[var(--accent-blue)]">✓</span> AI-generated
-							thumbnails
+							<span className="text-[var(--accent-blue)]">✓</span> Google Gemini AI quality
 						</li>
 						<li className="flex items-center gap-2">
-							<span className="text-[var(--accent-blue)]">✓</span> Real-time
-							status tracking
+							<span className="text-[var(--accent-blue)]">✓</span> YouTube-optimized metadata
 						</li>
 						<li className="flex items-center gap-2">
-							<span className="text-[var(--accent-blue)]">✓</span> Full editing
-							control
+							<span className="text-[var(--accent-blue)]">✓</span> Full editing control
 						</li>
 						<li className="flex items-center gap-2">
-							<span className="text-[var(--accent-blue)]">✓</span> Cloud-native
-							architecture
+							<span className="text-[var(--accent-blue)]">✓</span> Cloud storage included
 						</li>
 					</ul>
 				</div>
 
-				{/* CTA Button */}
-				<div className="mt-12">
-					<a
-						href="/dashboard"
-						className="bg-[var(--accent-blue)] text-white px-8 py-3 rounded-md text-lg hover:bg-opacity-90 transition-all"
-					>
-						Get Started
-					</a>
+				{/* Pricing Section */}
+				<div className="w-full max-w-2xl mt-16">
+					<h2 className="font-bold text-3xl text-[var(--accent-blue)] md:text-2xl sm:text-xl mb-6">
+						SIMPLE PRICING FOR UNLIMITED CREATIVITY
+					</h2>
+					<div className="bg-white border-2 border-[var(--accent-blue)] rounded-lg p-8 shadow-lg">
+						<div className="text-center">
+							<h3 className="text-2xl font-bold text-[var(--accent-blue)] mb-2">
+								Echo Pro
+							</h3>
+							<div className="text-5xl font-bold text-[var(--foreground)] mb-4">
+								$99<span className="text-xl text-gray-500">/month</span>
+							</div>
+							<p className="text-lg text-gray-600 mb-6">
+								Everything you need to automate your YouTube workflow
+							</p>
+							<ul className="text-left space-y-3 mb-8">
+								<li className="flex items-center gap-3">
+									<span className="text-[var(--accent-blue)] text-xl">✓</span>
+									<span>Unlimited video processing</span>
+								</li>
+								<li className="flex items-center gap-3">
+									<span className="text-[var(--accent-blue)] text-xl">✓</span>
+									<span>AI metadata generation with Google Gemini</span>
+								</li>
+								<li className="flex items-center gap-3">
+									<span className="text-[var(--accent-blue)] text-xl">✓</span>
+									<span>10 AI-generated thumbnails per video</span>
+								</li>
+								<li className="flex items-center gap-3">
+									<span className="text-[var(--accent-blue)] text-xl">✓</span>
+									<span>Cloud storage for all your videos</span>
+								</li>
+								<li className="flex items-center gap-3">
+									<span className="text-[var(--accent-blue)] text-xl">✓</span>
+									<span>Priority processing & support</span>
+								</li>
+								<li className="flex items-center gap-3">
+									<span className="text-[var(--accent-blue)] text-xl">✓</span>
+									<span>Save 10+ hours per week</span>
+								</li>
+							</ul>
+							<div className="text-center">
+								<a
+									href="/dashboard"
+									className="bg-[var(--accent-blue)] text-white px-8 py-4 rounded-md text-lg font-semibold hover:bg-opacity-90 transition-all inline-block mb-3"
+								>
+									Try Echo Free - Save Hours Today
+								</a>
+								<p className="text-sm text-gray-500">
+									No credit card required • Cancel anytime • Start saving time in minutes
+								</p>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				{/* Secondary CTA Section */}
+				<div className="mt-12 text-center">
+					<p className="text-lg text-gray-600 mb-4">
+						Ready to transform your YouTube workflow?
+					</p>
+					<div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+						<a
+							href="/dashboard"
+							className="bg-[var(--accent-blue)] text-white px-8 py-3 rounded-md text-lg font-semibold hover:bg-opacity-90 transition-all"
+						>
+							Start Creating with Echo
+						</a>
+						<a
+							href="#pricing"
+							className="text-[var(--accent-blue)] px-8 py-3 rounded-md text-lg font-semibold hover:bg-blue-50 transition-all border border-[var(--accent-blue)]"
+						>
+							See Pricing Details
+						</a>
+					</div>
+					<p className="text-sm text-gray-500 mt-3">
+						Join thousands of creators saving hours every week
+					</p>
 				</div>
 			</div>
 		</Container>
