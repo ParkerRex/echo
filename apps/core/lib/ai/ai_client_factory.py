@@ -7,10 +7,9 @@ based on the configuration settings.
 
 from typing import Optional
 
-from lib.ai.base_adapter import AIAdapterInterface
-from lib.ai.gemini_adapter import GeminiAdapter
-
-from core.config import settings
+from apps.core.core.config import settings
+from apps.core.lib.ai.base_adapter import AIAdapterInterface
+from apps.core.lib.ai.gemini_adapter import GeminiAdapter
 
 
 def get_ai_adapter(settings_instance=None) -> AIAdapterInterface:

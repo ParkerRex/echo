@@ -3,7 +3,7 @@ from typing import Any, Optional, cast
 
 import redis
 
-from core.config import settings
+from apps.core.core.config import settings
 
 
 class RedisClient:

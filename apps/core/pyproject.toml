@@ -111,6 +111,19 @@ known-first-party = ["apps.core"] # Helps ruff sort your project's imports corre
 
 [tool.ruff.format]
 quote-style = "double"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.15.0",
+    "pre-commit>=4.2.0",
+    "pydantic-to-typescript>=2.0.0",
+    "pytest>=8.3.5",
+    "pytest-asyncio>=0.26.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.11.1",
+    "ruff>=0.11.10",
+    "sqlacodegen>=3.0.0",
+]
 # indent-style = "space" # Default is space
 # skip-magic-trailing-comma = false # Default is false
 # line-ending = "lf" # Default is auto

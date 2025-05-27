@@ -1,4 +1,7 @@
-from lib.storage.file_storage import FileStorageService, get_file_storage_service
+from apps.core.lib.storage.file_storage import (
+    FileStorageService,
+    get_file_storage_service,
+)
 
 
 # Temporary stub for legacy imports

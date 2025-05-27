@@ -20,9 +20,8 @@ try:
 except ImportError:
     GEMINI_AVAILABLE = False
 
-from lib.ai.base_adapter import AIAdapterInterface
-
-from core.config import settings
+from apps.core.core.config import settings
+from apps.core.lib.ai.base_adapter import AIAdapterInterface
 
 
 class GeminiAdapter(AIAdapterInterface):

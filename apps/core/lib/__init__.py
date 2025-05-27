@@ -3,10 +3,10 @@ Common libraries and utilities for the application.
 """
 
 # Import and expose key components for easier access
-from lib.cache import RedisClient, get_redis_client
-from lib.database import Base, create_session, engine, get_db_session
-from lib.messaging import EmailService, get_email_service
-from lib.storage import FileStorage, get_file_storage
+from apps.core.lib.cache import RedisClient, get_redis_client
+from apps.core.lib.database import Base, create_session, engine, get_db_session
+from apps.core.lib.messaging import EmailService, get_email_service
+from apps.core.lib.storage import FileStorage, get_file_storage
 
 __all__ = [
     # Cache

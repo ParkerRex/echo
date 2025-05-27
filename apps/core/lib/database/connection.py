@@ -4,7 +4,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
-from core.config import settings
+from apps.core.core.config import settings
 
 # Create SQLAlchemy engine
 # Add connect_args for SQLite compatibility

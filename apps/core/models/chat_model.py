@@ -1,10 +1,11 @@
 import uuid
 
-from lib.database import Base
 from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+
+from apps.core.lib.database import Base
 
 
 class Chat(Base):

@@ -15,6 +15,7 @@
 
     "dev:web": "turbo run dev --filter=@echo/web",
     "dev:core": "turbo run dev --filter=@echo/core",
+    "dev:api": "./start-api.sh",
 
     "gen:types": "turbo run gen:types",
     "gen:types:supabase": "cd packages/supabase && supabase gen types typescript --local > types/generated.ts",

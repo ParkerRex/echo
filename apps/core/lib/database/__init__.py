@@ -1,4 +1,4 @@
-from lib.database.connection import (
+from apps.core.lib.database.connection import (
     Base,
     SessionLocal,
     create_session,

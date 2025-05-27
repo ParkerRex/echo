@@ -4,7 +4,7 @@
     "description": "Python API Core Service",
     "private": true,
       "scripts": {
-    "dev": "uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000",
+    "dev": "cd ../.. && PYTHONPATH=$(pwd) uv run --directory apps/core uvicorn apps.core.main:app --reload --host 0.0.0.0 --port 8000",
     "build": "echo 'Python build: No build step required for FastAPI'",
     "start": "./bin/start.sh",
     "test": "uv run python -m pytest",

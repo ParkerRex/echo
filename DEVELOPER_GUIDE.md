@@ -5,13 +5,14 @@
 1. [Project Overview](#project-overview)
 2. [Architecture](#architecture)
 3. [Development Setup](#development-setup)
-4. [Backend Development](#backend-development)
-5. [Frontend Development](#frontend-development)
-6. [Database Management](#database-management)
-7. [API Reference](#api-reference)
-8. [Testing](#testing)
-9. [Deployment](#deployment)
-10. [Troubleshooting](#troubleshooting)
+4. [API Startup Guide](#api-startup-guide)
+5. [Backend Development](#backend-development)
+6. [Frontend Development](#frontend-development)
+7. [Database Management](#database-management)
+8. [API Reference](#api-reference)
+9. [Testing](#testing)
+10. [Deployment](#deployment)
+11. [Troubleshooting](#troubleshooting)
 
 ## Project Overview
 
@@ -123,6 +124,7 @@ pnpm format                # Format all applications
 # Targeted development
 pnpm dev:web               # Frontend only
 pnpm dev:core              # Backend only
+pnpm dev:api               # API only (simple startup)
 ```
 
 ### Alternative Setup (Local Development)
@@ -160,6 +162,55 @@ pnpm dev:api
 # Terminal 2: Frontend
 pnpm dev:web
 ```
+
+## API Startup Guide
+
+### TL;DR - Just Start the API
+
+```bash
+# Option 1: Use the simple script
+./start-api.sh
+
+# Option 2: Use pnpm alias (recommended)
+pnpm dev:api
+
+# Option 3: Use the existing turbo command
+pnpm dev:core
+```
+
+### What This Does
+
+- ✅ Uses `uv` for fast, reliable Python package management
+- ✅ Automatically creates virtual environment if missing
+- ✅ Sets correct PYTHONPATH for module imports
+- ✅ Starts FastAPI with hot reload on port 8000
+- ✅ No complex orchestration or dependencies
+
+### API Endpoints
+
+- **API**: http://localhost:8000
+- **Docs**: http://localhost:8000/docs
+- **OpenAPI**: http://localhost:8000/openapi.json
+
+### Requirements
+
+- Python 3.13+ (managed by `uv`)
+- `uv` package manager (install with: `curl -LsSf https://astral.sh/uv/install.sh | sh`)
+
+### Troubleshooting API Startup
+
+If you get import errors:
+1. Make sure you're running from the project root
+2. The script automatically sets `PYTHONPATH` correctly
+3. Virtual environment is created automatically with all dependencies
+
+### No More Clusterfuck
+
+This replaces all the complex startup scripts with one simple, reliable approach:
+- No manual virtual environment activation needed
+- No complex PYTHONPATH management
+- No dependency on other services
+- Just works™️
 
 ## Backend Development
 

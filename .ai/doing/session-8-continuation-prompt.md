@@ -96,7 +96,6 @@ packages/supabase/
 
 ### Manual End-to-End Testing ❌
 **Priority:** **HIGH** (After backend fix)  
-**Estimated Time:** 2-3 hours  
 **Objective:** Manually test the entire application workflow to ensure everything works
 
 **Testing Checklist:**
