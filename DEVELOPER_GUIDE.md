@@ -312,101 +312,137 @@ This generates TypeScript types in `apps/web/src/types/api.ts` from the Pydantic
 
 ## Type Generation Strategy
 
-Echo uses a comprehensive type generation strategy to maintain type safety across the entire stack. The process follows a dependency chain from database schema to frontend types.
+Echo uses a **dual-track type generation strategy** to maintain type safety across the entire stack. We generate types from two different sources to serve different purposes:
 
-### Type Generation Flow
+### 🎯 **How Our Type System Actually Works**
+
+**We have TWO separate type generation flows:**
+
+#### **Track 1: Database-First Types (Supabase → TypeScript)**
 
 ```
-SQL Schema (Supabase)
-    ↓
-SQLAlchemy ORM Models (Python)
-    ↓
-Pydantic Models (Python)
-    ↓
-TypeScript Types (Frontend)
-    ↓
-API Client Types (Frontend)
+PostgreSQL Schema (Supabase)
+    ↓ [supabase gen types]
+TypeScript Database Types (packages/supabase/types/database.ts)
+    ↓ [imported by frontend]
+Frontend Database Operations
 ```
 
-### Automated Type Generation
+#### **Track 2: API-First Types (Python → TypeScript)**
 
-The unified type generation script handles all type generation with proper dependency ordering:
+```
+Pydantic API Schemas (Python)
+    ↓ [generate_api_types.py]
+TypeScript API Types (apps/web/app/types/api.ts)
+    ↓ [imported by frontend]
+Frontend API Calls
+```
+
+### 🔄 **Current Working Commands**
 
 ```bash
-# Generate all types in correct order
-pnpm types:generate
+# Database types (for Supabase client operations)
+pnpm gen:types:supabase    # Generates database.ts from PostgreSQL schema
 
-# Generate specific type layers
-pnpm types:orm        # SQLAlchemy models from database
-pnpm types:pydantic   # Pydantic models from database
-pnpm types:typescript # TypeScript types from database
-pnpm types:api        # API client types from Pydantic models
+# API types (for HTTP API calls)
+pnpm gen:types             # Generates api.ts from Pydantic schemas (via Turbo)
+cd apps/core && pnpm gen:types  # Direct API type generation
 ```
 
-### Type Generation Details
+### 📋 **Detailed Type Generation Breakdown**
 
-#### 1. SQLAlchemy ORM Models
+#### **Track 1: Database Types** 🗄️
 
-- **Source**: PostgreSQL database schema via Supabase
-- **Tool**: `sqlacodegen`
-- **Output**: `apps/core/models/generated.py`
-- **Command**: `pnpm types:orm`
+**Purpose**: Type-safe direct database operations via Supabase client
 
-Generated models provide the data access layer for the Python backend.
-
-#### 2. Pydantic Models
-
-- **Source**: PostgreSQL database schema via Supabase
-- **Tool**: `supabase-pydantic`
-- **Output**: `apps/core/models/supabase_pydantic.py`
-- **Command**: `pnpm types:pydantic`
-
-These models are used for API serialization and validation.
-
-#### 3. TypeScript Database Types
-
-- **Source**: PostgreSQL database schema via Supabase
-- **Tool**: `supabase gen types typescript`
+- **Source**: PostgreSQL database schema (live Supabase instance)
+- **Tool**: `supabase gen types typescript --local`
 - **Output**: `packages/supabase/types/database.ts`
-- **Command**: `pnpm types:typescript`
+- **Command**: `pnpm gen:types:supabase`
+- **Used For**:
+  - Frontend Supabase client operations
+  - Direct database queries/mutations
+  - Real-time subscriptions
 
-Provides type-safe database access for the frontend Supabase client.
+**Example Usage**:
 
-#### 4. API Client Types
+```typescript
+import { Tables } from "@echo/db/types";
 
-- **Source**: Pydantic models from backend API
-- **Tool**: `pydantic-to-typescript`
-- **Output**: `apps/web/app/types/api.ts`
-- **Command**: `pnpm types:api`
-
-Ensures type safety between frontend and backend API communication.
-
-### Type Generation Best Practices
-
-1. **Always regenerate after schema changes:**
-
-```bash
-# After database migrations
-pnpm db:push
-pnpm types:generate
+type Video = Tables<"videos">; // Gets exact DB schema
+const videos = await supabase.from("videos").select("*"); // Fully typed
 ```
 
-2. **Verify type consistency:**
-   The generation script includes validation to ensure all files are created successfully.
+#### **Track 2: API Types** 🚀
 
-3. **Development workflow:**
+**Purpose**: Type-safe HTTP API communication between frontend and backend
 
-- Make database schema changes in Supabase migrations
-- Apply migrations with `pnpm db:push`
-- Regenerate all types with `pnpm types:generate`
-- Update API schemas and frontend code as needed
+- **Source**: Pydantic schemas in `apps/core/api/schemas/`
+- **Tool**: Custom Python script (`apps/core/bin/generate_api_types.py`)
+- **Output**: `apps/web/app/types/api.ts`
+- **Command**: `cd apps/core && pnpm gen:types`
+- **Used For**:
+  - HTTP API requests/responses
+  - Form validation
+  - API client type safety
 
-4. **Troubleshooting type generation:**
+**Example Usage**:
 
-- Ensure all services are running (database, API)
-- Check that migrations are applied
-- Verify tool dependencies are installed
-- Review generation script logs for specific errors
+```typescript
+import { VideoUploadResponse, ProcessingStatus } from "../types/api";
+
+const response: VideoUploadResponse = await fetch("/api/videos/upload");
+if (response.status === ProcessingStatus.COMPLETED) {
+  /* ... */
+}
+```
+
+### 🤔 **Why Two Separate Type Systems?**
+
+**Database Types** are for when you want to:
+
+- Query the database directly from the frontend (via Supabase client)
+- Get the exact database schema with all constraints
+- Use real-time subscriptions
+- Access raw database relationships
+
+**API Types** are for when you want to:
+
+- Call your Python FastAPI endpoints
+- Use business logic and validation from Pydantic schemas
+- Handle processed/transformed data
+- Work with API-specific request/response formats
+
+### 🔄 **Development Workflow**
+
+#### **When you change the database schema:**
+
+```bash
+# 1. Apply database changes
+pnpm db:push
+
+# 2. Regenerate database types
+pnpm gen:types:supabase
+
+# 3. Update any code using database types
+```
+
+#### **When you change API schemas:**
+
+```bash
+# 1. Update Pydantic schemas in apps/core/api/schemas/
+# 2. Regenerate API types
+cd apps/core && pnpm gen:types
+
+# 3. Update any code using API types
+```
+
+### 🚨 **Common Gotchas**
+
+1. **Don't mix the two type systems** - Use database types for Supabase operations, API types for HTTP calls
+2. **Database types reflect raw DB schema** - They might have different field names than your API
+3. **API types include business logic** - They might have computed fields or different validation rules
+4. **Always regenerate after changes** - Types can get out of sync quickly
 
 ## Database Management
 
