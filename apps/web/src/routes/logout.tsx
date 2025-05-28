@@ -1,24 +1,31 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { createServerFn } from "@tanstack/react-start";
-import { getSupabaseServerClient } from "@echo/db/clients";
+import { createFileRoute, redirect } from "@tanstack/react-router"
+import { signOut } from "src/services/auth.api"
 
-const logoutFn = createServerFn({ method: 'POST' }).handler(async () => {
-  const supabase = await getSupabaseServerClient();
-  const { error } = await supabase.auth.signOut();
-
-  if (error) {
-    return {
-      error: true,
-      message: error.message,
-    };
-  }
-
-  throw redirect({
-    href: "/",
-  });
-});
-
+/**
+ * Logout route that immediately signs out the user and redirects
+ * Uses our hardened server-side authentication system
+ */
 export const Route = createFileRoute("/logout")({
   preload: false,
-  loader: () => logoutFn(),
-});
+  loader: async () => {
+    try {
+      // Use our hardened signOut server function
+      await signOut()
+
+      // Redirect to home page after successful logout
+      throw redirect({
+        to: "/",
+        replace: true,
+      })
+    } catch (error) {
+      console.error("Logout error:", error)
+
+      // Even if logout fails, redirect to home page
+      // This ensures users don't get stuck on the logout page
+      throw redirect({
+        to: "/",
+        replace: true,
+      })
+    }
+  },
+})

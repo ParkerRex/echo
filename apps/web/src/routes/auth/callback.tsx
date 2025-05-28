@@ -1,154 +1,169 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { supabase } from "@echo/db/clients";
+import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router"
+import { useEffect, useState } from "react"
+import { toast } from "sonner"
+import { supabase } from "@echo/db/clients"
+
+type CallbackSearch = {
+  redirect?: string
+}
 
 export const Route = createFileRoute("/auth/callback")({
+  validateSearch: (search: Record<string, unknown>): CallbackSearch => {
+    return {
+      redirect: typeof search.redirect === 'string' ? search.redirect : undefined,
+    }
+  },
   component: AuthCallbackComponent,
-});
+})
 
 function AuthCallbackComponent() {
-  const navigate = useNavigate();
-  const [isProcessing, setIsProcessing] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate()
+  const search = useSearch({ from: "/auth/callback" })
+  const [isProcessing, setIsProcessing] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    console.log('OAuth callback page loaded, URL:', window.location.href);
+    console.log('OAuth callback page loaded, URL:', window.location.href)
 
     const processCallback = async () => {
       try {
         // Check for OAuth error first
-        const searchParams = new URLSearchParams(window.location.search);
-        const urlError = searchParams.get('error');
-        const error_description = searchParams.get('error_description');
+        const searchParams = new URLSearchParams(window.location.search)
+        const urlError = searchParams.get('error')
+        const error_description = searchParams.get('error_description')
 
         if (urlError) {
-          console.error('OAuth error from provider:', urlError, error_description);
-          const errorMsg = error_description || urlError || 'OAuth authentication failed';
-          setError(errorMsg);
-          setIsProcessing(false);
-          toast.error(errorMsg);
+          console.error('OAuth error from provider:', urlError, error_description)
+          const errorMsg = error_description || urlError || 'OAuth authentication failed'
+          setError(errorMsg)
+          setIsProcessing(false)
+          toast.error(errorMsg)
           setTimeout(() => {
-            navigate({ to: "/login", replace: true });
-          }, 3000);
-          return;
+            navigate({ to: "/login", replace: true })
+          }, 3000)
+          return
         }
 
-        console.log('Processing OAuth callback...');
+        console.log('Processing OAuth callback...')
 
-        // Let Supabase automatically handle the OAuth callback
-        // This will process the URL parameters and create a session
-        let hasProcessed = false;
+        // Let Supabase handle the OAuth callback
+        const client = supabase()
 
-        const { data: { subscription } } = supabase().auth.onAuthStateChange(async (event, session) => {
-          console.log('Auth state change during callback:', { event, hasSession: !!session, hasProcessed });
+        // Simple timeout to prevent infinite waiting
+        const timeoutId = setTimeout(() => {
+          console.error('OAuth callback timeout')
+          setError('Authentication timeout. Please try again.')
+          setIsProcessing(false)
+          toast.error('Authentication timeout. Please try again.')
+          setTimeout(() => {
+            navigate({ to: "/login", replace: true })
+          }, 3000)
+        }, 8000) // 8 second timeout
 
-          if (hasProcessed) return; // Prevent multiple processing
+        // Listen for auth state changes
+        const { data: { subscription } } = client.auth.onAuthStateChange(async (event, session) => {
+          console.log('Auth state change during callback:', { event, hasSession: !!session })
 
           if (event === 'SIGNED_IN' && session) {
-            hasProcessed = true;
-            console.log('OAuth authentication successful');
-            const user = session.user;
-            const userName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
-            toast.success(`Welcome, ${userName}!`);
-            setIsProcessing(false);
-            subscription.unsubscribe();
-            navigate({ to: "/dashboard", replace: true });
+            clearTimeout(timeoutId)
+            console.log('OAuth authentication successful')
+
+            // Show success message
+            const userName = session.user?.user_metadata?.full_name ||
+                           session.user?.email?.split('@')[0] || 'User'
+            toast.success(`Welcome, ${userName}!`)
+
+            // Clean up subscription
+            subscription.unsubscribe()
+
+            // Redirect to intended destination
+            // The root route will handle fetching the user context
+            const redirectTo = search.redirect || "/dashboard"
+            navigate({ to: redirectTo, replace: true })
+
           } else if (event === 'SIGNED_OUT') {
-            hasProcessed = true;
-            console.log('OAuth authentication failed - user signed out');
-            setError('Authentication failed');
-            setIsProcessing(false);
-            subscription.unsubscribe();
-            toast.error('Authentication failed. Please try again.');
+            clearTimeout(timeoutId)
+            console.log('OAuth authentication failed - user signed out')
+            setError('Authentication failed')
+            setIsProcessing(false)
+            subscription.unsubscribe()
+            toast.error('Authentication failed. Please try again.')
             setTimeout(() => {
-              navigate({ to: "/login", replace: true });
-            }, 3000);
+              navigate({ to: "/login", replace: true })
+            }, 3000)
           }
-        });
+        })
 
-        // Also check if there's already a session
+        // Also check if there's already a session (fallback)
         setTimeout(async () => {
-          if (hasProcessed) return;
-
           try {
-            const { data, error: sessionError } = await supabase().auth.getSession();
+            const { data, error: sessionError } = await client.auth.getSession()
 
             if (sessionError) {
-              console.error('Error getting session during callback check:', sessionError);
-              if (!hasProcessed) {
-                hasProcessed = true;
-                setError(sessionError.message);
-                setIsProcessing(false);
-                subscription.unsubscribe();
-                toast.error(sessionError.message);
-                setTimeout(() => {
-                  navigate({ to: "/login", replace: true });
-                }, 3000);
-              }
-              return;
+              console.error('Error getting session during callback check:', sessionError)
+              clearTimeout(timeoutId)
+              setError(sessionError.message)
+              setIsProcessing(false)
+              subscription.unsubscribe()
+              toast.error(sessionError.message)
+              setTimeout(() => {
+                navigate({ to: "/login", replace: true })
+              }, 3000)
+              return
             }
 
-            if (data.session && !hasProcessed) {
-              hasProcessed = true;
-              console.log('OAuth authentication successful via session check');
-              const user = data.session.user;
-              const userName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
-              toast.success(`Welcome, ${userName}!`);
-              setIsProcessing(false);
-              subscription.unsubscribe();
-              navigate({ to: "/dashboard", replace: true });
+            if (data.session) {
+              clearTimeout(timeoutId)
+              console.log('OAuth authentication successful via session check')
+
+              // Show success message
+              const userName = data.session.user?.user_metadata?.full_name ||
+                             data.session.user?.email?.split('@')[0] || 'User'
+              toast.success(`Welcome, ${userName}!`)
+
+              // Clean up subscription
+              subscription.unsubscribe()
+
+              // Redirect to intended destination
+              const redirectTo = search.redirect || "/dashboard"
+              navigate({ to: redirectTo, replace: true })
             }
           } catch (err) {
-            console.error('Error during session check:', err);
+            console.error('Error during session check:', err)
           }
-        }, 1000);
-
-        // Set a timeout to handle cases where nothing happens
-        setTimeout(() => {
-          if (!hasProcessed) {
-            hasProcessed = true;
-            console.log('OAuth callback timeout - no authentication detected');
-            subscription.unsubscribe();
-            setError('Authentication timed out');
-            setIsProcessing(false);
-            toast.error('Authentication timed out. Please try again.');
-            setTimeout(() => {
-              navigate({ to: "/login", replace: true });
-            }, 3000);
-          }
-        }, 10000); // 10 second timeout
+        }, 1000)
 
         // Return cleanup function
         return () => {
-          subscription.unsubscribe();
-        };
+          clearTimeout(timeoutId)
+          subscription.unsubscribe()
+        }
 
       } catch (err) {
-        console.error('Error processing OAuth callback:', err);
-        const errorMessage = 'An unexpected error occurred during authentication';
-        setError(errorMessage);
-        setIsProcessing(false);
-        toast.error(errorMessage);
+        console.error('Error processing OAuth callback:', err)
+        const errorMessage = 'An unexpected error occurred during authentication'
+        setError(errorMessage)
+        setIsProcessing(false)
+        toast.error(errorMessage)
         setTimeout(() => {
-          navigate({ to: "/login", replace: true });
-        }, 3000);
+          navigate({ to: "/login", replace: true })
+        }, 3000)
       }
-    };
+    }
 
-    const cleanup = processCallback();
+    const cleanup = processCallback()
 
     // Return cleanup function
     return () => {
       if (cleanup && typeof cleanup.then === 'function') {
         cleanup.then(cleanupFn => {
           if (typeof cleanupFn === 'function') {
-            cleanupFn();
+            cleanupFn()
           }
-        });
+        })
       }
-    };
-  }, [navigate]);
+    }
+  }, [navigate, search.redirect])
 
   // Display a user-friendly loading message or error
   return (

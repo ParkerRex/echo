@@ -22,10 +22,11 @@ import {
 import { VideoList } from "src/components/video/VideoList";
 
 function DashboardComponent() {
-  const [activeTab, setActiveTab] = useState("library");
-  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  // Get user from route context (guaranteed to exist due to _authed layout)
+  const { user } = Route.useRouteContext()
 
-  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState("processing");
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
 
   const {
     data,
@@ -53,20 +54,21 @@ function DashboardComponent() {
       if (!lastPageParam || lastPage.length < (lastPageParam.limit ?? 10)) {
         return undefined;
       }
-      const currentTotal = allPages.reduce((acc, page) => acc + page.length, 0);
-      return { offset: currentTotal, limit: lastPageParam.limit ?? 10 };
+      return {
+        offset: (lastPageParam.offset ?? 0) + (lastPageParam.limit ?? 10),
+        limit: lastPageParam.limit ?? 10,
+      };
     },
   });
 
-  const videos: VideoSummary[] =
-    data?.pages.flatMap((page: VideoSummary[]) => page) ?? [];
+  const videos = data?.pages.flat() ?? [];
 
   return (
     <div className="container py-10">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
-            Video Dashboard
+            Welcome, {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}!
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
             Manage and monitor your video processing status
@@ -85,9 +87,7 @@ function DashboardComponent() {
               <DialogTitle>Upload Video</DialogTitle>
             </DialogHeader>
             <div className="py-4">
-              <VideoUploadDropzone
-                onUploadComplete={() => setUploadDialogOpen(false)}
-              />
+              <VideoUploadDropzone onUploadComplete={() => setUploadDialogOpen(false)} />
             </div>
           </DialogContent>
         </Dialog>
@@ -124,6 +124,6 @@ function DashboardComponent() {
   );
 }
 
-export const Route = createFileRoute("/dashboard")({
+export const Route = createFileRoute("/_authed/dashboard")({
   component: DashboardComponent,
 });

@@ -1,10 +1,11 @@
 import { Link } from "@tanstack/react-router"
 import { UserMenu } from "./user-menu"
-import { useAuthentication } from "src/services/queries"
+import { useAuth } from "src/lib/useAuth"
 import { Button } from "./ui/button"
 
 export function Header() {
-  const { data: authData } = useAuthentication()
+  const { session, isInitialized } = useAuth()
+  const isAuthenticated = isInitialized && !!session
 
   return (
     <header className="border-b bg-white shadow-sm">
@@ -31,7 +32,7 @@ export function Header() {
             >
               Home
             </Link>
-            {authData.isAuthenticated && (
+            {isAuthenticated && (
               <Link
                 to="/dashboard"
                 className="text-gray-600 hover:text-gray-900 transition-colors"
@@ -46,7 +47,7 @@ export function Header() {
 
           {/* User Menu or Auth Buttons */}
           <div className="flex items-center">
-            {authData.isAuthenticated ? (
+            {isAuthenticated ? (
               <UserMenu />
             ) : (
               <div className="flex items-center space-x-2">

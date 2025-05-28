@@ -1,23 +1,37 @@
-import { Button } from "src/components/ui/button";
-import { useAuth } from "src/lib/useAuth";
-import { toast } from "sonner";
+import { Button } from "src/components/ui/button"
+import { useServerFn } from "@tanstack/react-start"
+import { signInWithGoogle } from "src/services/auth.api"
+import { toast } from "sonner"
+import { useState } from "react"
 
 export function GoogleLoginButton() {
-  const { signInWithGoogle, isLoading, error } = useAuth();
+  const [isLoading, setIsLoading] = useState(false)
+  const signInFn = useServerFn(signInWithGoogle)
 
   const handleLogin = async () => {
+    console.log('🔘 Google Login Button clicked')
+    setIsLoading(true)
+
     try {
-      const result = await signInWithGoogle();
-      if (result.error) {
-        toast.error(result.error.message || "Failed to sign in with Google");
-        console.error("Google Sign-In error:", result.error.message);
+      console.log('📞 Calling signInWithGoogle server function...')
+      const result = await signInFn()
+      console.log('📋 Server function result:', result)
+
+      if (result.success && result.url) {
+        console.log('✅ Redirecting to Google OAuth URL:', result.url.substring(0, 100) + '...')
+        // Redirect to Google OAuth URL
+        window.location.href = result.url
+      } else {
+        console.error('❌ Server function failed:', result)
+        toast.error("Failed to initiate Google sign in")
+        setIsLoading(false)
       }
-      // If successful, navigation to Google occurs, then to callback.
-    } catch (err) {
-      toast.error("An unexpected error occurred during sign-in");
-      console.error("Unexpected error during Google sign-in:", err);
+    } catch (error: any) {
+      console.error("❌ Google Sign-In error:", error)
+      toast.error(error.message || "An unexpected error occurred during sign-in")
+      setIsLoading(false)
     }
-  };
+  }
 
   return (
     <Button

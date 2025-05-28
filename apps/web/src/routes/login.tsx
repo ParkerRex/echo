@@ -1,27 +1,33 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { supabase } from "@echo/db/clients";
-import { GoogleLoginButton } from "src/components/GoogleLoginButton";
-import { Layout } from "src/components/layout";
+import { createFileRoute, useRouter, useSearch, redirect } from "@tanstack/react-router"
+import { GoogleLoginButton } from "src/components/GoogleLoginButton"
+import { Layout } from "src/components/layout"
+
+type LoginSearch = {
+  redirect?: string
+}
 
 export const Route = createFileRoute("/login")({
-  beforeLoad: async ({ cause }) => {
-    // Redirect to dashboard if user is already logged in and tries to enter the login page.
-    if (cause === "enter") {
-      const {
-        data: { session },
-      } = await supabase().auth.getSession();
-      if (session) {
-        throw redirect({
-          to: "/dashboard",
-          replace: true,
-        });
-      }
+  validateSearch: (search: Record<string, unknown>): LoginSearch => {
+    return {
+      redirect: typeof search.redirect === 'string' ? search.redirect : undefined,
+    }
+  },
+  beforeLoad: ({ context, search }) => {
+    // If user is already authenticated, redirect to intended destination
+    if (context.user) {
+      const redirectTo = search.redirect || "/dashboard"
+      throw redirect({
+        to: redirectTo,
+        replace: true,
+      })
     }
   },
   component: LoginComp,
-});
+})
 
 function LoginComp() {
+  const search = useSearch({ from: "/login" })
+
   return (
     <Layout className="items-center gap-6 max-w-md">
       <div className="text-center space-y-2">

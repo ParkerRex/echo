@@ -85,14 +85,14 @@ function SettingsComponent() {
               </SelectContent>
             </Select> */}
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="defaultCategory">Default Video Category</Label>
-            {/* Placeholder for Select component */}
-            <Input
-              id="defaultCategory"
-              placeholder="Science & Technology (coming soon)"
-              disabled
-            />
+          <div className="flex items-center justify-between space-x-2">
+            <Label htmlFor="autoUpload" className="flex flex-col space-y-1">
+              <span>Auto-upload to YouTube</span>
+              <span className="font-normal leading-snug text-muted-foreground">
+                Automatically upload processed videos to your YouTube channel.
+              </span>
+            </Label>
+            <Switch id="autoUpload" disabled />
           </div>
         </CardContent>
       </Card>
@@ -160,14 +160,12 @@ function SettingsComponent() {
             <Switch id="notifyUploadComplete" disabled />
           </div>
           <div className="flex items-center justify-between space-x-2 pl-4">
-            <Label htmlFor="notifyProcessingComplete">
-              Processing Complete
-            </Label>
+            <Label htmlFor="notifyProcessingComplete">Processing Complete</Label>
             <Switch id="notifyProcessingComplete" disabled />
           </div>
           <div className="flex items-center justify-between space-x-2 pl-4">
-            <Label htmlFor="notifyProcessingError">Processing Error</Label>
-            <Switch id="notifyProcessingError" disabled />
+            <Label htmlFor="notifyErrors">Errors</Label>
+            <Switch id="notifyErrors" disabled />
           </div>
         </CardContent>
       </Card>
@@ -203,6 +201,6 @@ function SettingsComponent() {
   );
 }
 
-export const Route = createFileRoute("/settings")({
+export const Route = createFileRoute("/_authed/settings")({
   component: SettingsComponent,
 });

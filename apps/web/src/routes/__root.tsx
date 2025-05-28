@@ -5,24 +5,56 @@ import {
   Scripts,
   createRootRouteWithContext,
 } from "@tanstack/react-router"
+import { createServerFn } from "@tanstack/react-start"
 import * as React from "react"
 import { Header } from "src/components/header"
 import { Toaster } from "src/components/ui/sonner"
 // @ts-expect-error
 import css from "~/globals.css?url"
 import { seo } from "src/lib/seo"
-import { authQueries } from "src/services/queries"
+import { getSupabaseServerClient } from "src/lib/supabase"
+import type { User } from "@supabase/supabase-js"
+
+/**
+ * Server function to fetch current user session
+ * This ensures auth state is fetched on server and serialized to client
+ * Prevents SSR/CSR hydration mismatches
+ */
+export const fetchSessionUser = createServerFn({ method: 'GET' }).handler<{
+  user: User | null
+  error: string | null
+}>(async () => {
+  try {
+    const supabase = getSupabaseServerClient()
+
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+
+    if (sessionError) {
+      console.error('Session error:', sessionError)
+      return { user: null, error: sessionError.message }
+    }
+
+    if (!session) {
+      return { user: null, error: null }
+    }
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+
+    if (userError) {
+      console.error('User error:', userError)
+      return { user: null, error: userError.message }
+    }
+
+    return { user, error: null }
+  } catch (error) {
+    console.error('Unexpected auth error:', error)
+    return { user: null, error: 'Unexpected authentication error' }
+  }
+})
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient
 }>()({
-  beforeLoad: async ({ context }) => {
-    const authState = await context.queryClient.ensureQueryData(
-      authQueries.user(),
-    )
-
-    return { authState }
-  },
   head: () => ({
     meta: [
       {
@@ -50,6 +82,16 @@ export const Route = createRootRouteWithContext<{
       },
     ],
   }),
+  beforeLoad: async () => {
+    // Fetch user session using server function
+    // This ensures consistent auth state between server and client
+    const authResult = await fetchSessionUser()
+
+    return {
+      user: authResult.user,
+      authError: authResult.error,
+    }
+  },
   component: RootComponent,
 })
 

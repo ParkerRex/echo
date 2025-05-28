@@ -13,16 +13,16 @@
 import { Route as rootRoute } from './routes/__root'
 import { Route as SignupImport } from './routes/signup'
 import { Route as SignInImport } from './routes/sign-in'
-import { Route as SettingsImport } from './routes/settings'
-import { Route as ProfileImport } from './routes/profile'
 import { Route as LogoutImport } from './routes/logout'
 import { Route as LoginImport } from './routes/login'
-import { Route as DashboardImport } from './routes/dashboard'
 import { Route as PathlessLayoutImport } from './routes/_pathlessLayout'
 import { Route as AuthedImport } from './routes/_authed'
 import { Route as VideoIdImport } from './routes/$videoId'
 import { Route as IndexImport } from './routes/index'
 import { Route as AuthCallbackImport } from './routes/auth/callback'
+import { Route as AuthedSettingsImport } from './routes/_authed.settings'
+import { Route as AuthedProfileImport } from './routes/_authed.profile'
+import { Route as AuthedDashboardImport } from './routes/_authed.dashboard'
 import { Route as AuthedJobsJobIdImport } from './routes/_authed.jobs.$jobId'
 
 // Create/Update Routes
@@ -39,18 +39,6 @@ const SignInRoute = SignInImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
-const SettingsRoute = SettingsImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const ProfileRoute = ProfileImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => rootRoute,
-} as any)
-
 const LogoutRoute = LogoutImport.update({
   id: '/logout',
   path: '/logout',
@@ -60,12 +48,6 @@ const LogoutRoute = LogoutImport.update({
 const LoginRoute = LoginImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const DashboardRoute = DashboardImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -95,6 +77,24 @@ const AuthCallbackRoute = AuthCallbackImport.update({
   id: '/auth/callback',
   path: '/auth/callback',
   getParentRoute: () => rootRoute,
+} as any)
+
+const AuthedSettingsRoute = AuthedSettingsImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthedRoute,
+} as any)
+
+const AuthedProfileRoute = AuthedProfileImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AuthedRoute,
+} as any)
+
+const AuthedDashboardRoute = AuthedDashboardImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthedRoute,
 } as any)
 
 const AuthedJobsJobIdRoute = AuthedJobsJobIdImport.update({
@@ -135,13 +135,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PathlessLayoutImport
       parentRoute: typeof rootRoute
     }
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardImport
-      parentRoute: typeof rootRoute
-    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -154,20 +147,6 @@ declare module '@tanstack/react-router' {
       path: '/logout'
       fullPath: '/logout'
       preLoaderRoute: typeof LogoutImport
-      parentRoute: typeof rootRoute
-    }
-    '/profile': {
-      id: '/profile'
-      path: '/profile'
-      fullPath: '/profile'
-      preLoaderRoute: typeof ProfileImport
-      parentRoute: typeof rootRoute
-    }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsImport
       parentRoute: typeof rootRoute
     }
     '/sign-in': {
@@ -183,6 +162,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/signup'
       preLoaderRoute: typeof SignupImport
       parentRoute: typeof rootRoute
+    }
+    '/_authed/dashboard': {
+      id: '/_authed/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthedDashboardImport
+      parentRoute: typeof AuthedImport
+    }
+    '/_authed/profile': {
+      id: '/_authed/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AuthedProfileImport
+      parentRoute: typeof AuthedImport
+    }
+    '/_authed/settings': {
+      id: '/_authed/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthedSettingsImport
+      parentRoute: typeof AuthedImport
     }
     '/auth/callback': {
       id: '/auth/callback'
@@ -204,10 +204,16 @@ declare module '@tanstack/react-router' {
 // Create and export the route tree
 
 interface AuthedRouteChildren {
+  AuthedDashboardRoute: typeof AuthedDashboardRoute
+  AuthedProfileRoute: typeof AuthedProfileRoute
+  AuthedSettingsRoute: typeof AuthedSettingsRoute
   AuthedJobsJobIdRoute: typeof AuthedJobsJobIdRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
+  AuthedDashboardRoute: AuthedDashboardRoute,
+  AuthedProfileRoute: AuthedProfileRoute,
+  AuthedSettingsRoute: AuthedSettingsRoute,
   AuthedJobsJobIdRoute: AuthedJobsJobIdRoute,
 }
 
@@ -218,13 +224,13 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$videoId': typeof VideoIdRoute
   '': typeof PathlessLayoutRoute
-  '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
-  '/profile': typeof ProfileRoute
-  '/settings': typeof SettingsRoute
   '/sign-in': typeof SignInRoute
   '/signup': typeof SignupRoute
+  '/dashboard': typeof AuthedDashboardRoute
+  '/profile': typeof AuthedProfileRoute
+  '/settings': typeof AuthedSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/jobs/$jobId': typeof AuthedJobsJobIdRoute
 }
@@ -233,13 +239,13 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$videoId': typeof VideoIdRoute
   '': typeof PathlessLayoutRoute
-  '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
-  '/profile': typeof ProfileRoute
-  '/settings': typeof SettingsRoute
   '/sign-in': typeof SignInRoute
   '/signup': typeof SignupRoute
+  '/dashboard': typeof AuthedDashboardRoute
+  '/profile': typeof AuthedProfileRoute
+  '/settings': typeof AuthedSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/jobs/$jobId': typeof AuthedJobsJobIdRoute
 }
@@ -250,13 +256,13 @@ export interface FileRoutesById {
   '/$videoId': typeof VideoIdRoute
   '/_authed': typeof AuthedRouteWithChildren
   '/_pathlessLayout': typeof PathlessLayoutRoute
-  '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
-  '/profile': typeof ProfileRoute
-  '/settings': typeof SettingsRoute
   '/sign-in': typeof SignInRoute
   '/signup': typeof SignupRoute
+  '/_authed/dashboard': typeof AuthedDashboardRoute
+  '/_authed/profile': typeof AuthedProfileRoute
+  '/_authed/settings': typeof AuthedSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/_authed/jobs/$jobId': typeof AuthedJobsJobIdRoute
 }
@@ -267,13 +273,13 @@ export interface FileRouteTypes {
     | '/'
     | '/$videoId'
     | ''
-    | '/dashboard'
     | '/login'
     | '/logout'
-    | '/profile'
-    | '/settings'
     | '/sign-in'
     | '/signup'
+    | '/dashboard'
+    | '/profile'
+    | '/settings'
     | '/auth/callback'
     | '/jobs/$jobId'
   fileRoutesByTo: FileRoutesByTo
@@ -281,13 +287,13 @@ export interface FileRouteTypes {
     | '/'
     | '/$videoId'
     | ''
-    | '/dashboard'
     | '/login'
     | '/logout'
-    | '/profile'
-    | '/settings'
     | '/sign-in'
     | '/signup'
+    | '/dashboard'
+    | '/profile'
+    | '/settings'
     | '/auth/callback'
     | '/jobs/$jobId'
   id:
@@ -296,13 +302,13 @@ export interface FileRouteTypes {
     | '/$videoId'
     | '/_authed'
     | '/_pathlessLayout'
-    | '/dashboard'
     | '/login'
     | '/logout'
-    | '/profile'
-    | '/settings'
     | '/sign-in'
     | '/signup'
+    | '/_authed/dashboard'
+    | '/_authed/profile'
+    | '/_authed/settings'
     | '/auth/callback'
     | '/_authed/jobs/$jobId'
   fileRoutesById: FileRoutesById
@@ -313,11 +319,8 @@ export interface RootRouteChildren {
   VideoIdRoute: typeof VideoIdRoute
   AuthedRoute: typeof AuthedRouteWithChildren
   PathlessLayoutRoute: typeof PathlessLayoutRoute
-  DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
   LogoutRoute: typeof LogoutRoute
-  ProfileRoute: typeof ProfileRoute
-  SettingsRoute: typeof SettingsRoute
   SignInRoute: typeof SignInRoute
   SignupRoute: typeof SignupRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
@@ -328,11 +331,8 @@ const rootRouteChildren: RootRouteChildren = {
   VideoIdRoute: VideoIdRoute,
   AuthedRoute: AuthedRouteWithChildren,
   PathlessLayoutRoute: PathlessLayoutRoute,
-  DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
   LogoutRoute: LogoutRoute,
-  ProfileRoute: ProfileRoute,
-  SettingsRoute: SettingsRoute,
   SignInRoute: SignInRoute,
   SignupRoute: SignupRoute,
   AuthCallbackRoute: AuthCallbackRoute,
@@ -352,11 +352,8 @@ export const routeTree = rootRoute
         "/$videoId",
         "/_authed",
         "/_pathlessLayout",
-        "/dashboard",
         "/login",
         "/logout",
-        "/profile",
-        "/settings",
         "/sign-in",
         "/signup",
         "/auth/callback"
@@ -371,14 +368,14 @@ export const routeTree = rootRoute
     "/_authed": {
       "filePath": "_authed.tsx",
       "children": [
+        "/_authed/dashboard",
+        "/_authed/profile",
+        "/_authed/settings",
         "/_authed/jobs/$jobId"
       ]
     },
     "/_pathlessLayout": {
       "filePath": "_pathlessLayout.tsx"
-    },
-    "/dashboard": {
-      "filePath": "dashboard.tsx"
     },
     "/login": {
       "filePath": "login.tsx"
@@ -386,17 +383,23 @@ export const routeTree = rootRoute
     "/logout": {
       "filePath": "logout.tsx"
     },
-    "/profile": {
-      "filePath": "profile.tsx"
-    },
-    "/settings": {
-      "filePath": "settings.tsx"
-    },
     "/sign-in": {
       "filePath": "sign-in.tsx"
     },
     "/signup": {
       "filePath": "signup.tsx"
+    },
+    "/_authed/dashboard": {
+      "filePath": "_authed.dashboard.tsx",
+      "parent": "/_authed"
+    },
+    "/_authed/profile": {
+      "filePath": "_authed.profile.tsx",
+      "parent": "/_authed"
+    },
+    "/_authed/settings": {
+      "filePath": "_authed.settings.tsx",
+      "parent": "/_authed"
     },
     "/auth/callback": {
       "filePath": "auth/callback.tsx"
