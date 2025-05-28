@@ -36,10 +36,32 @@ export function getSupabaseServerClient() {
 export function createSupabaseClient(
   context: 'browser' | 'server' = 'browser'
 ) {
-  // Use the same environment variables for both browser and server
-  // TanStack Start automatically makes process.env available in both contexts
-  const url = process.env.SUPABASE_URL!
-  const anonKey = process.env.SUPABASE_ANON_KEY!
+  // Use different environment variables for browser vs server
+  // Browser: VITE_ prefixed variables (available in client-side code)
+  // Server: process.env variables (available in server-side code)
+  let url: string
+  let anonKey: string
+
+  if (context === 'browser') {
+    // Client-side: use VITE_ prefixed environment variables
+    url = import.meta.env?.VITE_SUPABASE_URL || process.env.VITE_SUPABASE_URL!
+    anonKey = import.meta.env?.VITE_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY!
+  } else {
+    // Server-side: use process.env variables
+    url = process.env.SUPABASE_URL!
+    anonKey = process.env.SUPABASE_ANON_KEY!
+  }
+
+  // Debug logging
+  if (!url || !anonKey) {
+    console.error('Supabase environment variables missing:', {
+      url: url ? 'present' : 'missing',
+      anonKey: anonKey ? 'present' : 'missing',
+      context,
+      availableEnv: context === 'browser' ? import.meta.env : process.env
+    })
+    throw new Error('Supabase URL and ANON_KEY are required')
+  }
 
   if (context === 'browser') {
     return createBrowserClient<Database>(url, anonKey)

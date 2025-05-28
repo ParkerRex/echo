@@ -3,7 +3,7 @@ import tsConfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
   tsr: {
-    appDirectory: 'app',
+    appDirectory: 'src',
   },
   vite: {
     plugins: [
@@ -11,9 +11,5 @@ export default defineConfig({
         projects: ["./tsconfig.json"],
       }),
     ],
-  },
-  server: {
-    preset: "netlify",
-    compatibilityDate: "2025-01-02",
   },
 });

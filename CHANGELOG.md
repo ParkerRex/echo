@@ -7,19 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- Initial changelog documentation
-
-### Changed
-
-- N/A
-
 ### Planned
 
 - Manual testing implementation
 - Additional UI/UX improvements
 - Performance optimizations
+
+## [0.3.1] - 2025-01-28 - OAuth Authentication Fix
+
+### Fixed
+
+- **Google OAuth PKCE Flow**: Fixed "invalid flow state, no valid flow state found" error in local development
+- **OAuth Redirect Configuration**: Updated Supabase config to use `http://127.0.0.1:54321/auth/v1/callback` for proper PKCE handling
+- **Authentication Callback**: Simplified OAuth callback component to work with server-side OAuth processing
+
+### Added
+
+- **OAuth Documentation**: Comprehensive setup guide for Google OAuth configuration
+- **Troubleshooting Guide**: Common OAuth issues and solutions in README
+- **Configuration Examples**: Clear examples of required redirect URIs for local development
+
+### Changed
+
+- **Supabase OAuth Config**: Updated `redirect_uri` to point to local Supabase API endpoint
+- **OAuth Callback Route**: Simplified to rely on Supabase's built-in OAuth handling
+
+### Technical Details
+
+- Root cause: PKCE flow state must be maintained by the same Supabase instance that created it
+- Solution: Configure Google OAuth to redirect directly to Supabase API (`http://127.0.0.1:54321/auth/v1/callback`)
+- This allows Supabase to handle the OAuth code exchange while maintaining PKCE flow state integrity
 
 ## [0.3.0] - 2025-01-15 - TanStack Patterns Implementation
 

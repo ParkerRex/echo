@@ -55,7 +55,27 @@ pnpm install
 pnpm setup:python-env
 ```
 
-3. **Start development environment:**
+3. **Configure Google OAuth (Required for Authentication):**
+
+For local development, you need to configure Google OAuth with specific redirect URIs:
+
+**Google Cloud Console Setup:**
+
+- Go to [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials
+- Edit your OAuth 2.0 Client ID
+- Add these **Authorized redirect URIs**:
+  ```
+  http://127.0.0.1:54321/auth/v1/callback
+  http://localhost:3000/auth/callback
+  ```
+- Save changes and wait 2-3 minutes for propagation
+
+**Why both URIs are needed:**
+
+- `http://127.0.0.1:54321/auth/v1/callback` - For Supabase to handle OAuth PKCE flow
+- `http://localhost:3000/auth/callback` - For your app's final redirect
+
+4. **Start development environment:**
 
 ```bash
 pnpm dev
@@ -68,6 +88,27 @@ That's it! This single command starts:
 - TypeScript frontend (port 3000)
 
 Visit `http://localhost:3000` to access the application.
+
+### OAuth Troubleshooting
+
+If you encounter OAuth authentication issues:
+
+**"App doesn't comply with Google's OAuth 2.0 policy" Error:**
+
+- Ensure you've added `http://127.0.0.1:54321/auth/v1/callback` to Google Cloud Console
+- Use `127.0.0.1` not `localhost` in the redirect URI
+- Wait 2-3 minutes after saving changes in Google Cloud Console
+
+**"Invalid flow state, no valid flow state found" Error:**
+
+- This indicates the redirect URI configuration is incorrect
+- Verify the Supabase config uses `http://127.0.0.1:54321/auth/v1/callback`
+- Restart Supabase after config changes: `pnpm db:stop && pnpm db:start`
+
+**OAuth works but session not persisting:**
+
+- Check that both redirect URIs are configured in Google Cloud Console
+- Verify your environment variables are correctly set
 
 ## Website
 

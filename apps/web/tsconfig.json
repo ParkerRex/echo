@@ -28,7 +28,7 @@
     "baseUrl": ".",
     "paths": {
       "~/*": [
-        "./app/*"
+        "src/*"
       ],
       "@echo/db": [
         "../../packages/supabase"
