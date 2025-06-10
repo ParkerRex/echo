@@ -40,6 +40,9 @@ dependencies = [
     "openai>=1.75.0",
     # Cloud Functions (if still deploying parts as Cloud Functions)
     "functions-framework", # If you use Google Cloud Functions
+    "psycopg2-binary>=2.9.10",
+    "asyncpg>=0.30.0",
+    "sqlalchemy>=2.0.41",
 ]
 
 [project.optional-dependencies]

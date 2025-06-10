@@ -2,9 +2,9 @@
   "name": "echo",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@10.10.0",
+  "workspaces": ["apps/*", "packages/*"],
   "scripts": {
-    "dev": "turbo run dev",
+    "dev": "concurrently \"bun dev:api\" \"turbo run dev\"",
     "build": "turbo run build",
     "start": "turbo run start",
     "test": "turbo run test",
@@ -13,9 +13,9 @@
     "check": "turbo run check",
     "typecheck": "turbo run typecheck",
 
-    "dev:web": "turbo run dev --filter=@echo/web",
-    "dev:core": "turbo run dev --filter=@echo/core",
-    "dev:api": "./start-api.sh",
+    "dev:web": "turbo run dev --filter=@echo/website",
+    "dev:core": "cd apps/core && PYTHONPATH=/Users/parkerrex/Developer/echo uv run uvicorn apps.core.main:app --reload --host 0.0.0.0 --port 8000",
+    "dev:api": "cd apps/core && PYTHONPATH=/Users/parkerrex/Developer/echo uv run uvicorn apps.core.main:app --reload --host 0.0.0.0 --port 8000",
 
     "gen:types": "./scripts/generate-types.sh",
     "gen:types:db": "cd packages/supabase && supabase gen types typescript --local > types/database.ts",
@@ -25,16 +25,22 @@
     "db:reset": "turbo run db:reset",
     "db:push": "turbo run db:push",
     "db:generate-migration": "echo 'Run: cd packages/supabase && supabase migration new <migration_name>'",
-    "db:setup-local": "pnpm db:start && echo 'Waiting for Supabase to start...' && sleep 10 && pnpm db:push && pnpm gen:types",
-    "db:refresh-local-schema": "pnpm db:push && pnpm gen:types",
+    "db:setup-local": "bun db:start && echo 'Waiting for Supabase to start...' && sleep 10 && bun db:push && bun gen:types",
+    "db:refresh-local-schema": "bun db:push && bun gen:types",
 
     "setup:python-env": "cd apps/core && uv sync --dev && echo 'Python env setup complete with UV!' && cd ../..",
+    "setup": "bun install && bun setup:python-env",
 
-    "clean": "turbo run clean && rm -rf node_modules/.cache"
+    "clean": "find . -name 'node_modules' -type d -exec rm -rf {} + 2>/dev/null || true && find . -name 'pnpm-lock.yaml' -delete && find . -name 'package-lock.json' -delete && find . -name 'bun.lockb' -delete && find . -name '.turbo' -type d -exec rm -rf {} + 2>/dev/null || true && turbo run clean",
+    "clean:cache": "rm -rf node_modules/.cache"
+  },
+  "dependencies": {
+    "@biomejs/biome": "1.9.4",
+    "turbo": "2.5.4"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
-    "npm-run-all": "^4.1.5",
-    "turbo": "^2.5.3"
-  }
+    "npm-run-all": "^4.1.5"
+  },
+  "packageManager": "bun@1.2.15"
 }
