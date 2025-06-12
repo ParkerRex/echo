@@ -6,7 +6,6 @@
   "exports": {
     ".": "./index.ts",
     "./clients": "./clients/index.ts",
-    "./clients/python": "./clients/python.py",
     "./types": "./types/db.ts",
     "./types/database": "./types/database.ts"
   },
@@ -14,7 +13,8 @@
     "build": "echo 'No build step required for shared package'",
     "dev": "echo 'No dev step required for shared package'",
     "test": "echo 'No tests configured yet'",
-    "lint": "eslint .",
+    "lint": "biome check .",
+    "format": "biome format --write .",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist .turbo",
     "gen:types": "supabase gen types typescript --local > types/database.ts"

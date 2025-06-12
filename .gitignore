@@ -9,7 +9,6 @@
 
 # testing
 /coverage
-.pytest_cache
 
 # next.js
 /.next/
@@ -18,16 +17,10 @@
 /apps/web/.next/
 /apps/web/out/
 
-# python
-venv/
-.venv/
-**/venv/
-**/.venv/
+# environment
 .env
 .env.development
 .env.production
-__pycache__
-**/__pycache__/
 
 # production
 /build

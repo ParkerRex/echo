@@ -16,7 +16,11 @@
     "@echo/ui": "workspace:*",
     "@openpanel/nextjs": "^1.0.8",
     "@openstatus/react": "^0.0.3",
+    "@tanstack/react-query": "^5.62.14",
     "@team-plain/typescript-sdk": "5.9.0",
+    "@trpc/client": "^10.45.2",
+    "@trpc/react-query": "^10.45.2",
+    "@trpc/server": "^10.45.2",
     "@uidotdev/usehooks": "^2.4.1",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.15.0",
@@ -26,12 +30,14 @@
     "next-safe-action": "^7.10.8",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "react-dropzone": "^14.3.5",
     "react-hls-player": "^3.0.7",
     "react-use-draggable-scroll": "^0.4.7",
     "resend": "^4.5.1",
     "server-only": "^0.0.1",
     "sharp": "0.34.1",
-    "sugar-high": "^0.9.3"
+    "sugar-high": "^0.9.3",
+    "lucide-react": "^0.376.0"
   },
   "devDependencies": {
     "@echo/tsconfig": "workspace:*",

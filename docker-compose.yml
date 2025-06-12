@@ -125,59 +125,60 @@ services:
       timeout: 5s
       retries: 5
 
-  # Echo Backend API
-  echo-api:
+  # Echo Core API (Hono + tRPC)
+  echo-core:
     build:
-      context: .
-      dockerfile: apps/core/Dockerfile
-      target: development
-    container_name: echo-api
+      context: ./apps/core
+      dockerfile: Dockerfile
+    container_name: echo-core
     depends_on:
       supabase-db:
         condition: service_healthy
       redis:
         condition: service_healthy
     env_file:
-      - .env.development
+      - ./apps/core/.env
     environment:
       # Override specific values for Docker environment
       - DATABASE_URL=postgresql://postgres:postgres@supabase-db:5432/postgres
       - SUPABASE_URL=http://supabase-rest:3000
+      - SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+      - SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
       - REDIS_URL=redis://redis:6379
-      - LOCAL_STORAGE_PATH=/app/output_files
+      - NODE_ENV=development
     ports:
       - "8000:8000"
     volumes:
-      - ./apps/core:/app
+      - ./apps/core/src:/app/src
       - ./packages:/packages
-      - echo-storage:/app/output_files
-    command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    command: ["bun", "run", "dev"]
 
-  # Echo Frontend Web App
-  echo-web:
+  # Echo Website (Next.js)
+  echo-website:
     build:
-      context: .
-      dockerfile: apps/web/Dockerfile
+      context: ./apps/website
+      dockerfile: Dockerfile
       target: development
-    container_name: echo-web
+    container_name: echo-website
     depends_on:
-      - echo-api
+      - echo-core
     env_file:
-      - .env.development
+      - ./apps/website/.env.local
     environment:
       # Override specific values for Docker environment
-      - VITE_SUPABASE_URL=http://localhost:54321
-      - VITE_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
     ports:
       - "3000:3000"
     volumes:
-      - ./apps/web:/app
+      - ./apps/website:/app
       - ./packages:/packages
       - /app/node_modules
-    command: ["pnpm", "dev", "--host", "0.0.0.0"]
+      - /app/.next
+    command: ["bun", "run", "dev"]
 
 volumes:
   supabase-db-data:
   supabase-storage-data:
-  redis-data:
-  echo-storage: 
+  redis-data: 

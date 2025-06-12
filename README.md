@@ -32,8 +32,7 @@ Echo helps users automatically generate metadata for YouTube videos (titles, sub
 
 ### Prerequisites
 
-- Python 3.10+ with [uv](https://github.com/astral-sh/uv)
-- Node.js 18+ with [pnpm](https://pnpm.io/)
+- [Bun](https://bun.sh/) 1.0+
 - [Supabase CLI](https://supabase.com/docs/guides/cli)
 - Docker (for local Supabase)
 
@@ -51,8 +50,7 @@ cp .env.example .env
 2. **Install dependencies:**
 
 ```bash
-pnpm install
-pnpm setup:python-env
+bun install
 ```
 
 3. **Configure Google OAuth (Required for Authentication):**
@@ -78,13 +76,13 @@ For local development, you need to configure Google OAuth with specific redirect
 4. **Start development environment:**
 
 ```bash
-pnpm dev
+bun dev
 ```
 
 That's it! This single command starts:
 
 - Local Supabase database
-- Python FastAPI backend (port 8000)
+- TypeScript Hono/tRPC backend (port 8000)
 - TypeScript frontend (port 3000)
 
 Visit `http://localhost:3000` to access the application.
@@ -103,7 +101,7 @@ If you encounter OAuth authentication issues:
 
 - This indicates the redirect URI configuration is incorrect
 - Verify the Supabase config uses `http://127.0.0.1:54321/auth/v1/callback`
-- Restart Supabase after config changes: `pnpm db:stop && pnpm db:start`
+- Restart Supabase after config changes: `bun db:stop && bun db:start`
 
 **OAuth works but session not persisting:**
 
@@ -171,20 +169,19 @@ graph TD
   C -->|writes metadata to| D
   A -->|fetches metadata from| D
   G[Database Schema] -->|generates| H[TypeScript Types]
-  G -->|generates| I[Python Types]
   H -->|used by| A
   I -->|used by| C
 ```
 
 ### Tech Stack
 
-- **Backend**: FastAPI with Python 3.10+ and uv
+- **Backend**: Hono + tRPC with TypeScript and Bun
 - **Frontend**: React with TanStack Router
 - **Database**: PostgreSQL via Supabase (source of truth for types)
 - **Storage**: Google Cloud Storage
 - **AI**: Google Gemini
 - **Auth**: Supabase Auth
-- **Type Safety**: Database-driven type generation for TypeScript and Python
+- **Type Safety**: Database-driven type generation for TypeScript
 
 ### User Workflow
 
@@ -202,11 +199,10 @@ Echo implements a **database-first type system** where the PostgreSQL schema is 
 ```mermaid
 graph LR
   A[Database Schema] -->|supabase gen types| B[TypeScript Types]
-  A -->|custom generator| C[Python Types]
-  B -->|imported by| D[Frontend Code]
-  C -->|imported by| E[Backend Code]
-  D -->|API calls| E
-  E -->|database queries| A
+  B -->|imported by| C[Frontend Code]
+  B -->|imported by| D[Backend Code]
+  C -->|tRPC calls| D
+  D -->|Drizzle ORM| A
 ```
 
 ### How It Works
@@ -216,7 +212,7 @@ When you want to add new functionality:
 1. **Think Database First** - Design the tables and columns you need
 2. **Write Migration** - Create a Supabase migration file
 3. **Apply Migration** - Run the migration to update your database schema
-4. **Generate Types** - Run type generation to update TypeScript and Python types
+4. **Generate Types** - Run type generation to update TypeScript types
 5. **Use Types** - Import and use the generated types in your code
 
 ### Example Workflow
@@ -251,10 +247,10 @@ COMMIT;
 
 ```bash
 # 3. Apply migration
-pnpm db:push
+bun db:push
 
 # 4. Generate types
-pnpm gen:types:db
+bun gen:types:db
 
 # 5. Use in your code - types are automatically available!
 ```
@@ -270,23 +266,24 @@ const categories: VideoCategory[] = await supabase
   .select("*");
 ```
 
-**Backend (Python):**
+**Backend (TypeScript):**
 
-```python
-from apps.core.types.database import VideoCategory, Video
+```typescript
+import { VideoCategory, Video } from "./db/schema";
+import { db } from "./db/client";
 
-# Types are automatically generated and available
-def get_categories() -> List[VideoCategory]:
-    # Implementation here
+// Types are automatically generated and available
+export const getCategories = async (): Promise<VideoCategory[]> => {
+  return await db.select().from(videoCategories);
+};
 ```
 
 ### Type Generation Commands
 
 | Command                         | Purpose                                        |
 | ------------------------------- | ---------------------------------------------- |
-| `pnpm gen:types:db`             | Generate TypeScript types from database schema |
-| `pnpm typecheck`                | Type check all TypeScript code                 |
-| `cd apps/core && uv run mypy .` | Type check all Python code                     |
+| `bun gen:types:db`              | Generate TypeScript types from database schema |
+| `bun typecheck`                 | Type check all TypeScript code                 |
 
 ### Benefits
 
@@ -306,7 +303,7 @@ The recommended workflow for adding new functionality:
 1. **Design Database Schema** - Think about what tables/columns you need
 2. **Create Migration** - Write SQL migration file
 3. **Apply Migration** - Update local database
-4. **Generate Types** - Update TypeScript and Python types
+4. **Generate Types** - Update TypeScript types
 5. **Implement Backend** - Add API endpoints using generated types
 6. **Implement Frontend** - Add UI using generated types
 7. **Test** - Verify everything works end-to-end
@@ -315,22 +312,21 @@ The recommended workflow for adding new functionality:
 
 ```bash
 # Start development environment
-pnpm dev
+bun dev
 
 # After making database changes
-pnpm db:push && pnpm gen:types:db
+bun db:push && bun gen:types:db
 
 # Type check everything
-pnpm typecheck
-cd apps/core && uv run mypy .
+bun typecheck
 
 # Run tests
-pnpm test
+bun test
 ```
 
 ### Code Quality
 
-- **Type Safety**: All code must pass TypeScript and mypy type checking
+- **Type Safety**: All code must pass TypeScript type checking
 - **Linting**: Use provided ESLint and Ruff configurations
 - **Testing**: Write tests for new functionality
 - **Documentation**: Update docs when adding new features
@@ -378,13 +374,13 @@ COMMIT;
 3. **Apply migration:**
 
 ```bash
-pnpm db:push
+bun db:push
 ```
 
 4. **Generate types:**
 
 ```bash
-pnpm gen:types:db
+bun gen:types:db
 ```
 
 ### Migration Best Practices
@@ -414,11 +410,11 @@ USING ((SELECT auth.uid()) = uploader_user_id);
 
 | Command             | Purpose                       |
 | ------------------- | ----------------------------- |
-| `pnpm db:start`     | Start local Supabase          |
-| `pnpm db:stop`      | Stop local Supabase           |
-| `pnpm db:push`      | Apply migrations to database  |
-| `pnpm db:reset`     | Reset database to clean state |
-| `pnpm gen:types:db` | Generate types from schema    |
+| `bun db:start`     | Start local Supabase          |
+| `bun db:stop`      | Stop local Supabase           |
+| `bun db:push`      | Apply migrations to database  |
+| `bun db:reset`     | Reset database to clean state |
+| `bun gen:types:db` | Generate types from schema    |
 
 ## Supabase Development Rules
 
@@ -598,11 +594,11 @@ LOCAL_STORAGE_PATH=./output_files
 ```
 echo/
 ├── apps/
-│   ├── core/                    # FastAPI Backend (Python)
+│   ├── core/                    # Hono/tRPC Backend (TypeScript)
 │   │   ├── api/                 # API endpoints
 │   │   ├── services/            # Business logic
 │   │   ├── lib/                 # Utilities and adapters
-│   │   └── types/               # Generated Python types
+│   │   └── types/               # TypeScript types
 │   └── web/                     # React Frontend (TypeScript)
 │       ├── app/                 # Application code
 │       ├── components/          # Reusable components
@@ -625,41 +621,40 @@ echo/
 
 | Command      | Purpose                              |
 | ------------ | ------------------------------------ |
-| `pnpm dev`   | Start entire development environment |
-| `pnpm build` | Build all applications               |
-| `pnpm test`  | Run all tests and quality checks     |
+| `bun dev`   | Start entire development environment |
+| `bun build` | Build all applications               |
+| `bun test`  | Run all tests and quality checks     |
 
 ### Database Operations
 
 | Command         | Purpose                       |
 | --------------- | ----------------------------- |
-| `pnpm db:start` | Start local Supabase          |
-| `pnpm db:stop`  | Stop local Supabase           |
-| `pnpm db:push`  | Apply migrations to database  |
-| `pnpm db:reset` | Reset database to clean state |
+| `bun db:start` | Start local Supabase          |
+| `bun db:stop`  | Stop local Supabase           |
+| `bun db:push`  | Apply migrations to database  |
+| `bun db:reset` | Reset database to clean state |
 
 ### Type Generation
 
 | Command                         | Purpose                             |
 | ------------------------------- | ----------------------------------- |
-| `pnpm gen:types:db`             | Generate types from database schema |
-| `pnpm typecheck`                | Type check all TypeScript code      |
-| `cd apps/core && uv run mypy .` | Type check all Python code          |
+| `bun gen:types:db`             | Generate types from database schema |
+| `bun typecheck`                | Type check all TypeScript code      |
 
 ### Quality Checks
 
 | Command       | Purpose                 |
 | ------------- | ----------------------- |
-| `pnpm lint`   | Lint all applications   |
-| `pnpm format` | Format all applications |
-| `pnpm check`  | Run all quality checks  |
+| `bun lint`   | Lint all applications   |
+| `bun format` | Format all applications |
+| `bun check`  | Run all quality checks  |
 
 ### Targeted Development
 
 | Command         | Purpose       |
 | --------------- | ------------- |
-| `pnpm dev:web`  | Frontend only |
-| `pnpm dev:core` | Backend only  |
+| `bun dev:web`  | Frontend only |
+| `bun dev:core` | Backend only  |
 
 ## Contributing
 
@@ -675,15 +670,14 @@ echo/
 
 1. Create feature branch from `main`
 2. Make your changes following the database-first workflow
-3. Run quality checks: `pnpm typecheck && pnpm lint && pnpm test`
+3. Run quality checks: `bun typecheck && bun lint && bun test`
 4. Update documentation if needed
 5. Submit pull request with clear description
 
 ### Code Quality Standards
 
-- **TypeScript**: Must pass `pnpm typecheck`
-- **Python**: Must pass `uv run mypy .` in `apps/core`
-- **Linting**: Must pass `pnpm lint`
+- **TypeScript**: Must pass `bun typecheck`
+- **Linting**: Must pass `bun lint`
 - **Testing**: New features must include tests
 
 ## License

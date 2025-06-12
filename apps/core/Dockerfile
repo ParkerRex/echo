@@ -1,60 +1,62 @@
-# Multi-stage Dockerfile for Echo Backend API
-FROM python:3.11-slim as base
+# Development stage
+FROM oven/bun:1 AS development
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    curl \
-    build-essential \
-    libpq-dev \
-    ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install uv for fast Python package management
-RUN pip install uv
-
-# Set working directory
 WORKDIR /app
 
-# Copy Python project files
-COPY apps/core/pyproject.toml apps/core/uv.lock ./
+# Copy package files
+COPY package.json bun.lockb* ./
 
-# Development stage
-FROM base as development
-
-# Install development dependencies
-RUN uv venv && \
-    . .venv/bin/activate && \
-    uv pip install -e ".[dev]"
+# Install all dependencies
+RUN bun install
 
 # Copy source code
-COPY apps/core/ ./
-COPY packages/ /packages/
+COPY . .
 
 # Expose port
 EXPOSE 8000
 
-# Default command for development (can be overridden in docker-compose)
-CMD [".venv/bin/uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Start development server
+CMD ["bun", "run", "dev"]
+
+# Build stage
+FROM oven/bun:1 AS builder
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json bun.lockb* ./
+
+# Install dependencies
+RUN bun install --frozen-lockfile
+
+# Copy source code
+COPY . .
+
+# Build the application
+RUN bun run build
 
 # Production stage
-FROM base as production
+FROM oven/bun:1-slim AS production
 
-# Install only production dependencies
-RUN uv venv && \
-    . .venv/bin/activate && \
-    uv pip install .
+WORKDIR /app
 
-# Copy source code
-COPY apps/core/ ./
-COPY packages/ /packages/
+# Copy package files and install production dependencies only
+COPY package.json bun.lockb* ./
+RUN bun install --production
+
+# Copy built application
+COPY --from=builder /app/dist ./dist
+
+# Copy any static files or configs needed at runtime
+COPY --from=builder /app/drizzle ./drizzle
 
 # Create non-root user
-RUN useradd --create-home --shell /bin/bash app && \
-    chown -R app:app /app
-USER app
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nodejs -u 1001
+USER nodejs
 
 # Expose port
 EXPOSE 8000
 
-# Production command
-CMD [".venv/bin/uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"] 
+# Start the application
+CMD ["bun", "run", "start"]
