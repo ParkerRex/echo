@@ -114,11 +114,11 @@ The Echo web application is built with modern React and TanStack Router, providi
 
 ### Frontend Architecture
 
-- **Framework**: React 18 with TanStack Router for type-safe routing
+- **Framework**: Next.js 14 with App Router for server-side rendering
 - **Styling**: Tailwind CSS with shadcn/ui components
-- **State Management**: TanStack Query for server state, React hooks for local state
+- **State Management**: tRPC for server state, React hooks for local state
 - **Authentication**: Supabase Auth with protected routes and user session management
-- **Form Handling**: Unified Auth components with FormData-based submission
+- **API Integration**: Type-safe tRPC client for backend communication
 - **Error Handling**: Comprehensive error boundaries and user-friendly error messages
 
 ### Key Features
@@ -149,44 +149,46 @@ The Echo web application is built with modern React and TanStack Router, providi
 
 ### Development Patterns
 
-The website follows modern React patterns adopted from the official TanStack Start + Supabase example:
+The website follows modern Next.js and tRPC patterns:
 
-- **Unified Auth Components**: Single Auth component for both sign-in and sign-up
-- **FormData Handling**: Simple form submission without complex state management
-- **Server Functions**: Type-safe server functions with consistent error handling
-- **Mutation Hooks**: Custom `useMutation` hook for form submissions and API calls
-- **Error Handling**: Hybrid approach with redirects for auth and error components for other failures
+- **Server Components**: Leverage Next.js server components for optimal performance
+- **tRPC Integration**: Type-safe API calls with automatic type inference
+- **Component Architecture**: Reusable UI components from shared packages
+- **Authentication Flow**: Seamless integration with Supabase Auth
+- **Error Handling**: Comprehensive error boundaries with user-friendly messages
 
 ## Architecture
 
 ```mermaid
 graph TD
-  A[React + TanStack Router] -->|calls| B(Supabase Auth)
-  A -->|calls| C[FastAPI Backend]
-  A -->|calls| D[Supabase DB]
-  C -->|generates| E[Google Cloud Storage Signed URLs]
-  C -->|processes with| F[Gemini AI]
-  C -->|writes metadata to| D
-  A -->|fetches metadata from| D
-  G[Database Schema] -->|generates| H[TypeScript Types]
+  A[Next.js Frontend] -->|tRPC calls| B[Hono + tRPC Backend]
+  A -->|auth| C(Supabase Auth)
+  B -->|queries| D[Supabase DB]
+  B -->|generates| E[Google Cloud Storage Signed URLs]
+  B -->|processes with| F[Gemini AI]
+  B -->|writes metadata to| D
+  A -->|fetches metadata from| B
+  G[Drizzle Schema] -->|generates| H[TypeScript Types]
   H -->|used by| A
-  I -->|used by| C
+  H -->|used by| B
+  D -->|migrations| G
 ```
 
 ### Tech Stack
 
 - **Backend**: Hono + tRPC with TypeScript and Bun
-- **Frontend**: React with TanStack Router
-- **Database**: PostgreSQL via Supabase (source of truth for types)
+- **Frontend**: Next.js with React and Tailwind CSS
+- **Database**: PostgreSQL via Supabase with Drizzle ORM
 - **Storage**: Google Cloud Storage
 - **AI**: Google Gemini
 - **Auth**: Supabase Auth
-- **Type Safety**: Database-driven type generation for TypeScript
+- **Type Safety**: End-to-end type safety with tRPC and Drizzle
+- **Build System**: Turbo monorepo with Bun
 
 ### User Workflow
 
 1. **Upload Video** - User uploads video file through the web interface
-2. **Processing** - FastAPI extracts audio and sends to Gemini for analysis
+2. **Processing** - Hono backend extracts audio and sends to Gemini for analysis
 3. **AI Generation** - Gemini generates title, description, transcript, and chapters
 4. **Results** - User views and can edit the generated metadata
 
@@ -595,23 +597,28 @@ LOCAL_STORAGE_PATH=./output_files
 echo/
 ├── apps/
 │   ├── core/                    # Hono/tRPC Backend (TypeScript)
-│   │   ├── api/                 # API endpoints
-│   │   ├── services/            # Business logic
-│   │   ├── lib/                 # Utilities and adapters
-│   │   └── types/               # TypeScript types
-│   └── web/                     # React Frontend (TypeScript)
-│       ├── app/                 # Application code
-│       ├── components/          # Reusable components
-│       └── types/               # Generated TypeScript types
+│   │   ├── src/
+│   │   │   ├── routers/         # tRPC routers
+│   │   │   ├── services/        # Business logic
+│   │   │   ├── lib/             # Utilities and adapters
+│   │   │   ├── db/              # Database schema and client
+│   │   │   └── middleware/      # Hono middleware
+│   │   └── tests/               # API tests
+│   ├── website/                 # Next.js Frontend
+│   │   ├── src/
+│   │   │   ├── app/             # Next.js app router
+│   │   │   ├── components/      # React components
+│   │   │   └── lib/             # Frontend utilities
+│   │   └── public/              # Static assets
+│   └── api/                     # Simple API service
 ├── packages/
 │   ├── supabase/               # Database configuration
 │   │   ├── migrations/         # SQL migration files
 │   │   └── types/              # Generated database types
-│   └── types/                  # Unified type system
-│       └── src/                # Type definitions and exports
+│   ├── ui/                     # Shared UI components
+│   ├── utils/                  # Shared utilities
+│   └── tsconfig/               # Shared TypeScript configs
 ├── scripts/                    # Build and utility scripts
-├── docs/                       # Documentation (if needed)
-├── DATABASE.md                 # Database schema reference
 └── README.md                   # Main documentation (this file)
 ```
 

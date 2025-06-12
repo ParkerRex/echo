@@ -1,8 +1,10 @@
 # FastAPI to Hono Migration Plan
 
+> **⚠️ MIGRATION COMPLETED** - This document is kept for historical reference. The migration from FastAPI to Hono + tRPC was successfully completed in December 2025. See the [CHANGELOG.md](../../CHANGELOG.md) for details.
+
 ## 📋 Overview
 
-This document outlines the comprehensive migration plan from FastAPI (Python) to Hono (TypeScript) for the Echo project's API core. The migration will modernize the backend while maintaining API compatibility and improving performance.
+This document outlined the comprehensive migration plan from FastAPI (Python) to Hono (TypeScript) for the Echo project's API core. The migration modernized the backend while maintaining API compatibility and improving performance.
 
 ## 🎯 Goals
 
