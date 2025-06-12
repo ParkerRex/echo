@@ -596,7 +596,7 @@ LOCAL_STORAGE_PATH=./output_files
 ```
 echo/
 ├── apps/
-│   ├── core/                    # Hono/tRPC Backend (TypeScript)
+│   ├── api/                     # Hono/tRPC Backend (TypeScript)
 │   │   ├── src/
 │   │   │   ├── routers/         # tRPC routers
 │   │   │   ├── services/        # Business logic

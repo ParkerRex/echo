@@ -9,7 +9,20 @@
       "Bash(sed:*)",
       "Bash(ls:*)",
       "Bash(find:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(claude mcp)",
+      "Bash(claude mcp list)",
+      "Bash(claude mcp add:*)",
+      "Bash(claude mcp get puppeteer)",
+      "Bash(bun dev)",
+      "Bash(lsof:*)",
+      "Bash(pkill:*)",
+      "Bash(ls:*)",
+      "Bash(git restore:*)",
+      "Bash(git mv:*)",
+      "Bash(bun install:*)",
+      "Bash(bun dev:api:*)"
     ],
     "deny": []
   }

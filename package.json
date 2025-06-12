@@ -14,8 +14,8 @@
     "typecheck": "turbo run typecheck",
 
     "dev:web": "turbo run dev --filter=@echo/website",
-    "dev:core": "turbo run dev --filter=@echo/core",
-    "dev:api": "turbo run dev --filter=@echo/core",
+    "dev:core": "turbo run dev --filter=@echo/api",
+    "dev:api": "turbo run dev --filter=@echo/api",
 
     "gen:types": "./scripts/generate-types.sh",
     "gen:types:db": "cd packages/supabase && supabase gen types typescript --local > types/database.ts",
