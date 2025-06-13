@@ -22,7 +22,8 @@
       "Bash(git restore:*)",
       "Bash(git mv:*)",
       "Bash(bun install:*)",
-      "Bash(bun dev:api:*)"
+      "Bash(bun dev:api:*)",
+      "Bash(cp:*)"
     ],
     "deny": []
   }

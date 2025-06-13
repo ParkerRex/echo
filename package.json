@@ -5,6 +5,10 @@
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
     "dev": "turbo run dev",
+    "dev:web": "turbo run dev --filter=@echo/website",
+    "dev:api": "turbo run dev --filter=@echo/api", 
+    "dev:full": "concurrently \"bun dev:api\" \"bun dev:web\" --names \"API,WEB\" --prefix-colors \"blue,green\"",
+
     "build": "turbo run build",
     "start": "turbo run start",
     "test": "turbo run test",
@@ -13,25 +17,14 @@
     "check": "turbo run check",
     "typecheck": "turbo run typecheck",
 
-    "dev:web": "turbo run dev --filter=@echo/website",
-    "dev:core": "turbo run dev --filter=@echo/api",
-    "dev:api": "turbo run dev --filter=@echo/api",
+    "db:types": "supabase gen types typescript --project-id YOUR_PROJECT_ID > packages/supabase/types/database.ts",
+    "db:migrate": "supabase db push --project-id YOUR_PROJECT_ID",
+    "db:reset": "supabase db reset --project-id YOUR_PROJECT_ID",
+    "db:studio": "supabase studio --project-id YOUR_PROJECT_ID",
 
-    "gen:types": "./scripts/generate-types.sh",
-    "gen:types:db": "cd packages/supabase && supabase gen types typescript --local > types/database.ts",
-
-    "db:start": "cd packages/supabase && supabase start",
-    "db:stop": "cd packages/supabase && supabase stop --no-backup",
-    "db:reset": "turbo run db:reset",
-    "db:push": "turbo run db:push",
-    "db:generate-migration": "echo 'Run: cd packages/supabase && supabase migration new <migration_name>'",
-    "db:setup-local": "bun db:start && echo 'Waiting for Supabase to start...' && sleep 10 && bun db:push && bun gen:types",
-    "db:refresh-local-schema": "bun db:push && bun gen:types",
-
-    "setup": "bun install",
-
-    "clean": "find . -name 'node_modules' -type d -exec rm -rf {} + 2>/dev/null || true && find . -name 'pnpm-lock.yaml' -delete && find . -name 'package-lock.json' -delete && find . -name 'bun.lockb' -delete && find . -name '.turbo' -type d -exec rm -rf {} + 2>/dev/null || true && turbo run clean",
-    "clean:cache": "rm -rf node_modules/.cache"
+    "setup": "bun install && echo 'Setup complete! Edit .env with your Supabase credentials, then run: bun dev'",
+    "clean": "find . -name 'node_modules' -type d -exec rm -rf {} + 2>/dev/null || true && find . -name '.turbo' -type d -exec rm -rf {} + 2>/dev/null || true",
+    "clean:cache": "rm -rf node_modules/.cache .turbo"
   },
   "dependencies": {
     "@biomejs/biome": "1.9.4",
