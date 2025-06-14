@@ -7,6 +7,8 @@ import { userRouter } from './user.router'
 import { authRouter } from './auth.router'
 import { analyticsRouter } from './analytics.router'
 import { webhookRouter } from './webhook.router'
+import { ideasRouter } from './ideas.router'
+import { contentRouter } from './content.router'
 
 /**
  * This is the primary router for your server.
@@ -21,6 +23,9 @@ export const appRouter = router({
   chat: chatRouter,
   analytics: analyticsRouter,
   webhook: webhookRouter,
+  // MVP routers
+  ideas: ideasRouter,
+  content: contentRouter,
   // Legacy router available for backward compatibility
   legacyVideo: videoRouter,
 })

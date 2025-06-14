@@ -1,15 +1,10 @@
 import { z } from 'zod'
 import { router, protectedProcedure } from '../trpc'
 import { eq, and, desc, sql, inArray, or, like, gte, lte } from 'drizzle-orm'
-import { videos, videoJobs, videoMetadata, NewVideo, NewVideoJob } from '../db/schema'
+import { videos, videoJobs, videoMetadata, type NewVideo, type NewVideoJob } from '../db/schema'
 import { VideoProcessingService } from '../services/video-processing'
 import { StorageService } from '../services/storage.service'
-import { 
-  NotFoundError, 
-  ValidationError, 
-  PayloadTooLargeError,
-  handleAsync 
-} from '../lib/errors'
+import { NotFoundError, ValidationError, PayloadTooLargeError, handleAsync } from '../lib/errors'
 import {
   commonSchemas,
   fileSchemas,
@@ -40,10 +35,10 @@ export const improvedVideoRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const { db, user } = ctx
-      
+
       // Sanitize file name
       const sanitizedFileName = sanitizeFileName(input.fileName)
-      
+
       // Handle chunked uploads
       if (input.chunkIndex !== undefined && input.totalChunks !== undefined) {
         // Store chunk and return progress
@@ -55,12 +50,12 @@ export const improvedVideoRouter = router({
           progress: ((input.chunkIndex + 1) / input.totalChunks) * 100,
         }
       }
-      
+
       // Validate file size
       if (input.fileSize > 5 * 1024 * 1024 * 1024) {
         throw new PayloadTooLargeError('Video file size exceeds 5GB limit')
       }
-      
+
       // Upload file to storage
       const [fileUrl, uploadError] = await handleAsync(
         storageService.uploadFile({
@@ -70,43 +65,49 @@ export const improvedVideoRouter = router({
           userId: user.id,
         })
       )
-      
+
       if (uploadError) {
         throw new ValidationError('Failed to upload file', uploadError)
       }
-      
+
       // Create video record with transaction
       const result = await db.transaction(async (tx) => {
-        const [video] = await tx.insert(videos).values({
-          userId: user.id,
-          fileName: sanitizedFileName,
-          fileUrl: fileUrl!,
-          fileSize: input.fileSize,
-          mimeType: input.mimeType,
-          status: 'draft',
-        } satisfies NewVideo).returning()
-        
-        const [job] = await tx.insert(videoJobs).values({
-          videoId: video.id,
-          userId: user.id,
-          status: 'pending',
-          config: {
-            generateTranscript: true,
-            generateSubtitles: true,
-            extractMetadata: true,
-            generateThumbnail: true,
-          },
-        } satisfies NewVideoJob).returning()
-        
+        const [video] = await tx
+          .insert(videos)
+          .values({
+            userId: user.id,
+            fileName: sanitizedFileName,
+            fileUrl: fileUrl!,
+            fileSize: input.fileSize,
+            mimeType: input.mimeType,
+            status: 'draft',
+          } satisfies NewVideo)
+          .returning()
+
+        const [job] = await tx
+          .insert(videoJobs)
+          .values({
+            videoId: video!.id,
+            userId: user.id,
+            status: 'pending',
+            config: {
+              generateTranscript: true,
+              generateSubtitles: true,
+              extractMetadata: true,
+              generateThumbnail: true,
+            },
+          } satisfies NewVideoJob)
+          .returning()
+
         return { video, job }
       })
-      
+
       // Queue processing job
-      await videoProcessingService.queueJob(result.job.id)
-      
+      await videoProcessingService.queueJob(result.job!.id)
+
       return {
-        video: result.video,
-        jobId: result.job.id,
+        video: result.video!,
+        jobId: result.job!.id,
       }
     }),
 
@@ -125,30 +126,29 @@ export const improvedVideoRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const { db, user } = ctx
-      
+
       const video = await db.query.videos.findFirst({
-        where: and(
-          eq(videos.id, input.videoId),
-          eq(videos.userId, user.id)
-        ),
+        where: and(eq(videos.id, input.videoId), eq(videos.userId, user.id)),
         with: {
-          metadata: input.includeMetadata,
-          jobs: input.includeJobs ? {
-            orderBy: [desc(videoJobs.createdAt)],
-            limit: 5,
-          } : false,
+          metadata: input.includeMetadata || undefined,
+          jobs: input.includeJobs
+            ? {
+                orderBy: [desc(videoJobs.createdAt)],
+                limit: 5,
+              }
+            : undefined,
         },
       })
-      
+
       if (!video) {
         throw new NotFoundError('Video', input.videoId)
       }
-      
+
       // Optionally exclude transcript from metadata if not requested
-      if (video.metadata && !input.includeTranscript) {
+      if (video && 'metadata' in video && video.metadata && !input.includeTranscript) {
         video.metadata.transcript = null
       }
-      
+
       return video
     }),
 
@@ -157,54 +157,46 @@ export const improvedVideoRouter = router({
    */
   list: protectedProcedure
     .use(rateLimiters.read)
-    .input(
-      commonSchemas.pagination
-        .merge(commonSchemas.sorting)
-        .merge(filterSchemas.videoFilter)
-    )
+    .input(commonSchemas.pagination.merge(commonSchemas.sorting).merge(filterSchemas.videoFilter))
     .query(async ({ ctx, input }) => {
       const { db, user } = ctx
-      
+
       // Build where conditions
       const conditions = [eq(videos.userId, user.id)]
-      
+
       if (input.status) {
         conditions.push(eq(videos.status, input.status))
       }
-      
+
       if (input.mimeType) {
         conditions.push(eq(videos.mimeType, input.mimeType))
       }
-      
+
       if (input.minDuration) {
         conditions.push(gte(videos.duration, input.minDuration))
       }
-      
+
       if (input.maxDuration) {
         conditions.push(lte(videos.duration, input.maxDuration))
       }
-      
+
       if (input.search) {
         // Search in file name and metadata
-        conditions.push(
-          or(
-            like(videos.fileName, `%${input.search}%`),
-            // Add metadata search if your DB supports it
-          )
-        )
+        conditions.push(like(videos.fileName, `%${input.search}%`))
       }
-      
+
       const where = and(...conditions)
-      
+
       // Execute queries in parallel
       const [items, totalCount] = await Promise.all([
         db.query.videos.findMany({
           where,
           limit: input.limit,
           offset: input.offset,
-          orderBy: input.sortBy === 'createdAt' 
-            ? [input.sortOrder === 'asc' ? videos.createdAt : desc(videos.createdAt)]
-            : [desc(videos.createdAt)],
+          orderBy:
+            input.sortBy === 'createdAt'
+              ? [input.sortOrder === 'asc' ? videos.createdAt : desc(videos.createdAt)]
+              : [desc(videos.createdAt)],
           with: {
             metadata: {
               columns: {
@@ -228,14 +220,13 @@ export const improvedVideoRouter = router({
         }),
         db.$count(videos, where),
       ])
-      
+
       return {
         items,
         totalCount,
         hasMore: input.offset + items.length < totalCount,
-        nextOffset: input.offset + items.length < totalCount 
-          ? input.offset + items.length 
-          : undefined,
+        nextOffset:
+          input.offset + items.length < totalCount ? input.offset + items.length : undefined,
       }
     }),
 
@@ -247,90 +238,75 @@ export const improvedVideoRouter = router({
     .input(batchSchemas.batchOperation)
     .mutation(async ({ ctx, input }) => {
       const { db, user } = ctx
-      
+
       // Verify ownership of all videos
       const userVideos = await db.query.videos.findMany({
-        where: and(
-          inArray(videos.id, input.ids),
-          eq(videos.userId, user.id)
-        ),
+        where: and(inArray(videos.id, input.ids), eq(videos.userId, user.id)),
         columns: { id: true, fileUrl: true },
       })
-      
+
       if (userVideos.length !== input.ids.length) {
         throw new ValidationError('Some videos not found or not owned by user')
       }
-      
+
       switch (input.operation) {
         case 'delete': {
           // Delete files from storage in parallel
           await Promise.all(
-            userVideos.map(video => 
-              storageService.deleteFile(video.fileUrl).catch(console.error)
-            )
+            userVideos.map((video) => storageService.deleteFile(video.fileUrl).catch(console.error))
           )
-          
+
           // Delete from database
-          await db.delete(videos).where(
-            and(
-              inArray(videos.id, input.ids),
-              eq(videos.userId, user.id)
-            )
-          )
-          
+          await db
+            .delete(videos)
+            .where(and(inArray(videos.id, input.ids), eq(videos.userId, user.id)))
+
           return { success: true, affected: userVideos.length }
         }
-        
+
         case 'publish': {
-          await db.update(videos)
+          await db
+            .update(videos)
             .set({ status: 'published', updatedAt: new Date() })
-            .where(
-              and(
-                inArray(videos.id, input.ids),
-                eq(videos.userId, user.id)
-              )
-            )
-          
+            .where(and(inArray(videos.id, input.ids), eq(videos.userId, user.id)))
+
           return { success: true, affected: userVideos.length }
         }
-        
+
         case 'unpublish': {
-          await db.update(videos)
+          await db
+            .update(videos)
             .set({ status: 'draft', updatedAt: new Date() })
-            .where(
-              and(
-                inArray(videos.id, input.ids),
-                eq(videos.userId, user.id)
-              )
-            )
-          
+            .where(and(inArray(videos.id, input.ids), eq(videos.userId, user.id)))
+
           return { success: true, affected: userVideos.length }
         }
-        
+
         case 'reprocess': {
           // Create new processing jobs
-          const jobs = await db.insert(videoJobs).values(
-            input.ids.map(videoId => ({
-              videoId,
-              userId: user.id,
-              status: 'pending' as const,
-              config: {
-                generateTranscript: true,
-                generateSubtitles: true,
-                extractMetadata: true,
-                generateThumbnail: true,
-              },
-            }))
-          ).returning()
-          
+          const jobs = await db
+            .insert(videoJobs)
+            .values(
+              input.ids.map((videoId) => ({
+                videoId,
+                userId: user.id,
+                status: 'pending' as const,
+                config: {
+                  generateTranscript: true,
+                  generateSubtitles: true,
+                  extractMetadata: true,
+                  generateThumbnail: true,
+                },
+              }))
+            )
+            .returning()
+
           // Queue all jobs
-          await Promise.all(
-            jobs.map(job => videoProcessingService.queueJob(job.id))
-          )
-          
+          await Promise.all(jobs.map((job) => videoProcessingService.queueJob(job.id)))
+
           return { success: true, affected: jobs.length }
         }
-        
+
         default:
           throw new ValidationError('Invalid batch operation')
       }
@@ -352,26 +328,24 @@ export const improvedVideoRouter = router({
     .mutation(async ({ ctx, input }) => {
       const { db, user } = ctx
       const { videoId, ...metadata } = input
-      
+
       // Verify ownership
       const video = await db.query.videos.findFirst({
-        where: and(
-          eq(videos.id, videoId),
-          eq(videos.userId, user.id)
-        ),
+        where: and(eq(videos.id, videoId), eq(videos.userId, user.id)),
       })
-      
+
       if (!video) {
         throw new NotFoundError('Video', videoId)
       }
-      
+
       // Update or create metadata
       const existingMetadata = await db.query.videoMetadata.findFirst({
         where: eq(videoMetadata.videoId, videoId),
       })
-      
+
       if (existingMetadata) {
-        await db.update(videoMetadata)
+        await db
+          .update(videoMetadata)
           .set({ ...metadata, updatedAt: new Date() })
           .where(eq(videoMetadata.id, existingMetadata.id))
       } else {
@@ -380,7 +354,7 @@ export const improvedVideoRouter = router({
           ...metadata,
         })
       }
-      
+
       return { success: true }
     }),
 
@@ -397,7 +371,7 @@ export const improvedVideoRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const { db, user } = ctx
-      
+
       // This is a placeholder - implement based on your analytics needs
       const stats = await db
         .select({
@@ -410,7 +384,7 @@ export const improvedVideoRouter = router({
         })
         .from(videos)
         .where(eq(videos.userId, user.id))
-      
+
       return {
         overview: stats[0],
         // Add more analytics as needed
@@ -431,26 +405,23 @@ export const improvedVideoRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const { db, user } = ctx
-      
+
       // Verify ownership
       const video = await db.query.videos.findFirst({
-        where: and(
-          eq(videos.id, input.videoId),
-          eq(videos.userId, user.id)
-        ),
+        where: and(eq(videos.id, input.videoId), eq(videos.userId, user.id)),
       })
-      
+
       if (!video) {
         throw new NotFoundError('Video', input.videoId)
       }
-      
+
       // Generate share token
       const shareToken = crypto.randomUUID()
       const expiresAt = new Date(Date.now() + input.expiresIn * 1000)
-      
+
       // Store share link info (you'll need a shares table)
       // This is a placeholder - implement based on your needs
-      
+
       return {
         shareUrl: `${process.env.PUBLIC_URL}/share/${shareToken}`,
         expiresAt,

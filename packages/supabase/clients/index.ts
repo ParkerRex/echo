@@ -1,13 +1,13 @@
-import { createBrowserClient, createServerClient } from "@supabase/ssr"
+import { createBrowserClient, createServerClient } from '@supabase/ssr'
 import { parseCookies, setCookie } from '@tanstack/react-start/server'
-import type { Database } from "../types/database"
+import type { Database } from '../types/database'
 
 /**
  * Get validated environment variables for Supabase
  * Ensures proper configuration in both server and client contexts
  */
 function getSupabaseConfig() {
-  const isServer = typeof window === "undefined"
+  const isServer = typeof window === 'undefined'
 
   if (isServer) {
     // Server-side configuration
@@ -16,8 +16,8 @@ function getSupabaseConfig() {
 
     if (!url || !anonKey) {
       throw new Error(
-        "Missing required Supabase environment variables. " +
-        "Please ensure SUPABASE_URL and SUPABASE_ANON_KEY are set."
+        'Missing required Supabase environment variables. ' +
+          'Please ensure SUPABASE_URL and SUPABASE_ANON_KEY are set.'
       )
     }
 
@@ -29,8 +29,8 @@ function getSupabaseConfig() {
 
     if (!url || !anonKey) {
       throw new Error(
-        "Missing required Supabase environment variables. " +
-        "Please ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set."
+        'Missing required Supabase environment variables. ' +
+          'Please ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set.'
       )
     }
 
@@ -55,7 +55,7 @@ export function getSupabaseServerClient() {
             value,
           }))
         } catch (error) {
-          console.error("Error parsing cookies:", error)
+          console.error('Error parsing cookies:', error)
           return []
         }
       },
@@ -64,14 +64,14 @@ export function getSupabaseServerClient() {
           cookies.forEach((cookie) => {
             setCookie(cookie.name, cookie.value, {
               httpOnly: true,
-              secure: process.env.NODE_ENV === "production",
-              sameSite: "lax",
+              secure: process.env.NODE_ENV === 'production',
+              sameSite: 'lax',
               maxAge: 60 * 60 * 24 * 7, // 7 days
-              path: "/",
+              path: '/',
             })
           })
         } catch (error) {
-          console.error("Error setting cookies:", error)
+          console.error('Error setting cookies:', error)
         }
       },
     },
@@ -87,7 +87,7 @@ export function getSupabaseServerClient() {
  */
 export function createSupabaseClient(context?: 'browser' | 'server') {
   // Auto-detect context if not provided
-  const actualContext = context || (typeof window === "undefined" ? 'server' : 'browser')
+  const actualContext = context || (typeof window === 'undefined' ? 'server' : 'browser')
 
   if (actualContext === 'server') {
     // Server context - use the TanStack Start compatible client
@@ -137,11 +137,11 @@ export const supabase = () => createSupabaseClient()
  */
 export const getSupabase = () => {
   console.warn(
-    "getSupabase() is deprecated. Use getSupabaseServerClient() for server-side operations " +
-    "or supabase() for auto-detected client/server usage."
+    'getSupabase() is deprecated. Use getSupabaseServerClient() for server-side operations ' +
+      'or supabase() for auto-detected client/server usage.'
   )
   return getSupabaseServerClient()
 }
 
 // Re-export types for convenience
-export type { Database } from "../types/database"
+export type { Database } from '../types/database'

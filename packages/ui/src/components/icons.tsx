@@ -1,6 +1,6 @@
-import { ArchiveIcon } from "@radix-ui/react-icons";
-import { FaXTwitter } from "react-icons/fa6";
-import { FiGithub } from "react-icons/fi";
+import { ArchiveIcon } from '@radix-ui/react-icons'
+import { FaXTwitter } from 'react-icons/fa6'
+import { FiGithub } from 'react-icons/fi'
 import {
   MdArrowBack,
   MdArrowDownward,
@@ -74,30 +74,30 @@ import {
   MdSort,
   MdTrendingDown,
   MdTrendingUp,
-} from "react-icons/md";
-import { PiDiscordLogo } from "react-icons/pi";
+} from 'react-icons/md'
+import { PiDiscordLogo } from 'react-icons/pi'
 
 type SVGIconProps = {
-  size?: number;
-  stroke?: string;
-  fill?: string;
-  strokeWidth?: number;
-  className?: string;
-  children?: React.ReactNode;
-  viewBox?: string;
-};
+  size?: number
+  stroke?: string
+  fill?: string
+  strokeWidth?: number
+  className?: string
+  children?: React.ReactNode
+  viewBox?: string
+}
 
 const SVGIcon: React.FC<SVGIconProps> = ({
   size = 20,
-  stroke = "currentColor",
-  fill = "currentColor",
+  stroke = 'currentColor',
+  fill = 'currentColor',
   strokeWidth = 0.25,
   className,
   children,
   viewBox,
 }) => {
-  const intrinsicContentDimension = 20;
-  const defaultViewBox = `0 0 ${intrinsicContentDimension} ${intrinsicContentDimension}`;
+  const intrinsicContentDimension = 20
+  const defaultViewBox = `0 0 ${intrinsicContentDimension} ${intrinsicContentDimension}`
 
   return (
     <svg
@@ -114,8 +114,8 @@ const SVGIcon: React.FC<SVGIconProps> = ({
     >
       {children}
     </svg>
-  );
-};
+  )
+}
 
 export const Icons = {
   LogoSmall: (props: SVGIconProps) => (
@@ -127,13 +127,7 @@ export const Icons = {
     </SVGIcon>
   ),
   Logo: (props: any) => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width={112}
-      height={28}
-      fill="none"
-      {...props}
-    >
+    <svg xmlns="http://www.w3.org/2000/svg" width={112} height={28} fill="none" {...props}>
       <path
         fill="currentColor"
         fillRule="evenodd"
@@ -182,13 +176,7 @@ export const Icons = {
     </SVGIcon>
   ),
   Apple: (props: any) => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width={19}
-      height={23}
-      fill="none"
-      {...props}
-    >
+    <svg xmlns="http://www.w3.org/2000/svg" width={19} height={23} fill="none" {...props}>
       <path
         fill="currentColor"
         d="M18.143 17.645a11.967 11.967 0 0 1-1.183 2.126c-.622.887-1.131 1.5-1.524 1.842-.608.56-1.26.846-1.958.862-.501 0-1.105-.143-1.809-.432-.706-.288-1.354-.43-1.947-.43-.622 0-1.29.142-2.003.43-.714.29-1.29.44-1.73.455-.67.029-1.337-.266-2.002-.885-.426-.371-.957-1.007-1.594-1.907-.683-.961-1.245-2.076-1.685-3.347C.236 14.986 0 13.656 0 12.369c0-1.474.319-2.746.957-3.811A5.612 5.612 0 0 1 2.96 6.53a5.39 5.39 0 0 1 2.71-.765c.531 0 1.228.165 2.095.488.863.324 1.418.489 1.661.489.182 0 .799-.192 1.843-.576.988-.355 1.822-.503 2.505-.445 1.851.15 3.242.88 4.166 2.194-1.655 1.003-2.474 2.408-2.458 4.21.015 1.404.524 2.572 1.525 3.5.454.43.96.763 1.524.999a16.56 16.56 0 0 1-.388 1.02ZM13.898.94c0 1.1-.402 2.128-1.204 3.079-.967 1.13-2.136 1.783-3.404 1.68a3.425 3.425 0 0 1-.026-.417c0-1.056.46-2.186 1.277-3.11.407-.469.926-.858 1.555-1.168.627-.306 1.22-.475 1.778-.504.017.147.024.294.024.44Z"
@@ -196,13 +184,7 @@ export const Icons = {
     </svg>
   ),
   Google: (props: any) => (
-    <svg
-      width="20"
-      height="20"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      {...props}
-    >
+    <svg width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
       <g clipPath="url(#a)">
         <path
           d="M10 3.958c1.475 0 2.796.509 3.838 1.5l2.854-2.854C14.959.992 12.696 0 10 0a9.995 9.995 0 0 0-8.933 5.508l3.325 2.58c.787-2.371 3-4.13 5.608-4.13Z"
@@ -282,27 +264,12 @@ export const Icons = {
     </svg>
   ),
   Check: (props: any) => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width={16}
-      height={17}
-      fill="none"
-      {...props}
-    >
-      <path
-        fill="currentColor"
-        d="m14 5.167-8 8L2.333 9.5l.94-.94L6 11.28l7.06-7.053.94.94Z"
-      />
+    <svg xmlns="http://www.w3.org/2000/svg" width={16} height={17} fill="none" {...props}>
+      <path fill="currentColor" d="m14 5.167-8 8L2.333 9.5l.94-.94L6 11.28l7.06-7.053.94.94Z" />
     </svg>
   ),
   AlertCircle: (props: any) => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width={16}
-      height={17}
-      fill="none"
-      {...props}
-    >
+    <svg xmlns="http://www.w3.org/2000/svg" width={16} height={17} fill="none" {...props}>
       <path
         fill="currentColor"
         d="M7.333 10.5h1.334v1.333H7.334V10.5Zm0-5.333h1.334v4H7.334v-4ZM8 1.833c-3.686 0-6.667 3-6.667 6.667A6.667 6.667 0 1 0 8 1.833Zm0 12A5.333 5.333 0 1 1 8 3.167a5.333 5.333 0 0 1 0 10.666Z"
@@ -310,13 +277,7 @@ export const Icons = {
     </svg>
   ),
   Transactions2: (props: any) => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width={40}
-      height={40}
-      fill="none"
-      {...props}
-    >
+    <svg xmlns="http://www.w3.org/2000/svg" width={40} height={40} fill="none" {...props}>
       <path
         fill="currentColor"
         d="M23.333 16.667H5V20h18.333v-3.333Zm0-6.667H5v3.333h18.333V10ZM5 26.667h11.667v-3.334H5v3.334Zm19 10 4.333-4.334 4.334 4.334L35 34.333 30.667 30 35 25.667l-2.333-2.334-4.334 4.334L24 23.333l-2.333 2.334L26 30l-4.333 4.333L24 36.667Z"
@@ -324,13 +285,7 @@ export const Icons = {
     </svg>
   ),
   Info: (props: any) => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width={14}
-      height={14}
-      fill="none"
-      {...props}
-    >
+    <svg xmlns="http://www.w3.org/2000/svg" width={14} height={14} fill="none" {...props}>
       <path
         fill="currentColor"
         d="M6.333 5h1.333V3.667H6.333M7 12.333A5.34 5.34 0 0 1 1.666 7 5.34 5.34 0 0 1 7 1.667 5.34 5.34 0 0 1 12.333 7 5.34 5.34 0 0 1 7 12.333Zm0-12a6.667 6.667 0 1 0 0 13.334A6.667 6.667 0 0 0 7 .333Zm-.667 10h1.333v-4H6.333v4Z"
@@ -338,13 +293,7 @@ export const Icons = {
     </svg>
   ),
   GitHub: (props: any) => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width={22}
-      height={22}
-      fill="none"
-      {...props}
-    >
+    <svg xmlns="http://www.w3.org/2000/svg" width={22} height={22} fill="none" {...props}>
       <path
         fill="currentColor"
         fillRule="evenodd"
@@ -464,13 +413,7 @@ export const Icons = {
     </svg>
   ),
   DotRaster: (props: any) => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width={8}
-      height={8}
-      fill="none"
-      {...props}
-    >
+    <svg xmlns="http://www.w3.org/2000/svg" width={8} height={8} fill="none" {...props}>
       <mask
         id="a"
         width={8}
@@ -479,7 +422,7 @@ export const Icons = {
         y={0}
         maskUnits="userSpaceOnUse"
         style={{
-          maskType: "alpha",
+          maskType: 'alpha',
         }}
       >
         <circle cx={4} cy={4} r={4} fill="#D9D9D9" />
@@ -490,29 +433,11 @@ export const Icons = {
     </svg>
   ),
   Gmail: (props: any) => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width={24}
-      height={24}
-      viewBox="0 0 48 48"
-      {...props}
-    >
-      <path
-        fill="#4caf50"
-        d="m45 16.2-5 2.75-5 4.75V40h7a3 3 0 0 0 3-3V16.2z"
-      />
-      <path
-        fill="#1e88e5"
-        d="m3 16.2 3.614 1.71L13 23.7V40H6a3 3 0 0 1-3-3V16.2z"
-      />
-      <path
-        fill="#e53935"
-        d="m35 11.2-11 8.25-11-8.25-1 5.8 1 6.7 11 8.25 11-8.25 1-6.7z"
-      />
-      <path
-        fill="#c62828"
-        d="M3 12.298V16.2l10 7.5V11.2L9.876 8.859A4.298 4.298 0 0 0 3 12.298z"
-      />
+    <svg xmlns="http://www.w3.org/2000/svg" width={24} height={24} viewBox="0 0 48 48" {...props}>
+      <path fill="#4caf50" d="m45 16.2-5 2.75-5 4.75V40h7a3 3 0 0 0 3-3V16.2z" />
+      <path fill="#1e88e5" d="m3 16.2 3.614 1.71L13 23.7V40H6a3 3 0 0 1-3-3V16.2z" />
+      <path fill="#e53935" d="m35 11.2-11 8.25-11-8.25-1 5.8 1 6.7 11 8.25 11-8.25 1-6.7z" />
+      <path fill="#c62828" d="M3 12.298V16.2l10 7.5V11.2L9.876 8.859A4.298 4.298 0 0 0 3 12.298z" />
       <path
         fill="#fbc02d"
         d="M45 12.298V16.2l-10 7.5V11.2l3.124-2.341A4.298 4.298 0 0 1 45 12.298z"
@@ -520,13 +445,7 @@ export const Icons = {
     </svg>
   ),
   Outlook: (props: any) => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width={24}
-      height={24}
-      viewBox="0 0 48 48"
-      {...props}
-    >
+    <svg xmlns="http://www.w3.org/2000/svg" width={24} height={24} viewBox="0 0 48 48" {...props}>
       <path
         fill="#1a237e"
         d="m43.607 23.752-7.162-4.172v11.594H44v-6.738a.793.793 0 0 0-.393-.684z"
@@ -592,10 +511,7 @@ export const Icons = {
       <path d="M480-80 200-360l56-57 184 184v-287h80v287l184-183 56 56L480-80Zm-40-520v-120h80v120h-80Zm0-200v-80h80v80h-80Z" />
     </svg>
   ),
-  Delete: ({
-    size = 24,
-    ...props
-  }: { size?: number } & React.SVGProps<SVGSVGElement>) => (
+  Delete: ({ size = 24, ...props }: { size?: number } & React.SVGProps<SVGSVGElement>) => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width={size}
@@ -688,4 +604,4 @@ export const Icons = {
   ArrowDownward: MdArrowDownward,
   ArrowUpward: MdArrowUpward,
   SubdirectoryArrowLeft: MdOutlineSubdirectoryArrowLeft,
-};
+}

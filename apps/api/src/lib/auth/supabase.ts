@@ -34,21 +34,21 @@ async function getJwtSecret(): Promise<Uint8Array> {
 export async function validateJWT(token: string): Promise<User | null> {
   try {
     const secret = await getJwtSecret()
-    
+
     // Verify the JWT
     const { payload } = await jwtVerify(token, secret, {
       issuer: env.SUPABASE_URL,
       audience: 'authenticated',
     })
-    
+
     // Extract user info from payload
     const userId = payload.sub
     const email = payload.email as string | undefined
-    
+
     if (!userId || !email) {
       return null
     }
-    
+
     return {
       id: userId,
       email,
@@ -65,11 +65,11 @@ export async function validateJWT(token: string): Promise<User | null> {
 export async function getUserById(userId: string): Promise<User | null> {
   try {
     const { data, error } = await supabase.auth.admin.getUserById(userId)
-    
+
     if (error || !data.user) {
       return null
     }
-    
+
     return {
       id: data.user.id,
       email: data.user.email || '',
@@ -90,11 +90,11 @@ export async function createUser(email: string, password: string): Promise<User 
       password,
       email_confirm: true,
     })
-    
+
     if (error || !data.user) {
       throw error || new Error('Failed to create user')
     }
-    
+
     return {
       id: data.user.id,
       email: data.user.email || email,

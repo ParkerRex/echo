@@ -1,9 +1,9 @@
-import { 
-  pgTable, 
-  uuid, 
-  text, 
-  timestamp, 
-  jsonb, 
+import {
+  pgTable,
+  uuid,
+  text,
+  timestamp,
+  jsonb,
   integer,
   boolean,
   pgEnum,
@@ -36,98 +36,130 @@ export const users = pgTable('users', {
 })
 
 // Videos table
-export const videos = pgTable('videos', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  userId: uuid('user_id').notNull().references(() => users.id),
-  fileName: text('file_name').notNull(),
-  fileUrl: text('file_url').notNull(),
-  fileSize: integer('file_size'),
-  mimeType: text('mime_type'),
-  duration: integer('duration'), // in seconds
-  status: videoStatusEnum('status').default('draft').notNull(),
-  uploadedAt: timestamp('uploaded_at').defaultNow().notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-}, (table) => {
-  return {
-    userIdIdx: index('videos_user_id_idx').on(table.userId),
-    statusIdx: index('videos_status_idx').on(table.status),
+export const videos = pgTable(
+  'videos',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    fileName: text('file_name').notNull(),
+    fileUrl: text('file_url').notNull(),
+    fileSize: integer('file_size'),
+    mimeType: text('mime_type'),
+    duration: integer('duration'), // in seconds
+    status: videoStatusEnum('status').default('draft').notNull(),
+    uploadedAt: timestamp('uploaded_at').defaultNow().notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => {
+    return {
+      userIdIdx: index('videos_user_id_idx').on(table.userId),
+      statusIdx: index('videos_status_idx').on(table.status),
+    }
   }
-})
+)
 
 // Video processing jobs
-export const videoJobs = pgTable('video_jobs', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  videoId: uuid('video_id').notNull().references(() => videos.id),
-  userId: uuid('user_id').notNull().references(() => users.id),
-  status: jobStatusEnum('status').default('pending').notNull(),
-  progress: integer('progress').default(0).notNull(), // 0-100
-  config: jsonb('config'), // Processing configuration
-  result: jsonb('result'), // Processing result/output
-  error: text('error'), // Error message if failed
-  startedAt: timestamp('started_at'),
-  completedAt: timestamp('completed_at'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-}, (table) => {
-  return {
-    videoIdIdx: index('video_jobs_video_id_idx').on(table.videoId),
-    userIdIdx: index('video_jobs_user_id_idx').on(table.userId),
-    statusIdx: index('video_jobs_status_idx').on(table.status),
+export const videoJobs = pgTable(
+  'video_jobs',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    videoId: uuid('video_id')
+      .notNull()
+      .references(() => videos.id),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    status: jobStatusEnum('status').default('pending').notNull(),
+    progress: integer('progress').default(0).notNull(), // 0-100
+    config: jsonb('config'), // Processing configuration
+    result: jsonb('result'), // Processing result/output
+    error: text('error'), // Error message if failed
+    startedAt: timestamp('started_at'),
+    completedAt: timestamp('completed_at'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => {
+    return {
+      videoIdIdx: index('video_jobs_video_id_idx').on(table.videoId),
+      userIdIdx: index('video_jobs_user_id_idx').on(table.userId),
+      statusIdx: index('video_jobs_status_idx').on(table.status),
+    }
   }
-})
+)
 
 // Video metadata (extracted data)
-export const videoMetadata = pgTable('video_metadata', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  videoId: uuid('video_id').notNull().references(() => videos.id),
-  title: text('title'),
-  description: text('description'),
-  transcript: text('transcript'),
-  subtitles: jsonb('subtitles'), // SRT/VTT data
-  tags: text('tags').array(),
-  thumbnail: text('thumbnail'), // URL
-  generatedTitles: text('generated_titles').array(), // Array of 10 generated titles
-  thumbnailUrls: text('thumbnail_urls').array(), // Array of AI-generated thumbnail URLs
-  metadata: jsonb('metadata'), // Additional extracted metadata
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-}, (table) => {
-  return {
-    videoIdIdx: index('video_metadata_video_id_idx').on(table.videoId),
+export const videoMetadata = pgTable(
+  'video_metadata',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    videoId: uuid('video_id')
+      .notNull()
+      .references(() => videos.id),
+    title: text('title'),
+    description: text('description'),
+    transcript: text('transcript'),
+    subtitles: jsonb('subtitles'), // SRT/VTT data
+    tags: text('tags').array(),
+    thumbnail: text('thumbnail'), // URL
+    generatedTitles: text('generated_titles').array(), // Array of 10 generated titles
+    thumbnailUrls: text('thumbnail_urls').array(), // Array of AI-generated thumbnail URLs
+    metadata: jsonb('metadata'), // Additional extracted metadata
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => {
+    return {
+      videoIdIdx: index('video_metadata_video_id_idx').on(table.videoId),
+    }
   }
-})
+)
 
 // Chat/Conversations
-export const chats = pgTable('chats', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  userId: uuid('user_id').notNull().references(() => users.id),
-  title: text('title').notNull(),
-  videoId: uuid('video_id').references(() => videos.id), // Optional video context
-  isActive: boolean('is_active').default(true).notNull(),
-  metadata: jsonb('metadata'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-}, (table) => {
-  return {
-    userIdIdx: index('chats_user_id_idx').on(table.userId),
-    videoIdIdx: index('chats_video_id_idx').on(table.videoId),
+export const chats = pgTable(
+  'chats',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    title: text('title').notNull(),
+    videoId: uuid('video_id').references(() => videos.id), // Optional video context
+    isActive: boolean('is_active').default(true).notNull(),
+    metadata: jsonb('metadata'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => {
+    return {
+      userIdIdx: index('chats_user_id_idx').on(table.userId),
+      videoIdIdx: index('chats_video_id_idx').on(table.videoId),
+    }
   }
-})
+)
 
 // Chat messages
-export const chatMessages = pgTable('chat_messages', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  chatId: uuid('chat_id').notNull().references(() => chats.id),
-  role: text('role', { enum: ['user', 'assistant', 'system'] }).notNull(),
-  content: text('content').notNull(),
-  metadata: jsonb('metadata'), // Token counts, model used, etc.
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-}, (table) => {
-  return {
-    chatIdIdx: index('chat_messages_chat_id_idx').on(table.chatId),
+export const chatMessages = pgTable(
+  'chat_messages',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    chatId: uuid('chat_id')
+      .notNull()
+      .references(() => chats.id),
+    role: text('role', { enum: ['user', 'assistant', 'system'] }).notNull(),
+    content: text('content').notNull(),
+    metadata: jsonb('metadata'), // Token counts, model used, etc.
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => {
+    return {
+      chatIdIdx: index('chat_messages_chat_id_idx').on(table.chatId),
+    }
   }
-})
+)
 
 // Define relations
 export const usersRelations = relations(users, ({ many }) => ({

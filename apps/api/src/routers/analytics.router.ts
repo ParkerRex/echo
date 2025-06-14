@@ -9,58 +9,56 @@ export const analyticsRouter = router({
   /**
    * Get overview statistics
    */
-  overview: protectedProcedure
-    .use(rateLimiters.read)
-    .query(async ({ ctx }) => {
-      const { db, user } = ctx
-      
-      const [videoStats, jobStats, storageStats] = await Promise.all([
-        // Video statistics
-        db
-          .select({
-            total: sql<number>`count(*)`,
-            published: sql<number>`count(*) filter (where ${videos.status} = 'published')`,
-            draft: sql<number>`count(*) filter (where ${videos.status} = 'draft')`,
-            processing: sql<number>`count(*) filter (where ${videos.status} = 'processing')`,
-            failed: sql<number>`count(*) filter (where ${videos.status} = 'failed')`,
-          })
-          .from(videos)
-          .where(eq(videos.userId, user.id)),
-        
-        // Job statistics
-        db
-          .select({
-            total: sql<number>`count(*)`,
-            pending: sql<number>`count(*) filter (where ${videoJobs.status} = 'pending')`,
-            processing: sql<number>`count(*) filter (where ${videoJobs.status} = 'processing')`,
-            completed: sql<number>`count(*) filter (where ${videoJobs.status} = 'completed')`,
-            failed: sql<number>`count(*) filter (where ${videoJobs.status} = 'failed')`,
-            avgProcessingTime: sql<number>`
+  overview: protectedProcedure.use(rateLimiters.read).query(async ({ ctx }) => {
+    const { db, user } = ctx
+
+    const [videoStats, jobStats, storageStats] = await Promise.all([
+      // Video statistics
+      db
+        .select({
+          total: sql<number>`count(*)`,
+          published: sql<number>`count(*) filter (where ${videos.status} = 'published')`,
+          draft: sql<number>`count(*) filter (where ${videos.status} = 'draft')`,
+          processing: sql<number>`count(*) filter (where ${videos.status} = 'processing')`,
+          failed: sql<number>`count(*) filter (where ${videos.status} = 'failed')`,
+        })
+        .from(videos)
+        .where(eq(videos.userId, user.id)),
+
+      // Job statistics
+      db
+        .select({
+          total: sql<number>`count(*)`,
+          pending: sql<number>`count(*) filter (where ${videoJobs.status} = 'pending')`,
+          processing: sql<number>`count(*) filter (where ${videoJobs.status} = 'processing')`,
+          completed: sql<number>`count(*) filter (where ${videoJobs.status} = 'completed')`,
+          failed: sql<number>`count(*) filter (where ${videoJobs.status} = 'failed')`,
+          avgProcessingTime: sql<number>`
               avg(extract(epoch from (${videoJobs.completedAt} - ${videoJobs.startedAt})))
               filter (where ${videoJobs.status} = 'completed')
             `,
-          })
-          .from(videoJobs)
-          .where(eq(videoJobs.userId, user.id)),
-        
-        // Storage statistics
-        db
-          .select({
-            totalSize: sql<number>`coalesce(sum(${videos.fileSize}), 0)`,
-            totalDuration: sql<number>`coalesce(sum(${videos.duration}), 0)`,
-            avgFileSize: sql<number>`coalesce(avg(${videos.fileSize}), 0)`,
-            avgDuration: sql<number>`coalesce(avg(${videos.duration}), 0)`,
-          })
-          .from(videos)
-          .where(eq(videos.userId, user.id)),
-      ])
-      
-      return {
-        videos: videoStats[0],
-        jobs: jobStats[0],
-        storage: storageStats[0],
-      }
-    }),
+        })
+        .from(videoJobs)
+        .where(eq(videoJobs.userId, user.id)),
+
+      // Storage statistics
+      db
+        .select({
+          totalSize: sql<number>`coalesce(sum(${videos.fileSize}), 0)`,
+          totalDuration: sql<number>`coalesce(sum(${videos.duration}), 0)`,
+          avgFileSize: sql<number>`coalesce(avg(${videos.fileSize}), 0)`,
+          avgDuration: sql<number>`coalesce(avg(${videos.duration}), 0)`,
+        })
+        .from(videos)
+        .where(eq(videos.userId, user.id)),
+    ])
+
+    return {
+      videos: videoStats[0],
+      jobs: jobStats[0],
+      storage: storageStats[0],
+    }
+  }),
 
   /**
    * Get time series data for charts
@@ -77,12 +75,12 @@ export const analyticsRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const { db, user } = ctx
-      
+
       const endDate = input.endDate || new Date()
-      const startDate = input.startDate || new Date(
-        endDate.getTime() - (input.period === 'hour' ? 24 : 30) * 24 * 60 * 60 * 1000
-      )
-      
+      const startDate =
+        input.startDate ||
+        new Date(endDate.getTime() - (input.period === 'hour' ? 24 : 30) * 24 * 60 * 60 * 1000)
+
       // Date truncation based on period
       const dateTrunc = {
         hour: sql`date_trunc('hour', ${videos.uploadedAt})`,
@@ -90,7 +88,7 @@ export const analyticsRouter = router({
         week: sql`date_trunc('week', ${videos.uploadedAt})`,
         month: sql`date_trunc('month', ${videos.uploadedAt})`,
       }[input.period]
-      
+
       // Metric aggregation
       const metricAgg = {
         uploads: sql<number>`count(*)`,
@@ -98,7 +96,7 @@ export const analyticsRouter = router({
         storage: sql<number>`sum(${videos.fileSize})`,
         duration: sql<number>`sum(${videos.duration})`,
       }[input.metric]
-      
+
       const data = await db
         .select({
           date: dateTrunc.as('date'),
@@ -106,15 +104,10 @@ export const analyticsRouter = router({
         })
         .from(videos)
         .leftJoin(videoJobs, eq(videos.id, videoJobs.videoId))
-        .where(
-          and(
-            eq(videos.userId, user.id),
-            between(videos.uploadedAt, startDate, endDate)
-          )
-        )
+        .where(and(eq(videos.userId, user.id), between(videos.uploadedAt, startDate, endDate)))
         .groupBy(sql`date`)
         .orderBy(sql`date`)
-      
+
       return {
         metric: input.metric,
         period: input.period,
@@ -135,13 +128,10 @@ export const analyticsRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const { db, user } = ctx
-      
+
       // Verify ownership
       const video = await db.query.videos.findFirst({
-        where: and(
-          eq(videos.id, input.videoId),
-          eq(videos.userId, user.id)
-        ),
+        where: and(eq(videos.id, input.videoId), eq(videos.userId, user.id)),
         with: {
           metadata: true,
           jobs: {
@@ -149,11 +139,11 @@ export const analyticsRouter = router({
           },
         },
       })
-      
+
       if (!video) {
         throw new Error('Video not found')
       }
-      
+
       // Get chat interactions if any
       const chatStats = await db
         .select({
@@ -169,13 +159,8 @@ export const analyticsRouter = router({
         })
         .from(chats)
         .leftJoin(chatMessages, eq(chats.id, chatMessages.chatId))
-        .where(
-          and(
-            eq(chats.userId, user.id),
-            eq(chats.videoId, input.videoId)
-          )
-        )
-      
+        .where(and(eq(chats.userId, user.id), eq(chats.videoId, input.videoId)))
+
       return {
         video: {
           id: video.id,
@@ -188,12 +173,13 @@ export const analyticsRouter = router({
         processing: {
           jobCount: video.jobs.length,
           lastProcessed: video.jobs[0]?.completedAt,
-          avgProcessingTime: video.jobs
-            .filter(j => j.completedAt && j.startedAt)
-            .reduce((acc, job) => {
-              const duration = job.completedAt!.getTime() - job.startedAt!.getTime()
-              return acc + duration
-            }, 0) / (video.jobs.filter(j => j.completedAt).length || 1),
+          avgProcessingTime:
+            video.jobs
+              .filter((j) => j.completedAt && j.startedAt)
+              .reduce((acc, job) => {
+                const duration = job.completedAt!.getTime() - job.startedAt!.getTime()
+                return acc + duration
+              }, 0) / (video.jobs.filter((j) => j.completedAt).length || 1),
         },
         engagement: chatStats[0],
         metadata: video.metadata,
@@ -203,17 +189,11 @@ export const analyticsRouter = router({
   /**
    * Get content insights
    */
-  contentInsights: protectedProcedure
-    .use(rateLimiters.read)
-    .query(async ({ ctx }) => {
-      const { db, user } = ctx
-      
-      const [
-        formatDistribution,
-        durationDistribution,
-        tagFrequency,
-        processingSuccess,
-      ] = await Promise.all([
+  contentInsights: protectedProcedure.use(rateLimiters.read).query(async ({ ctx }) => {
+    const { db, user } = ctx
+
+    const [formatDistribution, durationDistribution, tagFrequency, processingSuccess] =
+      await Promise.all([
         // Format distribution
         db
           .select({
@@ -224,7 +204,7 @@ export const analyticsRouter = router({
           .from(videos)
           .where(eq(videos.userId, user.id))
           .groupBy(videos.mimeType),
-        
+
         // Duration distribution
         db
           .select({
@@ -240,15 +220,10 @@ export const analyticsRouter = router({
             count: sql<number>`count(*)`,
           })
           .from(videos)
-          .where(
-            and(
-              eq(videos.userId, user.id),
-              sql`${videos.duration} is not null`
-            )
-          )
+          .where(and(eq(videos.userId, user.id), sql`${videos.duration} is not null`))
           .groupBy(sql`range`)
           .orderBy(sql`range`),
-        
+
         // Tag frequency
         db
           .select({
@@ -257,16 +232,11 @@ export const analyticsRouter = router({
           })
           .from(videoMetadata)
           .innerJoin(videos, eq(videoMetadata.videoId, videos.id))
-          .where(
-            and(
-              eq(videos.userId, user.id),
-              sql`${videoMetadata.tags} is not null`
-            )
-          )
+          .where(and(eq(videos.userId, user.id), sql`${videoMetadata.tags} is not null`))
           .groupBy(sql`tag`)
           .orderBy(desc(sql`count`))
           .limit(20),
-        
+
         // Processing success rate
         db
           .select({
@@ -288,14 +258,14 @@ export const analyticsRouter = router({
           .from(videoJobs)
           .where(eq(videoJobs.userId, user.id)),
       ])
-      
-      return {
-        formats: formatDistribution,
-        durations: durationDistribution,
-        topTags: tagFrequency,
-        processingStats: processingSuccess[0],
-      }
-    }),
+
+    return {
+      formats: formatDistribution,
+      durations: durationDistribution,
+      topTags: tagFrequency,
+      processingStats: processingSuccess[0],
+    }
+  }),
 
   /**
    * Get usage trends
@@ -309,10 +279,10 @@ export const analyticsRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const { db, user } = ctx
-      
+
       const startDate = new Date()
       startDate.setDate(startDate.getDate() - input.days)
-      
+
       const dailyUsage = await db
         .select({
           date: sql`date_trunc('day', ${videos.uploadedAt})`.as('date'),
@@ -322,21 +292,25 @@ export const analyticsRouter = router({
           uniqueFormats: sql<number>`count(distinct ${videos.mimeType})`,
         })
         .from(videos)
-        .where(
-          and(
-            eq(videos.userId, user.id),
-            gte(videos.uploadedAt, startDate)
-          )
-        )
+        .where(and(eq(videos.userId, user.id), gte(videos.uploadedAt, startDate)))
         .groupBy(sql`date`)
         .orderBy(sql`date`)
-      
+
       // Calculate growth metrics
-      const growth = dailyUsage.length >= 2 ? {
-        uploads: ((dailyUsage[dailyUsage.length - 1].uploads - dailyUsage[0].uploads) / dailyUsage[0].uploads) * 100,
-        storage: ((dailyUsage[dailyUsage.length - 1].totalSize - dailyUsage[0].totalSize) / dailyUsage[0].totalSize) * 100,
-      } : { uploads: 0, storage: 0 }
-      
+      const growth =
+        dailyUsage.length >= 2
+          ? {
+              uploads:
+                ((dailyUsage[dailyUsage.length - 1]!.uploads - dailyUsage[0]!.uploads) /
+                  dailyUsage[0]!.uploads) *
+                100,
+              storage:
+                ((dailyUsage[dailyUsage.length - 1]!.totalSize - dailyUsage[0]!.totalSize) /
+                  dailyUsage[0]!.totalSize) *
+                100,
+            }
+          : { uploads: 0, storage: 0 }
+
       return {
         period: input.days,
         daily: dailyUsage,
@@ -344,7 +318,8 @@ export const analyticsRouter = router({
         summary: {
           totalUploads: dailyUsage.reduce((sum, day) => sum + day.uploads, 0),
           totalStorage: dailyUsage.reduce((sum, day) => sum + day.totalSize, 0),
-          avgUploadsPerDay: dailyUsage.reduce((sum, day) => sum + day.uploads, 0) / dailyUsage.length,
+          avgUploadsPerDay:
+            dailyUsage.reduce((sum, day) => sum + day.uploads, 0) / dailyUsage.length,
         },
       }
     }),

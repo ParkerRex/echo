@@ -1,4 +1,4 @@
-import { Context, Next } from 'hono'
+import type { Context, Next } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { ZodError } from 'zod'
 import { TRPCError } from '@trpc/server'
@@ -15,9 +15,9 @@ export async function errorMiddleware(c: Context, next: Next) {
     await next()
   } catch (error) {
     console.error('Error in request:', error)
-    
+
     const requestId = c.req.header('X-Request-ID') || crypto.randomUUID()
-    
+
     // Handle different error types
     if (error instanceof HTTPException) {
       return c.json<ErrorResponse>(
@@ -26,10 +26,10 @@ export async function errorMiddleware(c: Context, next: Next) {
           message: error.message,
           requestId,
         },
-        error.status
+        error.status as any
       )
     }
-    
+
     if (error instanceof ZodError) {
       return c.json<ErrorResponse>(
         {
@@ -38,10 +38,10 @@ export async function errorMiddleware(c: Context, next: Next) {
           details: error.errors,
           requestId,
         },
-        400
+        400 as any
       )
     }
-    
+
     if (error instanceof TRPCError) {
       const statusMap: Record<string, number> = {
         UNAUTHORIZED: 401,
@@ -54,27 +54,27 @@ export async function errorMiddleware(c: Context, next: Next) {
         UNPROCESSABLE_CONTENT: 422,
         TOO_MANY_REQUESTS: 429,
       }
-      
+
       return c.json<ErrorResponse>(
         {
           error: error.code,
           message: error.message,
           requestId,
         },
-        statusMap[error.code] || 500
+        (statusMap[error.code] || 500) as any
       )
     }
-    
+
     // Generic error
     const message = error instanceof Error ? error.message : 'An unexpected error occurred'
-    
+
     return c.json<ErrorResponse>(
       {
         error: 'INTERNAL_SERVER_ERROR',
         message: process.env.NODE_ENV === 'development' ? message : 'Something went wrong',
         requestId,
       },
-      500
+      500 as any
     )
   }
 }

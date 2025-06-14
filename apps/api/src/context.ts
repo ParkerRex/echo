@@ -19,6 +19,7 @@ export interface Context {
   requestId?: string
   apiKey?: string
   isServiceRequest?: boolean
+  req: HonoContext['req']
 }
 
 /**
@@ -30,9 +31,9 @@ export async function createContext(
 ): Promise<Context> {
   // Get auth header
   const authHeader = c.req.header('Authorization')
-  
+
   let user: User | null = null
-  
+
   // Validate JWT if present
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.substring(7)
@@ -44,11 +45,12 @@ export async function createContext(
       console.error('JWT validation error:', error)
     }
   }
-  
+
   return {
     db,
     user,
     env: c.env as Env,
+    req: c.req,
   }
 }
 

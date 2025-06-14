@@ -113,52 +113,34 @@ pre code {
 }
 
 .dark .dotted-bg {
-  background-image: radial-gradient(
-    circle at 1px 1px,
-    #232323 1px,
-    transparent 0
-  );
+  background-image: radial-gradient(circle at 1px 1px, #232323 1px, transparent 0);
   background-size: 8px 8px;
 }
 
 .light .dotted-bg {
-  background-image: radial-gradient(
-    circle at 1px 1px,
-    #e7e7e7 1px,
-    transparent 0
-  );
+  background-image: radial-gradient(circle at 1px 1px, #e7e7e7 1px, transparent 0);
   background-size: 8px 8px;
 }
 
 .text-stroke {
   color: white;
-  text-shadow: -1px 1px 0 black, 1px 1px 0 black, 1px -1px 0 black, -1px -1px 0
-    black;
+  text-shadow: -1px 1px 0 black, 1px 1px 0 black, 1px -1px 0 black, -1px -1px 0 black;
 }
 
 .dark .text-stroke {
   color: black;
-  text-shadow: -1px 1px 0 white, 1px 1px 0 white, 1px -1px 0 white, -1px -1px 0
-    white;
+  text-shadow: -1px 1px 0 white, 1px 1px 0 white, 1px -1px 0 white, -1px -1px 0 white;
 }
 
 .dark .text-dotted {
-  background-image: radial-gradient(
-    circle at 0.4px 0.2px,
-    #fff 1px,
-    transparent 0
-  );
+  background-image: radial-gradient(circle at 0.4px 0.2px, #fff 1px, transparent 0);
   background-size: 5px 5px;
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .text-dotted {
-  background-image: radial-gradient(
-    circle at 0.4px 0.2px,
-    #000 1px,
-    transparent 0
-  );
+  background-image: radial-gradient(circle at 0.4px 0.2px, #000 1px, transparent 0);
   background-size: 5px 5px;
   background-clip: text;
   -webkit-text-fill-color: transparent;

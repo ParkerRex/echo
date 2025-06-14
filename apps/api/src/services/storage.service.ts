@@ -32,12 +32,10 @@ export class StorageService {
     const { fileName, data, mimeType, userId } = options
     const fileKey = this.generateFileKey(userId, fileName)
 
-    const { error } = await supabase.storage
-      .from(this.bucket)
-      .upload(fileKey, data, {
-        contentType: mimeType,
-        upsert: false,
-      })
+    const { error } = await supabase.storage.from(this.bucket).upload(fileKey, data, {
+      contentType: mimeType,
+      upsert: false,
+    })
 
     if (error) {
       throw new Error(`Failed to upload file: ${error.message}`)
@@ -51,10 +49,8 @@ export class StorageService {
    */
   async deleteFile(fileUrl: string): Promise<void> {
     const fileKey = this.extractFileKey(fileUrl)
-    
-    const { error } = await supabase.storage
-      .from(this.bucket)
-      .remove([fileKey])
+
+    const { error } = await supabase.storage.from(this.bucket).remove([fileKey])
 
     if (error) {
       console.error('Failed to delete file:', error)
@@ -69,11 +65,7 @@ export class StorageService {
     const { fileName, userId, expiresIn = 3600 } = options
     const fileKey = this.generateFileKey(userId, fileName)
 
-    const { data, error } = await supabase.storage
-      .from(this.bucket)
-      .createSignedUploadUrl(fileKey, {
-        expiresIn,
-      })
+    const { data, error } = await supabase.storage.from(this.bucket).createSignedUploadUrl(fileKey)
 
     if (error || !data) {
       throw new Error(`Failed to create upload URL: ${error?.message}`)
@@ -111,10 +103,8 @@ export class StorageService {
    * Get the public URL for a file
    */
   getPublicUrl(fileKey: string): string {
-    const { data } = supabase.storage
-      .from(this.bucket)
-      .getPublicUrl(fileKey)
-    
+    const { data } = supabase.storage.from(this.bucket).getPublicUrl(fileKey)
+
     return data.publicUrl
   }
 
@@ -126,11 +116,11 @@ export class StorageService {
     const url = new URL(fileUrl)
     const pathParts = url.pathname.split('/')
     const bucketIndex = pathParts.indexOf(this.bucket)
-    
+
     if (bucketIndex === -1) {
       throw new Error('Invalid file URL')
     }
-    
+
     return pathParts.slice(bucketIndex + 1).join('/')
   }
 

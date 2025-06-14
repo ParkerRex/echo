@@ -26,9 +26,7 @@ export class AuthorizationError extends ApiError {
 
 export class NotFoundError extends ApiError {
   constructor(resource: string, id?: string, cause?: unknown) {
-    const message = id 
-      ? `${resource} with id ${id} not found`
-      : `${resource} not found`
+    const message = id ? `${resource} with id ${id} not found` : `${resource} not found`
     super('NOT_FOUND', message, cause)
   }
 }
@@ -53,11 +51,7 @@ export class PayloadTooLargeError extends ApiError {
 
 export class ExternalServiceError extends ApiError {
   constructor(service: string, message?: string, cause?: unknown) {
-    super(
-      'INTERNAL_SERVER_ERROR', 
-      message || `External service error: ${service}`, 
-      cause
-    )
+    super('INTERNAL_SERVER_ERROR', message || `External service error: ${service}`, cause)
   }
 }
 
@@ -91,9 +85,7 @@ export function getErrorMessage(error: unknown): string {
 /**
  * Handle async errors in a type-safe way
  */
-export async function handleAsync<T>(
-  promise: Promise<T>
-): Promise<[T, null] | [null, Error]> {
+export async function handleAsync<T>(promise: Promise<T>): Promise<[T, null] | [null, Error]> {
   try {
     const data = await promise
     return [data, null]

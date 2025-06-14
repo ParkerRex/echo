@@ -1,26 +1,26 @@
 type FormatAmountParams = {
-  currency: string;
-  amount: number;
-  locale?: string;
-  minimumFractionDigits?: number;
-  maximumFractionDigits?: number;
-};
+  currency: string
+  amount: number
+  locale?: string
+  minimumFractionDigits?: number
+  maximumFractionDigits?: number
+}
 
 export function formatAmount({
   currency,
   amount,
-  locale = "en-US",
+  locale = 'en-US',
   minimumFractionDigits,
   maximumFractionDigits,
 }: FormatAmountParams) {
   if (!currency) {
-    return;
+    return
   }
 
   return Intl.NumberFormat(locale, {
-    style: "currency",
+    style: 'currency',
     currency,
     minimumFractionDigits,
     maximumFractionDigits,
-  }).format(amount);
+  }).format(amount)
 }

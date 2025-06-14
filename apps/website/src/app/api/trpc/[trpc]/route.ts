@@ -1,11 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003'
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { trpc: string } }
-) {
+export async function GET(req: NextRequest, { params }: { params: { trpc: string } }) {
   const url = new URL(req.url)
   const targetUrl = `${API_URL}/trpc/${params.trpc}${url.search}`
 
@@ -14,7 +11,7 @@ export async function GET(
   })
 
   const data = await response.text()
-  
+
   return new NextResponse(data, {
     status: response.status,
     headers: {
@@ -23,10 +20,7 @@ export async function GET(
   })
 }
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: { trpc: string } }
-) {
+export async function POST(req: NextRequest, { params }: { params: { trpc: string } }) {
   const url = new URL(req.url)
   const targetUrl = `${API_URL}/trpc/${params.trpc}${url.search}`
   const body = await req.text()
@@ -38,7 +32,7 @@ export async function POST(
   })
 
   const data = await response.text()
-  
+
   return new NextResponse(data, {
     status: response.status,
     headers: {

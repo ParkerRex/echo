@@ -20,6 +20,7 @@ export interface Env {
 
   // AI Service Configuration
   GEMINI_API_KEY: string
+  ANTHROPIC_API_KEY?: string
 
   // Redis Configuration (optional)
   REDIS_URL?: string
@@ -56,15 +57,10 @@ export function getEnv(): Env {
 
 // Validate required environment variables
 export function validateEnv(): void {
-  const required = [
-    'DATABASE_URL',
-    'SUPABASE_URL',
-    'SUPABASE_ANON_KEY',
-    'SUPABASE_JWT_SECRET',
-  ]
+  const required = ['DATABASE_URL', 'SUPABASE_URL', 'SUPABASE_ANON_KEY', 'SUPABASE_JWT_SECRET']
 
-  const missing = required.filter(key => !process.env[key])
-  
+  const missing = required.filter((key) => !process.env[key])
+
   if (missing.length > 0) {
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`)
   }

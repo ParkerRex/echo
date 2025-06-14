@@ -15,10 +15,7 @@ const t = initTRPC.context<Context>().create({
       ...shape,
       data: {
         ...shape.data,
-        zodError:
-          error.cause instanceof ZodError
-            ? error.cause.flatten()
-            : null,
+        zodError: error.cause instanceof ZodError ? error.cause.flatten() : null,
       },
     }
   },
@@ -41,12 +38,12 @@ export const publicProcedure = t.procedure
  */
 const enforceUserIsAuthed = middleware(async ({ ctx, next }) => {
   if (!ctx.user) {
-    throw new TRPCError({ 
+    throw new TRPCError({
       code: 'UNAUTHORIZED',
       message: 'Not authenticated',
     })
   }
-  
+
   return next({
     ctx: {
       // infers the `user` as non-nullable
@@ -63,16 +60,14 @@ export const protectedProcedure = t.procedure.use(enforceUserIsAuthed)
 /**
  * Admin procedure - requires admin role
  */
-const enforceUserIsAdmin = enforceUserIsAuthed.unstable_pipe(
-  async ({ ctx, next }) => {
-    // You can add admin check logic here
-    // For now, we'll just pass through
-    // if (ctx.user.role !== 'admin') {
-    //   throw new TRPCError({ code: 'FORBIDDEN' })
-    // }
-    
-    return next({ ctx })
-  }
-)
+const enforceUserIsAdmin = enforceUserIsAuthed.unstable_pipe(async ({ ctx, next }) => {
+  // You can add admin check logic here
+  // For now, we'll just pass through
+  // if (ctx.user.role !== 'admin') {
+  //   throw new TRPCError({ code: 'FORBIDDEN' })
+  // }
+
+  return next({ ctx })
+})
 
 export const adminProcedure = t.procedure.use(enforceUserIsAdmin)

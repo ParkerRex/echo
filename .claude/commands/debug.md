@@ -1,197 +1,67 @@
-# Debug Commands
+You are an expert debugger tasked with solving GitHub issues. Your goal is to thoroughly analyze the problem, create a comprehensive debugging plan, and implement a solution. Follow these steps to complete your task:
 
-Common debugging commands and workflows for the Echo project.
+    1. You will be provided with one input variable:
+   <issue_number>#$ARGUMENTS</issue_number>  
 
-## Backend Debugging
+1. Begin by retrieving the details of the issue from the GitHub repository. Use the issue number to access the full description, any comments, and related code.
 
-### Server Health Check
-```bash
-# Check if API server is running
-curl http://localhost:8000/
+2. Analyze the problem:
+   a. Identify the core issue and any related symptoms
+   b. Determine the affected components or modules
+   c. List any error messages or unexpected behaviors
 
-# Check tRPC endpoint
-curl http://localhost:8000/trpc/
-```
+3. Create a debugging plan:
+   a. Outline the steps you'll take to investigate the issue
+   b. Identify any tools or techniques you'll use (e.g., logging, breakpoints, code review)
+   c. Determine if you need any additional information or resources
 
-### Database Debugging
-```bash
-# Check database connection
-bun db:start
+4. Generate a todo list:
+   a. Break down the debugging process into specific, actionable items
+   b. Prioritize the tasks based on their importance and potential impact
+   c. Estimate the time required for each task
 
-# Open Drizzle Studio for database exploration
-cd apps/core && bun db:studio
+5. Implement solutions:
+   a. Follow your todo list to investigate and resolve the issue
+   b. Document any changes made to the code or configuration
+   c. Explain the reasoning behind each solution
 
-# View migration status
-cd packages/supabase && supabase migration list
+6. Test and verify:
+   a. Create test cases to confirm the issue has been resolved
+   b. Perform regression testing to ensure no new issues were introduced
+   c. Update documentation if necessary
 
-# Check database schema
-cd packages/supabase && supabase db diff
-```
+Throughout this process, use a <scratchpad> to organize your thoughts and keep track of your progress. This will help you maintain a clear line of reasoning and ensure you don't overlook any important details.
 
-### Logs and Monitoring
-```bash
-# View API server logs
-cd apps/core && bun dev
+Your final output should be structured as follows:
 
-# View detailed request logs
-# Logs automatically include request IDs for tracing
+<debug_report>
+  <issue_summary>
+    Briefly describe the issue and its impact
+  </issue_summary>
+  
+  <analysis>
+    Provide a detailed analysis of the problem, including your findings and any relevant code snippets
+  </analysis>
+  
+  <debugging_plan>
+    Outline your debugging plan, including the steps you took to investigate and resolve the issue
+  </debugging_plan>
+  
+  <todo_list>
+    Present your prioritized todo list with time estimates
+  </todo_list>
+  
+  <solution>
+    Describe the implemented solution(s) and explain why they effectively resolve the issue
+  </solution>
+  
+  <testing_results>
+    Report on the testing process and confirm that the issue has been resolved
+  </testing_results>
+  
+  <conclusion>
+    Summarize the debugging process and provide any recommendations for preventing similar issues in the future
+  </conclusion>
+</debug_report>
 
-# Check environment variables
-cd apps/core && bun run src/types/env.ts
-```
-
-## Frontend Debugging
-
-### Next.js Development
-```bash
-# Start with verbose logging
-cd apps/website && NEXT_DEBUG=1 bun dev
-
-# Build and analyze bundle
-cd apps/website && bun build && bun analyze
-```
-
-### tRPC Client Debugging
-```bash
-# Enable tRPC logging in development
-# Add to your component:
-# const utils = api.useUtils()
-# console.log('tRPC context:', utils)
-```
-
-## Environment Issues
-
-### Missing Environment Variables
-```bash
-# Check required variables
-grep -E "^[A-Z_]+=" .env.example
-
-# Validate environment in backend
-cd apps/core && bun run -e "import('./src/types/env.js').then(m => m.validateEnv())"
-```
-
-### Supabase Connection Issues
-```bash
-# Check Supabase status
-cd packages/supabase && supabase status
-
-# Restart Supabase
-bun db:stop && bun db:start
-
-# Reset Supabase database
-bun db:reset
-```
-
-## Performance Debugging
-
-### Bundle Analysis
-```bash
-# Analyze frontend bundle
-cd apps/website && bun build && bun analyze
-
-# Check backend performance
-cd apps/core && bun --inspect dev
-```
-
-### Database Performance
-```bash
-# View slow queries in Drizzle Studio
-cd apps/core && bun db:studio
-
-# Check database indexes
-cd packages/supabase && supabase db diff --schema public
-```
-
-## Testing and Quality
-
-### Type Checking Issues
-```bash
-# Check types across all packages
-bun typecheck
-
-# Check specific package
-cd apps/core && bun typecheck
-cd apps/website && bun typecheck
-```
-
-### Linting and Formatting
-```bash
-# Fix linting issues
-bun lint
-bun format
-
-# Check specific package
-cd apps/core && bun check
-```
-
-## Common Error Solutions
-
-### "Module not found" errors
-```bash
-# Clear all caches and reinstall
-bun clean && bun install
-
-# Check package resolution
-bun run --bun node_modules/.bin/tsc --showConfig
-```
-
-### tRPC type errors
-```bash
-# Regenerate tRPC types
-cd apps/core && bun typecheck
-cd apps/website && bun typecheck
-
-# Check router exports
-cd apps/core && bun run -e "console.log(Object.keys(require('./src/routers/index.js')))"
-```
-
-### Database connection errors
-```bash
-# Check Supabase connection
-cd packages/supabase && supabase db ping
-
-# Verify environment variables
-echo $SUPABASE_URL
-echo $DATABASE_URL
-```
-
-### Build errors
-```bash
-# Clean build artifacts
-bun clean
-
-# Clear Next.js cache
-cd apps/website && rm -rf .next
-
-# Clear Turbo cache
-rm -rf .turbo
-```
-
-## Debug Tools
-
-### Browser DevTools
-- React DevTools for component debugging
-- Network tab for API calls
-- Console for client-side errors
-- Performance tab for optimization
-
-### VS Code Extensions
-- TypeScript Hero for import management
-- Prettier for code formatting
-- ESLint for code quality
-- Thunder Client for API testing
-
-### Useful Commands
-```bash
-# Monitor file changes
-watch -n 1 'find . -name "*.ts" -o -name "*.tsx" | wc -l'
-
-# Check port usage
-lsof -i :3000  # Frontend
-lsof -i :8000  # Backend
-lsof -i :54321 # Supabase
-
-# Memory usage
-ps aux | grep node
-ps aux | grep bun
-```
+Remember to focus on providing a clear, concise, and actionable debug report. Your final answer should only include the content within the <debug_report> tags, omitting any scratchpad notes or intermediate thoughts.

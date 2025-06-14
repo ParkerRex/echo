@@ -1,4 +1,4 @@
-import { db, videoJobs, videos, videoMetadata, NewVideoMetadata } from '../db/client'
+import { db, videoJobs, videos, videoMetadata, type NewVideoMetadata } from '../db/client'
 import { eq } from 'drizzle-orm'
 import { AIService } from './ai.service'
 import { FFmpegService } from '../lib/utils/ffmpeg'
@@ -29,8 +29,9 @@ export class VideoProcessingService {
   async processJob(jobId: string): Promise<void> {
     try {
       // Update job status
-      await db.update(videoJobs)
-        .set({ 
+      await db
+        .update(videoJobs)
+        .set({
           status: 'processing',
           startedAt: new Date(),
         })
@@ -49,15 +50,13 @@ export class VideoProcessingService {
       }
 
       const { video } = job
-      const config = job.config as any || {}
+      const config = (job.config as any) || {}
 
       // Extract video metadata
       const metadata = await this.ffmpegService.extractMetadata(video.fileUrl)
-      
+
       // Update video duration
-      await db.update(videos)
-        .set({ duration: metadata.duration })
-        .where(eq(videos.id, video.id))
+      await db.update(videos).set({ duration: metadata.duration }).where(eq(videos.id, video.id))
 
       let transcriptText = ''
       let subtitlesData = null
@@ -88,7 +87,7 @@ export class VideoProcessingService {
       // Generate AI thumbnail backgrounds
       await this.updateProgress(jobId, 90)
       const aiThumbnails = await this.aiService.generateThumbnailBackgrounds(
-        titles[0], // Use the first title
+        titles[0] || '', // Use the first title
         description,
         tags,
         4 // Generate 4 different thumbnail options
@@ -115,12 +114,11 @@ export class VideoProcessingService {
       } satisfies NewVideoMetadata)
 
       // Update video status
-      await db.update(videos)
-        .set({ status: 'published' })
-        .where(eq(videos.id, video.id))
+      await db.update(videos).set({ status: 'published' }).where(eq(videos.id, video.id))
 
       // Mark job as completed
-      await db.update(videoJobs)
+      await db
+        .update(videoJobs)
         .set({
           status: 'completed',
           progress: 100,
@@ -133,12 +131,12 @@ export class VideoProcessingService {
           },
         })
         .where(eq(videoJobs.id, jobId))
-
     } catch (error) {
       console.error('Video processing error:', error)
-      
+
       // Mark job as failed
-      await db.update(videoJobs)
+      await db
+        .update(videoJobs)
         .set({
           status: 'failed',
           error: error instanceof Error ? error.message : 'Unknown error',
@@ -150,11 +148,9 @@ export class VideoProcessingService {
       const job = await db.query.videoJobs.findFirst({
         where: eq(videoJobs.id, jobId),
       })
-      
+
       if (job?.videoId) {
-        await db.update(videos)
-          .set({ status: 'failed' })
-          .where(eq(videos.id, job.videoId))
+        await db.update(videos).set({ status: 'failed' }).where(eq(videos.id, job.videoId))
       }
     }
   }
@@ -163,16 +159,15 @@ export class VideoProcessingService {
    * Update job progress
    */
   private async updateProgress(jobId: string, progress: number): Promise<void> {
-    await db.update(videoJobs)
-      .set({ progress })
-      .where(eq(videoJobs.id, jobId))
+    await db.update(videoJobs).set({ progress }).where(eq(videoJobs.id, jobId))
   }
 
   /**
    * Cancel a job
    */
   async cancelJob(jobId: string): Promise<void> {
-    await db.update(videoJobs)
+    await db
+      .update(videoJobs)
       .set({
         status: 'cancelled',
         completedAt: new Date(),

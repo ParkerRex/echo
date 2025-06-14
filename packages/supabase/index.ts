@@ -1,2 +1,2 @@
-export * from "./clients";
-export * from "./types/db";
+export * from './clients'
+export * from './types/db'

@@ -27,7 +27,10 @@ export const commonSchemas = {
 export const fileSchemas = {
   videoUpload: z.object({
     fileName: z.string().min(1).max(255),
-    fileSize: z.number().min(1).max(5 * 1024 * 1024 * 1024), // 5GB max
+    fileSize: z
+      .number()
+      .min(1)
+      .max(5 * 1024 * 1024 * 1024), // 5GB max
     mimeType: z.enum([
       'video/mp4',
       'video/quicktime',
@@ -39,14 +42,11 @@ export const fileSchemas = {
   }),
   imageUpload: z.object({
     fileName: z.string().min(1).max(255),
-    fileSize: z.number().min(1).max(10 * 1024 * 1024), // 10MB max
-    mimeType: z.enum([
-      'image/jpeg',
-      'image/png',
-      'image/gif',
-      'image/webp',
-      'image/svg+xml',
-    ]),
+    fileSize: z
+      .number()
+      .min(1)
+      .max(10 * 1024 * 1024), // 10MB max
+    mimeType: z.enum(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml']),
   }),
 }
 
@@ -58,15 +58,17 @@ export const videoConfigSchema = z.object({
   generateSubtitles: z.boolean().default(true),
   extractMetadata: z.boolean().default(true),
   generateThumbnail: z.boolean().default(true),
-  targetResolutions: z.array(
-    z.enum(['360p', '480p', '720p', '1080p', '1440p', '2160p'])
-  ).optional(),
+  targetResolutions: z
+    .array(z.enum(['360p', '480p', '720p', '1080p', '1440p', '2160p']))
+    .optional(),
   outputFormat: z.enum(['mp4', 'webm']).default('mp4'),
-  watermark: z.object({
-    enabled: z.boolean(),
-    position: z.enum(['top-left', 'top-right', 'bottom-left', 'bottom-right']),
-    opacity: z.number().min(0).max(1),
-  }).optional(),
+  watermark: z
+    .object({
+      enabled: z.boolean(),
+      position: z.enum(['top-left', 'top-right', 'bottom-left', 'bottom-right']),
+      opacity: z.number().min(0).max(1),
+    })
+    .optional(),
 })
 
 /**
@@ -106,7 +108,7 @@ export const filterSchemas = {
 export function sanitizeFileName(fileName: string): string {
   // Remove any path components
   const baseName = fileName.split(/[/\\]/).pop() || fileName
-  
+
   // Replace problematic characters
   return baseName
     .replace(/[^a-zA-Z0-9.-]/g, '_')
@@ -118,10 +120,7 @@ export function sanitizeFileName(fileName: string): string {
 /**
  * Validate file extension
  */
-export function validateFileExtension(
-  fileName: string, 
-  allowedExtensions: string[]
-): boolean {
+export function validateFileExtension(fileName: string, allowedExtensions: string[]): boolean {
   const ext = fileName.split('.').pop()?.toLowerCase()
   return ext ? allowedExtensions.includes(ext) : false
 }
@@ -146,15 +145,15 @@ export function safeParse<T>(
   data: unknown
 ): { success: true; data: T } | { success: false; errors: string[] } {
   const result = schema.safeParse(data)
-  
+
   if (result.success) {
     return { success: true, data: result.data }
   }
-  
-  const errors = result.error.issues.map(issue => {
+
+  const errors = result.error.issues.map((issue) => {
     const path = issue.path.join('.')
     return path ? `${path}: ${issue.message}` : issue.message
   })
-  
+
   return { success: false, errors }
 }

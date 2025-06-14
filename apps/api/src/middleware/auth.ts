@@ -82,9 +82,10 @@ export const auth = {
   }),
 
   // Custom role check
-  role: (roles: string[]) => createAuthMiddleware({
-    allowedRoles: roles,
-  }),
+  role: (roles: string[]) =>
+    createAuthMiddleware({
+      allowedRoles: roles,
+    }),
 }
 
 /**
@@ -100,7 +101,7 @@ export const optionalAuth = middleware(async ({ ctx, next }) => {
  */
 export function createApiKeyMiddleware(validKeys: Set<string>) {
   return middleware(async ({ ctx, next }) => {
-    const apiKey = ctx.req?.headers.get('x-api-key')
+    const apiKey = ctx.req?.header('x-api-key')
 
     if (!apiKey || !validKeys.has(apiKey)) {
       throw new AuthenticationError('Invalid API key')

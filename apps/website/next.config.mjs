@@ -3,7 +3,7 @@ const config = {
   poweredByHeader: false,
   reactStrictMode: true,
   trailingSlash: true,
-  transpilePackages: ["@echo/ui", "@echo/tailwind", "next-mdx-remote"],
+  transpilePackages: ['@echo/ui', '@echo/tailwind', 'next-mdx-remote'],
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -13,6 +13,6 @@ const config = {
   experimental: {
     inlineCss: true,
   },
-};
+}
 
-export default config;
+export default config

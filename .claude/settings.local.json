@@ -23,7 +23,16 @@
       "Bash(git mv:*)",
       "Bash(bun install:*)",
       "Bash(bun dev:api:*)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "mcp__puppeteer__puppeteer_navigate",
+      "mcp__puppeteer__puppeteer_screenshot",
+      "mcp__puppeteer__puppeteer_evaluate",
+      "Bash(bun run:*)",
+      "Bash(bun run lint:*)",
+      "Bash(bun run:*)",
+      "Bash(bun update:*)",
+      "Bash(npx tsc:*)",
+      "Bash(test -f .env)"
     ],
     "deny": []
   }

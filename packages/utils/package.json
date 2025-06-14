@@ -20,6 +20,7 @@
     "date-fns": "^4.1.0"
   },
   "devDependencies": {
+    "@echo/tsconfig": "workspace:*",
     "@types/node": "^20.0.0",
     "typescript": "^5.3.3"
   }

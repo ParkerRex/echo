@@ -5,7 +5,7 @@ import postgres from 'postgres'
 
 const runMigrations = async () => {
   console.log('🚀 Running database migrations...')
-  
+
   const connectionString = process.env.DATABASE_URL!
   const sql = postgres(connectionString, { max: 1 })
   const db = drizzle(sql)

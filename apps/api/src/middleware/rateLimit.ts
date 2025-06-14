@@ -38,8 +38,8 @@ export function createRateLimiter(config: RateLimitConfig) {
     const key = keyGenerator
       ? keyGenerator(ctx)
       : ctx.user
-      ? `user:${ctx.user.id}:${path}`
-      : `ip:${ctx.req?.headers.get('x-forwarded-for') || 'unknown'}:${path}`
+        ? `user:${ctx.user.id}:${path}`
+        : `ip:${ctx.req?.header('x-forwarded-for') || 'unknown'}:${path}`
 
     const now = Date.now()
     const record = rateLimitStore.get(key)
@@ -56,10 +56,8 @@ export function createRateLimiter(config: RateLimitConfig) {
 
       if (record.count > max) {
         const retryAfter = Math.ceil((record.resetAt - now) / 1000)
-        
-        throw new RateLimitError(
-          `Rate limit exceeded. Try again in ${retryAfter} seconds`
-        )
+
+        throw new RateLimitError(`Rate limit exceeded. Try again in ${retryAfter} seconds`)
       }
     }
 
@@ -102,10 +100,11 @@ export const rateLimiters = {
   }),
 
   // Custom rate limit based on operation cost
-  cost: (cost: number) => createRateLimiter({
-    windowMs: 60 * 60 * 1000, // 1 hour
-    max: Math.floor(1000 / cost), // Adjust max based on cost
-  }),
+  cost: (cost: number) =>
+    createRateLimiter({
+      windowMs: 60 * 60 * 1000, // 1 hour
+      max: Math.floor(1000 / cost), // Adjust max based on cost
+    }),
 }
 
 /**

@@ -21,7 +21,7 @@ app.use('*', errorMiddleware)
 app.use(
   '*',
   cors({
-    origin: env.CORS_ORIGINS?.split(',') || ['http://localhost:3000'],
+    origin: env.CORS_ORIGINS?.split(',') || ['http://localhost:3001'],
     credentials: true,
   })
 )
@@ -41,7 +41,9 @@ app.use(
   '/trpc/*',
   trpcServer({
     router: appRouter,
-    createContext,
+    createContext: async (opts, c) => {
+      return (await createContext(opts, c)) as any
+    },
     endpoint: '/trpc',
   })
 )
@@ -71,7 +73,7 @@ app.notFound((c) => {
 // Global error handler
 app.onError((err, c) => {
   console.error(`Error in ${c.req.method} ${c.req.path}:`, err)
-  
+
   return c.json(
     {
       error: 'Internal Server Error',
@@ -82,7 +84,7 @@ app.onError((err, c) => {
 })
 
 // Start server
-const port = parseInt(env.PORT || '8000', 10)
+const port = parseInt(env.PORT || '3003', 10)
 const host = env.HOST || '0.0.0.0'
 
 console.log(`🚀 Server starting...`)

@@ -4,9 +4,9 @@ import { getEnv } from '../types/env'
 const env = getEnv()
 
 export interface ChatContext {
-  videoTitle?: string
-  videoDescription?: string
-  transcript?: string
+  videoTitle?: string | null
+  videoDescription?: string | null
+  transcript?: string | null
   recentMessages?: Array<{
     role: string
     content: string
@@ -45,15 +45,15 @@ export class AIService {
     // In a real implementation, this would use a speech-to-text service
     // For now, we'll use Gemini with audio capabilities when available
     // or integrate with services like Whisper API
-    
+
     // Placeholder implementation
     console.log('Transcribing audio from:', audioUrl)
-    
+
     // You would typically:
     // 1. Download the audio file
     // 2. Send to transcription service
     // 3. Return the transcript
-    
+
     return 'This is a placeholder transcript. In production, integrate with Whisper API or similar service.'
   }
 
@@ -78,7 +78,7 @@ export class AIService {
 
     // Parse SRT to structured format
     const subtitles = this.parseSRT(srtContent)
-    
+
     return {
       srt: srtContent,
       entries: subtitles,
@@ -88,7 +88,10 @@ export class AIService {
   /**
    * Generate video metadata (titles, description, tags)
    */
-  async generateVideoMetadata(transcript: string, fileName: string): Promise<{
+  async generateVideoMetadata(
+    transcript: string,
+    fileName: string
+  ): Promise<{
     titles: string[]
     description: string
     tags: string[]
@@ -130,7 +133,12 @@ export class AIService {
         if (parsed.titles && Array.isArray(parsed.titles)) {
           parsed.titles = parsed.titles.slice(0, 10)
           while (parsed.titles.length < 10) {
-            parsed.titles.push(`${fileName.replace(/\.[^/.]+$/, '')} - Part ${parsed.titles.length + 1}`.substring(0, 60))
+            parsed.titles.push(
+              `${fileName.replace(/\.[^/.]+$/, '')} - Part ${parsed.titles.length + 1}`.substring(
+                0,
+                60
+              )
+            )
           }
         }
         return parsed
@@ -162,10 +170,7 @@ export class AIService {
   /**
    * Generate chat response
    */
-  async generateChatResponse(
-    message: string,
-    context: ChatContext
-  ): Promise<ChatResponse> {
+  async generateChatResponse(message: string, context: ChatContext): Promise<ChatResponse> {
     const systemPrompt = this.buildSystemPrompt(context)
     const conversationHistory = this.buildConversationHistory(context.recentMessages || [])
 
@@ -180,7 +185,7 @@ export class AIService {
 
     const result = await this.model.generateContent(prompt)
     const response = await result.response
-    
+
     return {
       content: response.text(),
       model: 'gemini-pro',
@@ -194,10 +199,7 @@ export class AIService {
   /**
    * Stream chat response
    */
-  async *streamChatResponse(
-    message: string,
-    context: ChatContext
-  ): AsyncGenerator<StreamChunk> {
+  async *streamChatResponse(message: string, context: ChatContext): AsyncGenerator<StreamChunk> {
     const systemPrompt = this.buildSystemPrompt(context)
     const conversationHistory = this.buildConversationHistory(context.recentMessages || [])
 
@@ -248,7 +250,7 @@ export class AIService {
     }
 
     prompt += '\n\nProvide helpful, accurate, and contextual responses.'
-    
+
     return prompt
   }
 
@@ -258,11 +260,13 @@ export class AIService {
   private buildConversationHistory(messages: Array<{ role: string; content: string }>): string {
     if (!messages.length) return ''
 
-    return 'Recent conversation:\n' + 
+    return (
+      'Recent conversation:\n' +
       messages
         .slice(-5) // Last 5 messages
-        .map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`)
+        .map((msg) => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`)
         .join('\n')
+    )
   }
 
   /**
@@ -280,14 +284,14 @@ export class AIService {
     for (const block of blocks) {
       const lines = block.trim().split('\n')
       if (lines.length >= 3) {
-        const index = parseInt(lines[0])
-        const [startTime, endTime] = lines[1].split(' --> ')
+        const index = parseInt(lines[0]!)
+        const [startTime, endTime] = lines[1]!.split(' --> ')
         const text = lines.slice(2).join('\n')
 
         entries.push({
           index,
-          startTime: startTime.trim(),
-          endTime: endTime.trim(),
+          startTime: startTime?.trim() || '',
+          endTime: endTime?.trim() || '',
           text: text.trim(),
         })
       }
@@ -310,7 +314,7 @@ export class AIService {
 
     const result = await this.model.generateContent(prompt)
     const response = await result.response
-    
+
     return response.text()
   }
 
@@ -331,8 +335,8 @@ export class AIService {
 
     return topicsText
       .split(',')
-      .map(topic => topic.trim())
-      .filter(topic => topic.length > 0)
+      .map((topic: string) => topic.trim())
+      .filter((topic: string) => topic.length > 0)
   }
 
   /**
@@ -345,7 +349,7 @@ export class AIService {
     count: number = 4
   ): Promise<string[]> {
     const thumbnailUrls: string[] = []
-    
+
     // Different styles for variety
     const styles = [
       'vibrant gradient background with abstract shapes',
@@ -375,7 +379,7 @@ export class AIService {
         // For now, we'll generate a placeholder URL
         const placeholderUrl = `https://picsum.photos/seed/${videoTitle}-${i}/1920/1080`
         thumbnailUrls.push(placeholderUrl)
-        
+
         // In production with real Imagen 3:
         // const result = await this.imagenModel.generateImage({
         //   prompt,

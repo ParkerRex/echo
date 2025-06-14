@@ -1,25 +1,25 @@
-import { type Editor, BubbleMenu as TiptapBubbleMenu } from "@tiptap/react";
-import { useState } from "react";
+import { type Editor, BubbleMenu as TiptapBubbleMenu } from '@tiptap/react'
+import { useState } from 'react'
 import {
   MdOutlineFormatBold,
   MdOutlineFormatItalic,
   MdOutlineFormatStrikethrough,
-} from "react-icons/md";
-import type { Props as TippyOptions } from "tippy.js";
-import { BubbleMenuItem } from "./bubble-item";
-import { LinkItem } from "./link-item";
+} from 'react-icons/md'
+import type { Props as TippyOptions } from 'tippy.js'
+import { BubbleMenuItem } from './bubble-item'
+import { LinkItem } from './link-item'
 
 export function BubbleMenu({
   editor,
   tippyOptions,
 }: {
-  editor: Editor;
-  tippyOptions?: TippyOptions;
+  editor: Editor
+  tippyOptions?: TippyOptions
 }) {
-  const [openLink, setOpenLink] = useState(false);
+  const [openLink, setOpenLink] = useState(false)
 
   if (!editor) {
-    return null;
+    return null
   }
 
   return (
@@ -30,7 +30,7 @@ export function BubbleMenu({
             <BubbleMenuItem
               editor={editor}
               action={() => editor.chain().focus().toggleBold().run()}
-              isActive={editor.isActive("bold")}
+              isActive={editor.isActive('bold')}
             >
               <MdOutlineFormatBold className="size-4" />
               <span className="sr-only">Bold</span>
@@ -39,7 +39,7 @@ export function BubbleMenu({
             <BubbleMenuItem
               editor={editor}
               action={() => editor.chain().focus().toggleItalic().run()}
-              isActive={editor.isActive("italic")}
+              isActive={editor.isActive('italic')}
             >
               <MdOutlineFormatItalic className="size-4" />
               <span className="sr-only">Italic</span>
@@ -48,7 +48,7 @@ export function BubbleMenu({
             <BubbleMenuItem
               editor={editor}
               action={() => editor.chain().focus().toggleStrike().run()}
-              isActive={editor.isActive("strike")}
+              isActive={editor.isActive('strike')}
             >
               <MdOutlineFormatStrikethrough className="size-4" />
               <span className="sr-only">Strike</span>
@@ -59,5 +59,5 @@ export function BubbleMenu({
         </div>
       </TiptapBubbleMenu>
     </div>
-  );
+  )
 }

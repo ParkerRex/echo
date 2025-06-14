@@ -1,1 +1,1 @@
-module.exports = require("@echo/ui/postcss");
+module.exports = require('@echo/ui/postcss')
