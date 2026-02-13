@@ -255,6 +255,44 @@ This project has been completely rewritten from Python/FastAPI to TypeScript/Hon
 - **Modern Tooling**: Better debugging and development tools
 - **Unified Language**: Single language (TypeScript) across the stack
 
+## Reliability & Production Features
+
+Echo API implements comprehensive reliability patterns for production deployment:
+
+### 🛡️ Reliability Features
+- **Circuit Breakers**: Prevent cascading failures for external services
+- **Retry Logic**: Exponential backoff with jitter for transient failures  
+- **Timeout Management**: Operation-specific timeouts prevent hanging
+- **Health Monitoring**: Comprehensive health checks with `/health`, `/ready`, `/live`
+- **Error Tracking**: Intelligent error categorization and alerting
+- **Graceful Degradation**: AI fallbacks ensure continued functionality
+
+### 📊 Monitoring & Observability
+- **Real-time Metrics**: Request performance, error rates, circuit breaker stats
+- **Health Endpoints**: Kubernetes-compatible liveness and readiness probes
+- **Structured Logging**: Request tracing with context and performance data
+- **Error Analytics**: Automatic error grouping and trend analysis
+
+### 🔒 Security & Validation
+- **File Upload Security**: Comprehensive validation, virus scanning, magic number checks
+- **Rate Limiting**: Built-in rate limiting with per-route configuration  
+- **Input Validation**: Zod schemas for all API inputs
+- **Authentication**: Supabase JWT validation with user context
+
+### 🗄️ Database Reliability
+- **Connection Pooling**: Optimized pool configuration with lifecycle management
+- **Automatic Retries**: Database operations with circuit breaker protection
+- **Graceful Shutdown**: Clean connection draining on process termination
+- **Health Monitoring**: Connection stats and query performance tracking
+
+### 🤖 AI Service Resilience
+- **Multi-tier Fallback**: Cache → AI Services → Algorithms → Templates → Defaults
+- **Service Selection**: Automatic routing to best available AI service
+- **Confidence Scoring**: Response quality indicators for degraded modes
+- **Response Caching**: Intelligent caching with TTL management
+
+See [RELIABILITY.md](../../docs/RELIABILITY.md) for detailed documentation.
+
 ## License
 
 MIT

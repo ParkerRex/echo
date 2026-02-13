@@ -7,6 +7,8 @@ import { appRouter } from './routers'
 import { validateEnv, getEnv } from './types/env'
 import { errorMiddleware } from './middleware/error'
 import { loggingMiddleware, requestIdMiddleware } from './middleware/logging'
+import { performHealthCheck, metrics } from './lib/health'
+import { circuitBreakers } from './lib/circuit-breaker'
 
 // Validate environment variables on startup
 validateEnv()
@@ -26,7 +28,7 @@ app.use(
   })
 )
 
-// Health check endpoint
+// Health check endpoints
 app.get('/', (c) => {
   return c.json({
     status: 'ok',
@@ -34,6 +36,67 @@ app.get('/', (c) => {
     version: '2.0.0',
     timestamp: new Date().toISOString(),
   })
+})
+
+// Comprehensive health check
+app.get('/health', async (c) => {
+  try {
+    const health = await performHealthCheck()
+    const statusCode = health.status === 'healthy' ? 200 : 
+                      health.status === 'degraded' ? 200 : 503
+    
+    return c.json(health, statusCode as any)
+  } catch (error) {
+    console.error('Health check failed:', error)
+    return c.json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      error: 'Health check execution failed'
+    }, 503 as any)
+  }
+})
+
+// Metrics endpoint
+app.get('/metrics', (c) => {
+  const appMetrics = metrics.getMetrics()
+  
+  // Add circuit breaker stats
+  const circuitBreakerStats = {
+    openai: circuitBreakers.openai.getStats(),
+    youtube: circuitBreakers.youtube.getStats(),
+    anthropic: circuitBreakers.anthropic.getStats(),
+    database: circuitBreakers.database.getStats(),
+  }
+  
+  return c.json({
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    ...appMetrics,
+    circuitBreakers: circuitBreakerStats,
+  })
+})
+
+// Readiness probe (for Kubernetes)
+app.get('/ready', async (c) => {
+  try {
+    // Quick check of critical services
+    const health = await performHealthCheck()
+    const isReady = health.checks.database.status === 'pass' && 
+                   health.checks.openai.status !== 'fail'
+    
+    if (isReady) {
+      return c.json({ status: 'ready', timestamp: new Date().toISOString() })
+    } else {
+      return c.json({ status: 'not ready', timestamp: new Date().toISOString() }, 503 as any)
+    }
+  } catch (error) {
+    return c.json({ status: 'not ready', error: 'Readiness check failed' }, 503 as any)
+  }
+})
+
+// Liveness probe (for Kubernetes)
+app.get('/live', (c) => {
+  return c.json({ status: 'alive', timestamp: new Date().toISOString() })
 })
 
 // tRPC endpoint
@@ -89,8 +152,8 @@ const host = env.HOST || '0.0.0.0'
 
 console.log(`🚀 Server starting...`)
 console.log(`📍 Environment: ${env.NODE_ENV}`)
-console.log(`🔗 tRPC endpoint: http://${host}:${port}/trpc`)
-console.log(`🌐 Health check: http://${host}:${port}/`)
+console.log(`🔗 tRPC endpoint: http://${host === '0.0.0.0' ? 'localhost' : host}:${port}/trpc`)
+console.log(`🌐 Health check: http://${host === '0.0.0.0' ? 'localhost' : host}:${port}/`)
 
 serve({
   fetch: app.fetch,

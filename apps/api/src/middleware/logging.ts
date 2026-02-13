@@ -41,6 +41,14 @@ export async function loggingMiddleware(c: Context, next: Next) {
       logEntry.userId = user.id
     }
 
+    // Record metrics (try to import dynamically to avoid circular imports)
+    try {
+      const { metrics } = await import('../lib/health')
+      metrics.recordRequest(duration, c.res.status < 400)
+    } catch (error) {
+      // Ignore metrics recording errors
+    }
+
     // Log based on status
     if (c.res.status >= 500) {
       console.error('[ERROR]', JSON.stringify(logEntry))

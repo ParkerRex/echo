@@ -21,6 +21,7 @@ export interface Env {
   // AI Service Configuration
   GEMINI_API_KEY: string
   ANTHROPIC_API_KEY?: string
+  OPENAI_API_KEY?: string
 
   // Redis Configuration (optional)
   REDIS_URL?: string
@@ -48,6 +49,10 @@ export interface Env {
 
   // External Service URLs
   PUBLIC_URL?: string
+
+  // Google OAuth (for YouTube)
+  GOOGLE_CLIENT_ID?: string
+  GOOGLE_CLIENT_SECRET?: string
 }
 
 // Type-safe environment variable access

@@ -6,14 +6,15 @@
 2. [Quick Start](#quick-start)
 3. [Website](#website)
 4. [Architecture](#architecture)
-5. [End-to-End Type Safety](#end-to-end-type-safety)
-6. [Development Workflow](#development-workflow)
-7. [Database & Migrations](#database--migrations)
-8. [Supabase Development Rules](#supabase-development-rules)
-9. [Environment Configuration](#environment-configuration)
-10. [Project Structure](#project-structure)
-11. [Development Commands](#development-commands)
-12. [Contributing](#contributing)
+5. [Reliability & Production](#reliability--production)
+6. [End-to-End Type Safety](#end-to-end-type-safety)
+7. [Development Workflow](#development-workflow)
+8. [Database & Migrations](#database--migrations)
+9. [Supabase Development Rules](#supabase-development-rules)
+10. [Environment Configuration](#environment-configuration)
+11. [Project Structure](#project-structure)
+12. [Development Commands](#development-commands)
+13. [Contributing](#contributing)
 
 ## Overview
 
@@ -156,6 +157,8 @@ The website follows modern Next.js and tRPC patterns:
 - **Component Architecture**: Reusable UI components from shared packages
 - **Authentication Flow**: Seamless integration with Supabase Auth
 - **Error Handling**: Comprehensive error boundaries with user-friendly messages
+- **Security**: Route protection, rate limiting, and security headers
+- **Monitoring**: Health checks and performance monitoring
 
 ## Architecture
 
@@ -184,6 +187,7 @@ graph TD
 - **Auth**: Supabase Auth
 - **Type Safety**: End-to-end type safety with tRPC and Drizzle
 - **Build System**: Turbo monorepo with Bun
+- **Reliability**: Comprehensive production-ready reliability patterns
 
 ### User Workflow
 
@@ -191,6 +195,78 @@ graph TD
 2. **Processing** - Hono backend extracts audio and sends to Gemini for analysis
 3. **AI Generation** - Gemini generates title, description, transcript, and chapters
 4. **Results** - User views and can edit the generated metadata
+
+## Reliability & Production
+
+Echo implements comprehensive reliability patterns for bulletproof production deployment, ensuring high availability, fault tolerance, and graceful degradation.
+
+### 🛡️ Core Reliability Features
+
+- **Circuit Breakers**: Prevent cascading failures by monitoring external services and failing fast when they're unavailable
+- **Retry Logic**: Exponential backoff with jitter for handling transient failures automatically
+- **Timeout Management**: Operation-specific timeouts prevent hanging requests and resource exhaustion
+- **Health Monitoring**: Comprehensive health checks for all system components with Kubernetes-compatible probes
+- **Error Tracking**: Intelligent error categorization, aggregation, and alerting with rate limiting
+- **Graceful Degradation**: Multi-tier AI fallback system ensures functionality even when services fail
+
+### 📊 Monitoring & Observability
+
+- **Health Endpoints**: `/health`, `/ready`, `/live` for comprehensive system monitoring
+- **Real-time Metrics**: Request performance, error rates, circuit breaker stats, memory usage
+- **Structured Logging**: Request tracing with context and performance data for debugging
+- **Error Analytics**: Automatic error grouping, severity classification, and trend analysis
+- **Performance Tracking**: P50/P95/P99 response times, database query performance, cache hit rates
+
+### 🔒 Security & Validation
+
+- **File Upload Security**: Comprehensive validation including MIME type verification, magic number checks, virus scanning, and suspicious content detection
+- **Rate Limiting**: Intelligent rate limiting with different limits per route type (100/min default, 20/min auth, 200/min API)
+- **Input Validation**: Zod schemas for all API inputs with runtime validation
+- **Authentication**: Supabase JWT validation with proper session management and route protection
+- **Security Headers**: XSS protection, clickjacking prevention, and content type validation
+
+### 🗄️ Database Reliability
+
+- **Connection Pooling**: Optimized pool configuration (20 connections) with proper lifecycle management
+- **Automatic Retries**: Database operations protected by circuit breakers with exponential backoff
+- **Graceful Shutdown**: Clean connection draining on process termination with SIGTERM/SIGINT handling
+- **Health Monitoring**: Real-time connection stats, query performance tracking, and error rate monitoring
+- **Transaction Safety**: Proper transaction handling with rollback capabilities for data integrity
+
+### 🤖 AI Service Resilience
+
+Echo implements a sophisticated multi-tier fallback system for AI services:
+
+1. **Response Cache** - Previously computed results (1-hour TTL)
+2. **Primary AI Service** - OpenAI GPT-4 (highest quality)
+3. **Secondary AI Service** - Anthropic Claude (fallback)
+4. **Basic Algorithms** - Rule-based alternatives for title generation, keyword extraction, sentiment analysis
+5. **Human Templates** - Pre-written content templates for different content types
+6. **Graceful Failure** - Minimal default responses that maintain user experience
+
+**Features:**
+- **Service Selection**: Automatic routing to the best available AI service based on availability and cost
+- **Confidence Scoring**: Response quality indicators help users understand when degraded modes are active
+- **Response Caching**: Intelligent caching with TTL management reduces API calls and improves performance
+- **Capability Mapping**: Different AI services handle different capabilities based on their strengths
+
+### 🚀 Production Deployment
+
+- **Docker Support**: Multi-stage builds for optimized container images
+- **Kubernetes Ready**: Health probes, resource limits, and graceful shutdown handling
+- **Environment Configuration**: Comprehensive environment variable management for different deployment scenarios
+- **Zero Downtime Deploys**: Health checks ensure traffic only routes to healthy instances
+- **Monitoring Integration**: Metrics endpoints compatible with Prometheus, Grafana, and other monitoring tools
+
+### 📈 Performance Features
+
+- **Connection Pooling**: Database connections optimized for concurrent load
+- **Caching Strategies**: Multi-level caching for expensive operations (AI responses, database queries)
+- **Request Batching**: Efficient handling of multiple concurrent requests
+- **Memory Management**: Automatic memory monitoring with warnings for high usage
+- **Response Compression**: Automatic compression for API responses
+
+See [docs/RELIABILITY.md](./docs/RELIABILITY.md) for detailed documentation on all reliability features, configuration options, troubleshooting guides, and best practices.
 
 ## End-to-End Type Safety
 
