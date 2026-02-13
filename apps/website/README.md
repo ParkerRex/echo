@@ -270,6 +270,46 @@ bun test
 bun test:e2e
 ```
 
+## Reliability & Security
+
+The Echo website implements comprehensive reliability and security measures:
+
+### 🛡️ Security Features
+- **Authentication Protection**: All app functionality secured behind Supabase auth
+- **Route Protection**: Middleware-based route protection with automatic redirects
+- **Rate Limiting**: Intelligent rate limiting (100/min default, 20/min auth, 200/min API)
+- **Security Headers**: XSS protection, clickjacking prevention, content type validation
+- **Error Boundaries**: React error boundaries for graceful error handling
+
+### 📊 Monitoring & Health Checks
+- **Health Endpoints**: `/api/health`, `/api/ready`, `/api/live` for monitoring
+- **API Connectivity**: Automatic backend health verification
+- **Supabase Health**: Database connectivity monitoring
+- **Memory Monitoring**: Real-time memory usage tracking
+- **Build Health**: Environment and deployment validation
+
+### 🎯 Conversion Optimization
+- **Pain-Driven Landing Page**: Conversion-focused copy addressing creator pain points
+- **Social Proof**: Dynamic user counter and testimonials
+- **Urgency Elements**: Scarcity messaging and time-sensitive offers
+- **SEO Optimized**: Meta tags, OpenGraph, and Twitter cards for better discoverability
+- **Mobile-First Design**: Responsive design optimized for all devices
+
+### 🔒 Route Security
+- **Protected Routes**: Dashboard, creator tools, and API endpoints require authentication
+- **Public Routes**: Landing page, auth pages, and marketing content remain accessible
+- **Smart Redirects**: Maintains user intent after authentication with `redirectedFrom` parameter
+- **API Protection**: Unauthorized API calls return proper 401 responses
+
+### ⚡ Performance Features
+- **Server Components**: Leverage Next.js server components for faster initial loads
+- **Image Optimization**: Automatic WebP conversion and responsive sizing
+- **Code Splitting**: Route-based and dynamic imports for smaller bundles
+- **tRPC Caching**: Intelligent query caching with React Query
+- **Static Generation**: Pre-rendered marketing pages for better performance
+
+See [RELIABILITY.md](../../docs/RELIABILITY.md) for detailed documentation on the platform's reliability features.
+
 ## Contributing
 
 See the main [project README](../../README.md#contributing) for contribution guidelines.

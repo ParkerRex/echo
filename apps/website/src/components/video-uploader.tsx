@@ -2,7 +2,7 @@
 'use client'
 
 import { trpc } from '@/lib/trpc'
-import { Button } from '@echo/ui/components/button'
+import { Button } from '@echo/ui/button'
 import { AlertCircle, Upload, VideoIcon, Check } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
@@ -16,7 +16,8 @@ export function VideoUploader({ onVideoUploaded }: VideoUploaderProps) {
   const [error, setError] = useState<string | null>(null)
   const [uploadProgress, setUploadProgress] = useState(0)
 
-  const uploadMutation = trpc.video.upload.useMutation({
+  const getUploadUrlMutation = trpc.video.getUploadUrl.useMutation()
+  const createVideoMutation = trpc.video.createVideo.useMutation({
     onSuccess: (data: any) => {
       onVideoUploaded(data.video.id)
     },
@@ -46,34 +47,52 @@ export function VideoUploader({ onVideoUploaded }: VideoUploaderProps) {
       setIsUploading(true)
       setUploadProgress(0)
 
-      // Convert file to base64 for small files, or use presigned URL for large files
-      if (file.size < 10 * 1024 * 1024) {
-        // Less than 10MB
-        const reader = new FileReader()
-        reader.onload = async (e) => {
-          const base64 = e.target?.result as string
-          const base64Data = base64?.split(',')[1]
+      try {
+        // Step 1: Get presigned upload URL
+        const { uploadUrl, fileKey } = await getUploadUrlMutation.mutateAsync({
+          fileName: file.name,
+          fileSize: file.size,
+          mimeType: file.type,
+        })
 
-          uploadMutation.mutate({
-            fileName: file.name,
-            fileSize: file.size,
-            mimeType: file.type,
-            base64Data,
-          })
-        }
-        reader.onprogress = (e) => {
-          if (e.lengthComputable) {
-            setUploadProgress((e.loaded / e.total) * 100)
+        // Step 2: Upload file directly to Supabase Storage
+        const xhr = new XMLHttpRequest()
+        
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const percentComplete = (event.loaded / event.total) * 100
+            setUploadProgress(percentComplete)
           }
         }
-        reader.readAsDataURL(file)
-      } else {
-        // For large files, implement presigned URL upload
-        setError('Large file uploads coming soon!')
+
+        xhr.onload = async () => {
+          if (xhr.status === 200) {
+            // Step 3: Create video record in database
+            await createVideoMutation.mutateAsync({
+              fileName: file.name,
+              fileSize: file.size,
+              mimeType: file.type,
+              fileKey,
+            })
+          } else {
+            throw new Error('Upload failed')
+          }
+        }
+
+        xhr.onerror = () => {
+          setError('Upload failed. Please try again.')
+          setIsUploading(false)
+        }
+
+        xhr.open('PUT', uploadUrl)
+        xhr.setRequestHeader('Content-Type', file.type)
+        xhr.send(file)
+      } catch (err: any) {
+        setError(err.message || 'Upload failed')
         setIsUploading(false)
       }
     },
-    [uploadMutation]
+    [getUploadUrlMutation, createVideoMutation]
   )
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({

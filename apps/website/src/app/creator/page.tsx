@@ -4,17 +4,17 @@ import { trpc } from '@/lib/trpc'
 import { Button } from '@echo/ui/button'
 import { Card } from '@echo/ui/card'
 import {
-  Video,
-  Upload,
+  AlertCircle,
+  Calendar,
+  CheckCircle,
+  Clock,
+  Eye,
   MoreHorizontal,
   Play,
-  Clock,
-  CheckCircle,
-  AlertCircle,
   Sparkles,
   TrendingUp,
-  Eye,
-  Calendar,
+  Upload,
+  Video,
 } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -23,8 +23,8 @@ import { useState } from 'react'
 export default function CreatorPage() {
   const [view, setView] = useState<'grid' | 'list'>('grid')
 
-  // In a real app, this would be protected and use actual user context
-  const { data: videos, isLoading } = (trpc as any).video.list.useQuery({
+  // Protected route - user must be authenticated to access
+  const { data: videos, isLoading } = trpc.video.list.useQuery({
     limit: 20,
     offset: 0,
   })
