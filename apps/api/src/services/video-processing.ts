@@ -64,7 +64,8 @@ export class VideoProcessingService {
       // Generate transcript if requested
       if (config.generateTranscript) {
         await this.updateProgress(jobId, 30)
-        const audioUrl = await this.ffmpegService.extractAudio(video.fileUrl)
+        // Extract audio and upload to storage
+        const audioUrl = await this.ffmpegService.extractAudio(video.fileUrl, job.userId)
         transcriptText = await this.aiService.transcribeAudio(audioUrl)
       }
 
@@ -82,7 +83,7 @@ export class VideoProcessingService {
       )
 
       // Generate thumbnail from video
-      const thumbnailUrl = await this.ffmpegService.generateThumbnail(video.fileUrl)
+      const thumbnailUrl = await this.ffmpegService.generateThumbnail(video.fileUrl, 5, job.userId)
 
       // Generate AI thumbnail backgrounds
       await this.updateProgress(jobId, 90)

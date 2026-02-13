@@ -1,6 +1,6 @@
 import { exec } from 'child_process'
 import { promisify } from 'util'
-import { writeFile, unlink } from 'fs/promises'
+import { writeFile, unlink, readFile } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { randomUUID } from 'crypto'
@@ -45,17 +45,34 @@ export class FFmpegService {
   }
 
   /**
-   * Extract audio from video
+   * Extract audio from video and upload to storage
    */
-  async extractAudio(videoUrl: string): Promise<string> {
+  async extractAudio(videoUrl: string, userId?: string): Promise<string> {
     const tempVideoFile = await this.downloadToTemp(videoUrl)
     const tempAudioFile = join(tmpdir(), `${randomUUID()}.mp3`)
 
     try {
+      // Extract audio using FFmpeg
       await execAsync(`ffmpeg -i "${tempVideoFile}" -vn -acodec mp3 -ab 128k "${tempAudioFile}"`)
 
-      // In production, upload to storage and return URL
-      // For now, return local path
+      // Upload to storage if userId provided
+      if (userId) {
+        const { StorageService } = await import('../../services/storage.service')
+        const storageService = new StorageService()
+        
+        const audioBuffer = await readFile(tempAudioFile)
+        const audioUrl = await storageService.uploadFile({
+          fileName: `audio-${Date.now()}.mp3`,
+          data: audioBuffer,
+          mimeType: 'audio/mpeg',
+          userId,
+        })
+        
+        await this.cleanup(tempAudioFile)
+        return audioUrl
+      }
+
+      // Return local path if no userId
       return tempAudioFile
     } catch (error) {
       await this.cleanup(tempAudioFile)
@@ -68,7 +85,7 @@ export class FFmpegService {
   /**
    * Generate thumbnail from video
    */
-  async generateThumbnail(videoUrl: string, timestamp: number = 5): Promise<string> {
+  async generateThumbnail(videoUrl: string, timestamp: number = 5, userId?: string): Promise<string> {
     const tempVideoFile = await this.downloadToTemp(videoUrl)
     const tempThumbFile = join(tmpdir(), `${randomUUID()}.jpg`)
 
@@ -77,8 +94,23 @@ export class FFmpegService {
         `ffmpeg -i "${tempVideoFile}" -ss ${timestamp} -vframes 1 -q:v 2 "${tempThumbFile}"`
       )
 
-      // In production, upload to storage and return URL
-      // For now, return local path
+      // Upload to storage if userId provided
+      if (userId) {
+        const { StorageService } = await import('../../services/storage.service')
+        const storageService = new StorageService()
+        
+        const thumbBuffer = await readFile(tempThumbFile)
+        const thumbUrl = await storageService.uploadFile({
+          fileName: `thumbnail-${Date.now()}.jpg`,
+          data: thumbBuffer,
+          mimeType: 'image/jpeg',
+          userId,
+        })
+        
+        await this.cleanup(tempThumbFile)
+        return thumbUrl
+      }
+
       return tempThumbFile
     } catch (error) {
       await this.cleanup(tempThumbFile)

@@ -11,27 +11,69 @@ const storageService = new StorageService()
 
 export const videoRouter = router({
   /**
-   * Upload a video file
+   * Get presigned URL for video upload
    */
-  upload: protectedProcedure
+  getUploadUrl: protectedProcedure
     .input(
       z.object({
         fileName: z.string(),
         fileSize: z.number(),
         mimeType: z.string(),
-        base64Data: z.string(), // For small files, otherwise use presigned URLs
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { user } = ctx
+
+      // Validate file
+      const maxSize = 500 * 1024 * 1024 // 500MB
+      if (input.fileSize > maxSize) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'File size must be less than 500MB',
+        })
+      }
+
+      const allowedTypes = ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska', 'video/webm']
+      if (!allowedTypes.includes(input.mimeType)) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Invalid file type. Supported formats: MP4, MOV, AVI, MKV, WEBM',
+        })
+      }
+
+      // Get presigned upload URL
+      const uploadUrl = await storageService.getPresignedUploadUrl({
+        fileName: input.fileName,
+        mimeType: input.mimeType,
+        userId: user.id,
+      })
+
+      // Generate the file key that will be used
+      const fileKey = storageService.generateFileKey(user.id, input.fileName)
+
+      return {
+        uploadUrl,
+        fileKey,
+      }
+    }),
+
+  /**
+   * Create video record after successful upload
+   */
+  createVideo: protectedProcedure
+    .input(
+      z.object({
+        fileName: z.string(),
+        fileSize: z.number(),
+        mimeType: z.string(),
+        fileKey: z.string(),
       })
     )
     .mutation(async ({ ctx, input }) => {
       const { db, user } = ctx
 
-      // Upload file to storage
-      const fileUrl = await storageService.uploadFile({
-        fileName: input.fileName,
-        data: Buffer.from(input.base64Data, 'base64'),
-        mimeType: input.mimeType,
-        userId: user.id,
-      })
+      // Get the public URL for the uploaded file
+      const fileUrl = storageService.getPublicUrl(input.fileKey)
 
       // Create video record
       const [video] = await db
@@ -42,7 +84,7 @@ export const videoRouter = router({
           fileUrl,
           fileSize: input.fileSize,
           mimeType: input.mimeType,
-          status: 'draft',
+          status: 'processing',
         } satisfies NewVideo)
         .returning()
 
@@ -180,32 +222,6 @@ export const videoRouter = router({
     }),
 
   /**
-   * Get presigned upload URL for large files
-   */
-  getUploadUrl: protectedProcedure
-    .input(
-      z.object({
-        fileName: z.string(),
-        fileSize: z.number(),
-        mimeType: z.string(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      const { user } = ctx
-
-      const uploadUrl = await storageService.getPresignedUploadUrl({
-        fileName: input.fileName,
-        mimeType: input.mimeType,
-        userId: user.id,
-      })
-
-      return {
-        uploadUrl,
-        fileKey: storageService.generateFileKey(user.id, input.fileName),
-      }
-    }),
-
-  /**
    * Complete multipart upload
    */
   completeUpload: protectedProcedure
@@ -257,5 +273,41 @@ export const videoRouter = router({
         video: video!,
         jobId: job!.id,
       }
+    }),
+
+  /**
+   * Get job status
+   */
+  getJobStatus: protectedProcedure
+    .input(
+      z.object({
+        jobId: z.string().uuid(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const { db, user } = ctx
+
+      const job = await db.query.videoJobs.findFirst({
+        where: and(
+          eq(videoJobs.id, input.jobId),
+          eq(videoJobs.userId, user.id)
+        ),
+        with: {
+          video: {
+            with: {
+              metadata: true,
+            },
+          },
+        },
+      })
+
+      if (!job) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Job not found',
+        })
+      }
+
+      return job
     }),
 })

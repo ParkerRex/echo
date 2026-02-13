@@ -153,4 +153,31 @@ export class StorageService {
 
     return data[0]
   }
+
+  /**
+   * Get file as a readable stream
+   */
+  async getFileStream(fileUrl: string): Promise<NodeJS.ReadableStream> {
+    // If it's a Supabase URL, download it
+    if (fileUrl.includes('supabase')) {
+      const fileKey = this.extractFileKey(fileUrl)
+      const { data, error } = await supabase.storage.from(this.bucket).download(fileKey)
+
+      if (error || !data) {
+        throw new Error(`Failed to download file: ${error?.message}`)
+      }
+
+      // Convert Blob to Node.js stream
+      const stream = data.stream()
+      return stream as unknown as NodeJS.ReadableStream
+    }
+
+    // For other URLs, fetch and return stream
+    const response = await fetch(fileUrl)
+    if (!response.ok) {
+      throw new Error(`Failed to fetch file: ${response.statusText}`)
+    }
+
+    return response.body as unknown as NodeJS.ReadableStream
+  }
 }

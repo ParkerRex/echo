@@ -9,6 +9,8 @@ import { analyticsRouter } from './analytics.router'
 import { webhookRouter } from './webhook.router'
 import { ideasRouter } from './ideas.router'
 import { contentRouter } from './content.router'
+import { youtubeRouter } from './youtube.router'
+import { contentStrategyRouter } from './content-strategy.router'
 
 /**
  * This is the primary router for your server.
@@ -23,6 +25,8 @@ export const appRouter = router({
   chat: chatRouter,
   analytics: analyticsRouter,
   webhook: webhookRouter,
+  youtube: youtubeRouter,
+  contentStrategy: contentStrategyRouter,
   // MVP routers
   ideas: ideasRouter,
   content: contentRouter,
