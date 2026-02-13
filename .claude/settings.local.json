@@ -32,7 +32,9 @@
       "Bash(bun run:*)",
       "Bash(bun update:*)",
       "Bash(npx tsc:*)",
-      "Bash(test -f .env)"
+      "Bash(test -f .env)",
+      "Bash(bun add:*)",
+      "Bash(PORT=3003 timeout 5s bun run src/index.ts)"
     ],
     "deny": []
   }
